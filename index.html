@@ -226,6 +226,46 @@
       border-radius: 999px;
     }
 
+    .limit-slider {
+      position: relative;
+      width: 100%;
+      height: calc(var(--canvas-size) * 0.03);
+      margin-top: calc(var(--canvas-size) * 0.015);
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+    }
+ 
+    .limit-slider-track {
+      position: absolute;
+      inset: 0;
+      background: var(--ui-rule);
+      border-radius: 999px;
+    }
+ 
+    .limit-slider-thumb {
+      position: absolute;
+      height: 100%;
+      min-width: calc(var(--canvas-size) * 0.054);
+      padding: 0 calc(var(--canvas-size) * 0.015);
+      background-color: var(--ui-ink);
+      color: var(--ui-bg);
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-size: calc(var(--canvas-size) * 0.018);
+      transform: translateX(0);
+      z-index: 2;
+      transition: transform 0.1s ease-out;
+      will-change: transform;
+    }
+ 
+    .limit-slider-thumb.is-dragging {
+      transition: none;
+    }
+
     .settings-list {
       display: flex;
       flex-direction: column;
@@ -581,7 +621,7 @@
       </div>
       <div class="params-section">
         <div class="params-section-title">Limit</div>
-        <div id="limit-filter-container" class="height-filter-list"></div>
+        <div id="limit-slider-container"></div>
       </div>
 
       <div class="params-section">
@@ -1671,43 +1711,117 @@
     }
 
     /**
-     * Renders the selectable Block Limit pills in the params panel.
-     * These limits (Total Blocks) are decoupled from height units.
+     * Renders and binds the interactive Limit slider.
+     * Replaces the static pills with a draggable 'pill thumb'.
      */
-    function renderLimitList() {
-      const lList = document.getElementById('limit-filter-container');
-      if (!lList) return;
-      lList.innerHTML = '';
+    function renderLimitSlider() {
+      const container = document.getElementById('limit-slider-container');
+      if (!container) return;
+      container.innerHTML = '';
 
-      POSSIBLE_LIMITS.forEach(limit => {
-        const cell = document.createElement('div');
-        cell.className = 'height-cell';
-        if (appState.targetBlocks === limit) cell.classList.add('is-selected');
-        cell.innerHTML = `<span>${limit}</span>`;
+      const slider = document.createElement('div');
+      slider.className = 'limit-slider';
+      
+      const track = document.createElement('div');
+      track.className = 'limit-slider-track';
+      
+      const thumb = document.createElement('div');
+      thumb.className = 'limit-slider-thumb';
+      thumb.innerHTML = `<span>${appState.targetBlocks}</span>`;
+      
+      slider.appendChild(track);
+      slider.appendChild(thumb);
+      container.appendChild(slider);
 
-        cell.addEventListener('click', () => {
-          if (appState.targetBlocks === limit) return;
-          appState.targetBlocks = limit;
-          appState.seed = null;
+      const min = 2;
+      const max = 40;
+      const step = 2;
+      
+      function updateThumbPos(val) {
+        const percent = (val - min) / (max - min);
+        const sliderWidth = slider.offsetWidth;
+        const thumbWidth = thumb.offsetWidth;
+        // The thumb slides from 0 to (sliderWidth - thumbWidth)
+        const maxScroll = sliderWidth - thumbWidth;
+        thumb.style.transform = `translateX(${percent * maxScroll}px)`;
+        thumb.querySelector('span').textContent = val;
+      }
 
-          // Re-calculate heights for the new limit
-          POSSIBLE_HEIGHTS = computeValidHeights();
+      // Initial pos
+      requestAnimationFrame(() => updateThumbPos(appState.targetBlocks));
 
-          // If the current multi-selection includes heights that are now invalid, remove them
-          const validSet = new Set(POSSIBLE_HEIGHTS);
-          [...appState.selectedHeights].forEach(h => {
-            if (!validSet.has(h)) appState.selectedHeights.delete(h);
-          });
-          // Also check range mode bounds if they were set
-          if (appState.rangeStart && !validSet.has(appState.rangeStart)) appState.rangeStart = null;
-          if (appState.rangeEnd && !validSet.has(appState.rangeEnd)) appState.rangeEnd = null;
+      let isDragging = false;
 
-          renderLimitList();
-          renderHeightList();
-          triggerGeneration();
+      function valFromX(clientX) {
+        const rect = slider.getBoundingClientRect();
+        const thumbWidth = thumb.offsetWidth;
+        const maxScroll = rect.width - thumbWidth;
+        const relativeX = Math.max(0, Math.min(maxScroll, clientX - rect.left - (thumbWidth / 2)));
+        const percent = relativeX / maxScroll;
+        let rawVal = min + (percent * (max - min));
+        // Snap to step
+        return Math.round(rawVal / step) * step;
+      }
+
+      function onPointerDown(e) {
+        const isThumb = e.target.closest('.limit-slider-thumb');
+        if (isThumb) {
+          isDragging = true;
+          thumb.classList.add('is-dragging');
+          window.addEventListener('pointermove', onPointerMove);
+          window.addEventListener('pointerup', onPointerUp);
+        } else {
+          // Stepper behavior: jump to next/prev if clicking track
+          const rect = thumb.getBoundingClientRect();
+          const clickX = e.clientX;
+          let newVal = appState.targetBlocks;
+          if (clickX < rect.left) {
+            newVal = Math.max(min, appState.targetBlocks - step);
+          } else if (clickX > rect.right) {
+            newVal = Math.min(max, appState.targetBlocks + step);
+          }
+          if (newVal !== appState.targetBlocks) {
+            updateLimit(newVal);
+          }
+        }
+      }
+
+      function onPointerMove(e) {
+        if (!isDragging) return;
+        const newVal = valFromX(e.clientX);
+        if (newVal !== appState.targetBlocks) {
+          updateLimit(newVal);
+        }
+      }
+
+      function onPointerUp() {
+        isDragging = false;
+        thumb.classList.remove('is-dragging');
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+      }
+
+      function updateLimit(val) {
+        appState.targetBlocks = val;
+        appState.seed = null;
+        updateThumbPos(val);
+        
+        // Dynamic height validation logic
+        POSSIBLE_HEIGHTS = computeValidHeights();
+        const validSet = new Set(POSSIBLE_HEIGHTS);
+        [...appState.selectedHeights].forEach(h => {
+          if (!validSet.has(h)) appState.selectedHeights.delete(h);
         });
-        lList.appendChild(cell);
-      });
+        if (appState.rangeStart && !validSet.has(appState.rangeStart)) appState.rangeStart = null;
+        if (appState.rangeEnd && !validSet.has(appState.rangeEnd)) appState.rangeEnd = null;
+
+        renderHeightList();
+        triggerGeneration();
+      }
+
+      slider.addEventListener('pointerdown', onPointerDown);
+      // Ensure layout changes don't break position
+      window.addEventListener('resize', () => updateThumbPos(appState.targetBlocks));
     }
 
     function renderHeightList() {
@@ -1790,7 +1904,7 @@
           triggerGeneration();
         });
       }
-      renderLimitList();
+      renderLimitSlider();
       renderHeightList();
 
       // 3. Dynamic Palettes (Restored Checkboxes)
