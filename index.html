@@ -15,13 +15,16 @@
       --page-pad-x: 40px;
       --page-pad-y: 40px;
       --canvas-size: 80vmin;
+      --ink: rgb(28, 28, 26);
+      /* #1C1C1A source truth */
+      --ink-muted: rgba(28, 28, 26, 0.5);
+      --rule-color: rgba(28, 28, 26, 0.1);
       --rule-width: 1px;
 
-      /* Unified UI Colors - Dynamically updated by JS based on canvas background */
-      --ui-bg: #f4f1ea;
-      --ui-ink: rgba(28, 28, 26, 0.9);
-      --ui-ink-muted: rgba(28, 28, 26, 0.5);
-      --ui-rule: rgba(28, 28, 26, 0.1);
+      /* Dynamic Overlay Colors (for canvas text) */
+      --overlay-ink: rgb(28, 28, 26);
+      --overlay-ink-muted: rgba(28, 28, 26, 0.5);
+      --overlay-rule-color: rgba(28, 28, 26, 0.1);
     }
 
     * {
@@ -42,7 +45,7 @@
 
     #app {
       display: flex;
-      gap: calc(var(--canvas-size) * 0.015);
+      gap: 40px;
       align-items: flex-start;
       width: fit-content;
       max-width: 100%;
@@ -53,50 +56,52 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: calc(var(--canvas-size) * 0.02);
+      gap: 16px;
       width: var(--canvas-size);
     }
 
     #debug-panel {
-      width: calc(var(--canvas-size) * 0.4);
+      width: min(280px, 32vw);
       max-height: var(--canvas-size);
       overflow: auto;
-      padding: calc(var(--canvas-size) * 0.015);
-      background: var(--ui-bg);
-      color: var(--ui-ink);
+      padding: 16px;
+      background: #f1eee5;
+      color: var(--ink);
+      border: 1px solid rgba(28, 28, 26, 0.1);
+      border-radius: 12px;
     }
 
     .debug-title {
-      font-size: calc(var(--canvas-size) * 0.024);
+      font-size: 14px;
       text-transform: uppercase;
-      color: var(--ui-ink);
-      margin-bottom: calc(var(--canvas-size) * 0.015);
+      color: var(--ink);
+      margin-bottom: 12px;
     }
 
     .debug-copy {
-      font-size: calc(var(--canvas-size) * 0.018);
+      font-size: 12px;
       line-height: 1.5;
-      color: var(--ui-ink-muted);
-      margin-bottom: calc(var(--canvas-size) * 0.015);
+      color: var(--ink-muted);
+      margin-bottom: 12px;
     }
 
     .debug-section {
-      margin-bottom: calc(var(--canvas-size) * 0.02);
+      margin-bottom: 16px;
     }
 
     .debug-section-title {
-      font-size: calc(var(--canvas-size) * 0.02);
+      font-size: 12px;
       text-transform: uppercase;
-      color: var(--ui-ink);
-      margin-bottom: calc(var(--canvas-size) * 0.01);
+      color: var(--ink);
+      margin-bottom: 8px;
     }
 
     .debug-subsection-title {
-      font-size: calc(var(--canvas-size) * 0.016);
+      font-size: 10px;
       text-transform: uppercase;
-      color: var(--ui-ink-muted);
-      margin-top: calc(var(--canvas-size) * 0.015);
-      margin-bottom: calc(var(--canvas-size) * 0.005);
+      color: var(--ink-muted);
+      margin-top: 12px;
+      margin-bottom: 2px;
       letter-spacing: 0.05em;
     }
 
@@ -104,162 +109,59 @@
       margin-top: 0;
     }
 
-    .height-filter-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: calc(var(--canvas-size) * 0.01) 0;
-      /* vertical gap only, horizontal handled natively by cells */
-    }
-
-    .height-cell {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: calc(var(--canvas-size) * 0.04);
-      min-width: calc(var(--canvas-size) * 0.06);
-
-      /* ASYMMETRICAL PADDING ALIGNMENT FIX */
-      /* Left padding matches text centering intent. 
-         Right padding is increased to contain the physical visual gap between pills.
-         This mathematically locks the visual left edge to 0, aligning it perfectly with checkboxes above!
-      */
-      padding: 0 calc(var(--canvas-size) * 0.025) 0 calc(var(--canvas-size) * 0.015);
-
-      color: var(--ui-ink-muted);
-      font-family: 'Space Mono', monospace;
-      font-size: calc(var(--canvas-size) * 0.018);
-      cursor: pointer;
-      user-select: none;
-      transition: color 0.2s ease;
-    }
-
-    .height-cell::before {
-      content: '';
-      position: absolute;
-      /* Inset only applies to the right, creating the physical gap while keeping the left edge locked at 0 */
-      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
-      border: 2px solid var(--ui-rule);
-      border-radius: 999px;
-      z-index: 0;
-    }
-
-    .height-cell span {
-      position: relative;
-      z-index: 1;
-    }
-
-    .height-cell:not(.is-selected):not(.in-range):hover {
-      color: var(--ui-ink);
-    }
-
-    .height-cell:not(.is-selected):not(.in-range):hover::before {
-      border-color: var(--ui-ink);
-    }
-
-    /* Active Multi-Select & Range States */
-    .height-cell.is-selected,
-    .height-cell.in-range {
-      color: var(--ui-bg);
-    }
-
-    .height-cell.is-selected::before,
-    .height-cell.in-range::before {
-      background-color: var(--ui-ink);
-      border-color: transparent;
-    }
-
-    /* Calendar Range Extending Logic */
-    .height-cell.in-range::before {
-      inset: 0;
-      /* Bridges right gap completely to touch adjacent cell */
-      border-radius: 0;
-      /* Squares off corners */
-    }
-
-    .height-cell.range-start::before {
-      inset: 0;
-      /* Bridges right gap completely */
-      border-radius: 999px 0 0 999px;
-    }
-
-    .height-cell.range-end::before {
-      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
-      /* Preserves right gap as this is the end */
-      border-radius: 0 999px 999px 0;
-    }
-
-    .height-cell.range-start.range-end::before {
-      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
-      /* Preserves right gap */
-      border-radius: 999px;
-    }
-
+    #shape-filter-list,
+    #height-filter-list,
     #palette-filter-list {
       display: flex;
       flex-direction: column;
-      gap: calc(var(--canvas-size) * 0.01);
+      gap: 6px;
     }
 
-    .setting-item {
+    #height-filter-list {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+    }
+
+    .shape-filter-item {
       display: flex;
       align-items: center;
-      gap: calc(var(--canvas-size) * 0.012);
-      font-size: calc(var(--canvas-size) * 0.018);
+      gap: 10px;
+      font-size: 11px;
       text-transform: uppercase;
+      color: var(--ink);
       cursor: pointer;
     }
 
-    .setting-item input {
-      appearance: none;
-      width: calc(var(--canvas-size) * 0.022);
-      height: calc(var(--canvas-size) * 0.022);
+    .shape-filter-item input {
+      accent-color: var(--ink);
+      width: 13px;
+      height: 13px;
       flex: 0 0 auto;
-      border: 2px solid var(--ui-ink);
-      border-radius: 4px;
-      background-color: transparent;
-      margin: 0;
-      cursor: pointer;
     }
 
-    .setting-item input:checked {
-      border-color: var(--ui-ink);
-      background-color: var(--ui-ink);
-      box-shadow: inset 0 0 0 2px var(--ui-bg);
+    .shape-filter-item.is-disabled {
+      color: var(--ink-muted);
     }
 
-    .setting-item code {
+    .shape-filter-item code {
       font-family: 'Space Mono', monospace;
-      font-size: calc(var(--canvas-size) * 0.018);
-      color: var(--ui-ink);
-      transition: color 0.2s ease;
-    }
-
-    .setting-item input:checked+code {
-      color: var(--ui-ink);
-    }
-
-    .setting-item:hover input:not(:checked) {
-      border-color: var(--ui-ink);
-    }
-
-    .setting-item:hover input:not(:checked)+code {
-      color: var(--ui-ink);
+      font-size: 11px;
     }
 
     .debug-actions {
       display: flex;
-      gap: calc(var(--canvas-size) * 0.015);
+      gap: 12px;
       flex-wrap: wrap;
-      font-size: calc(var(--canvas-size) * 0.018);
+      font-size: 11px;
       text-transform: uppercase;
     }
 
     .debug-link {
       font-family: 'Space Mono', monospace;
-      font-size: calc(var(--canvas-size) * 0.018);
+      font-size: 11px;
       text-transform: uppercase;
-      color: var(--ui-ink);
+      color: var(--ink);
       background: none;
       border: none;
       padding: 0;
@@ -272,13 +174,12 @@
       position: relative;
       width: var(--canvas-size);
       height: var(--canvas-size);
-      background: #000;
     }
 
     #svg-out {
       display: block;
-      width: 100%;
-      height: 100%;
+      width: var(--canvas-size);
+      height: var(--canvas-size);
     }
 
     svg,
@@ -293,7 +194,7 @@
       display: flex;
       flex-direction: column;
       gap: calc(var(--canvas-size) * 0.015);
-      color: var(--ui-ink);
+      color: var(--overlay-ink);
       z-index: 2;
       text-transform: uppercase;
       width: calc(var(--canvas-size) * 0.375);
@@ -307,6 +208,7 @@
       height: calc(var(--canvas-size) * 0.03);
       z-index: 3;
       pointer-events: none;
+      opacity: 0.5;
     }
 
     #controls-overlay {
@@ -316,7 +218,7 @@
       display: flex;
       flex-direction: row;
       gap: calc(var(--canvas-size) * 0.05);
-      z-index: 10;
+      z-index: 3;
     }
 
     .is-hidden {
@@ -328,7 +230,7 @@
       font-weight: 400;
       font-size: calc(var(--canvas-size) * 0.029);
       text-transform: uppercase;
-      color: var(--ui-ink);
+      color: var(--overlay-ink);
       white-space: nowrap;
       text-box-trim: trim-both;
       text-box-edge: cap alphabetic;
@@ -352,40 +254,40 @@
       column-gap: calc(var(--canvas-size) * 0.016);
       width: 100%;
       font-size: calc(var(--canvas-size) * 0.024);
-      color: var(--ui-ink-muted);
+      color: var(--overlay-ink-muted);
     }
 
     .stat+.stat {
       padding-top: calc(var(--canvas-size) * 0.015);
-      border-top: var(--rule-width) solid var(--ui-rule);
+      border-top: var(--rule-width) solid var(--overlay-rule-color);
     }
 
     .stat-value {
-      color: var(--ui-ink);
+      color: var(--overlay-ink);
       justify-self: end;
     }
 
     .stat-suffix {
-      color: var(--ui-ink-muted);
+      color: var(--overlay-ink-muted);
     }
 
     #blocks-list .stat {
-      color: var(--ui-ink-muted);
+      color: var(--overlay-ink-muted);
       padding-top: calc(var(--canvas-size) * 0.015);
       padding-bottom: calc(var(--canvas-size) * 0.015);
       border-top: none;
     }
 
     #blocks-list .stat:first-child {
-      border-top: var(--rule-width) solid var(--ui-rule);
+      border-top: var(--rule-width) solid var(--overlay-rule-color);
     }
 
     #blocks-list .stat+.stat {
-      border-top: var(--rule-width) solid var(--ui-rule);
+      border-top: var(--rule-width) solid var(--overlay-rule-color);
     }
 
     #blocks-list .stat:last-child {
-      border-bottom: var(--rule-width) solid var(--ui-rule);
+      border-bottom: var(--rule-width) solid var(--overlay-rule-color);
     }
 
     #palette-dots {
@@ -395,7 +297,7 @@
       gap: 0;
       flex-wrap: nowrap;
       margin-top: calc(var(--canvas-size) * 0.008);
-      border: var(--rule-width) solid var(--ui-rule);
+      border: var(--rule-width) solid var(--overlay-rule-color);
       border-radius: calc(var(--canvas-size) * 0.03);
       overflow: hidden;
     }
@@ -424,8 +326,7 @@
   <div id="app">
     <div id="canvas-wrap">
       <div id="svg-container">
-        <svg id="svg-out" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
-
+        <svg id="svg-out" xmlns="http://www.w3.org/2000/svg"></svg>
         <div id="info-panel">
           <div class="stat">
             <span class="stat-label">palette</span>
@@ -435,7 +336,7 @@
 
           <div class="stat">
             <span class="stat-label">height</span>
-            <span class="stat-value"><span id="stack-height">—</span><span class="stat-suffix"> units</span></span>
+            <span class="stat-value"><span id="col-h">—</span><span class="stat-suffix"> units</span></span>
           </div>
           <div class="stat">
             <span class="stat-label">shapes</span>
@@ -443,28 +344,26 @@
           </div>
           <div id="blocks-list"></div>
         </div>
-
         <div id="logo-overlay">
           <svg width="100%" height="100%" viewBox="0 0 90 30" preserveAspectRatio="none"
             xmlns="http://www.w3.org/2000/svg" style="display: block;">
-            <rect width="24" height="6" fill="var(--ui-ink-muted)" />
-            <rect y="16" width="24" height="6" fill="var(--ui-ink-muted)" />
-            <rect y="24" width="12" height="6" fill="var(--ui-ink-muted)" />
-            <rect x="12" y="8" width="18" height="6" fill="var(--ui-ink-muted)" />
+            <rect width="24" height="6" fill="var(--overlay-ink)" />
+            <rect y="16" width="24" height="6" fill="var(--overlay-ink)" />
+            <rect y="24" width="12" height="6" fill="var(--overlay-ink)" />
+            <rect x="12" y="8" width="18" height="6" fill="var(--overlay-ink)" />
 
-            <rect x="30" y="8" width="24" height="6" fill="var(--ui-ink-muted)" />
-            <rect x="30" y="24" width="24" height="6" fill="var(--ui-ink-muted)" />
-            <rect x="36" width="24" height="6" fill="var(--ui-ink-muted)" />
-            <rect x="36" y="16" width="24" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="30" y="8" width="24" height="6" fill="var(--overlay-ink)" />
+            <rect x="30" y="24" width="24" height="6" fill="var(--overlay-ink)" />
+            <rect x="36" width="24" height="6" fill="var(--overlay-ink)" />
+            <rect x="36" y="16" width="24" height="6" fill="var(--overlay-ink)" />
 
-            <rect x="60" width="24" height="6" fill="var(--ui-ink-muted)" />
-            <rect x="60" y="16" width="24" height="6" fill="var(--ui-ink-muted)" />
-            <rect x="60" y="24" width="12" height="6" fill="var(--ui-ink-muted)" />
-            <rect x="72" y="8" width="18" height="6" fill="var(--ui-ink-muted)" />
-            <rect x="78" y="24" width="12" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="60" width="24" height="6" fill="var(--overlay-ink)" />
+            <rect x="60" y="16" width="24" height="6" fill="var(--overlay-ink)" />
+            <rect x="60" y="24" width="12" height="6" fill="var(--overlay-ink)" />
+            <rect x="72" y="8" width="18" height="6" fill="var(--overlay-ink)" />
+            <rect x="78" y="24" width="12" height="6" fill="var(--overlay-ink)" />
           </svg>
         </div>
-
         <div id="controls-overlay">
           <button class="control-btn" id="regenerate-btn">regenerate<span class="arrow-symbol">↑</span></button>
           <button class="control-btn" id="download-png-btn">PNG<span class="arrow-symbol">↓</span></button>
@@ -477,7 +376,7 @@
 
       <div class="debug-section">
         <div class="debug-section-title">Render Mode</div>
-        <label class="setting-item">
+        <label class="shape-filter-item">
           <input type="checkbox" id="toggle-ink-border" checked>
           <code>Ink Borders</code>
         </label>
@@ -485,11 +384,11 @@
 
       <div class="debug-section">
         <div class="debug-section-title">Height</div>
-        <label class="setting-item" style="margin-bottom: calc(var(--canvas-size) * 0.015);">
-          <input type="checkbox" id="toggle-range-mode">
-          <code>Range Mode</code>
-        </label>
-        <div id="height-filter-container" class="height-filter-list"></div>
+        <div id="height-filter-list"></div>
+      </div>
+      <div class="debug-section">
+        <div class="debug-section-title">Shapes</div>
+        <div id="shape-filter-list"></div>
       </div>
       <div class="debug-section">
         <div class="debug-section-title">Palettes</div>
@@ -504,15 +403,13 @@
     const B = 10;
     const CANVAS = 1000;
     const COL_W = 190;
-    // The key hex color for the fixed shape borders: #1C1C1A
     const BLACK = 'rgb(28, 28, 26)';
 
-    // A cohesive generative system: Curated, thematic, and distinct.
     const PALETTES = [
       // 1. THE CLASSICS (Anchored to Warm Cotton, Newsprint, and Kraft papers)
       { name: 'spice', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
       { name: 'storm', bg: '#e8e6e1', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#1c1a14', '#413819', '#f9cf45', '#fbd78b', '#948572', '#2c2618'] },
-      { name: 'flora', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
+      { name: 'vivid', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
       { name: 'earth', bg: '#e3d8c8', category: 'classic', contrast: 'medium', temp: 'warm', colors: ['#b66b56', '#284571', '#f6b36f', '#da6305', '#6e4354', '#ac9575'] },
       { name: 'sunset', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#ee9340', '#133e71', '#e7bc6d', '#d8721e', '#c58583', '#7f9b9e'] },
       { name: 'ember', bg: '#e3d8c8', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#dd4a14', '#33644f', '#c00b04', '#4d7d87', '#e08a19', '#23172d'] },
@@ -522,16 +419,16 @@
       { name: 'blush', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
       { name: 'orchid', bg: '#e8e6e1', category: 'classic', contrast: 'medium', temp: 'cool', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
 
-      // 2. THE BRIGHTS (Stark backgrounds with vibrant hues and deep, heavy anchor inks)
-      { name: 'marine', bg: '#f0f2f5', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#239de0', '#027fd3', '#5bbcf3', '#11151c', '#7acdf5', '#0a5fa0'] },
-      { name: 'amethyst', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#a259ff', '#883fe8', '#661ed9', '#150921', '#cda1ee', '#7a30cc'] },
-      { name: 'spruce', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#57c7af', '#228e74', '#44aa94', '#0a1a15', '#6dd4be', '#1a7060'] },
-      { name: 'ocean', bg: '#f0f2f5', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#05111c', '#355772', '#64808e', '#adc3ce', '#91acb7', '#1e4060'] },
-      { name: 'crimson', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#b50e08', '#c94040', '#de7070', '#1c0808', '#a01010', '#801010'] },
-      { name: 'topaz', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#e08f0c', '#ecaf30', '#ffe399', '#1c1408', '#c07a00', '#f5c840'] },
+      // 2. THE BRIGHTS (Stark whites and crisp greys to maximize contrast)
+      { name: 'blue', bg: '#f0f2f5', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#239de0', '#027fd3', '#5bbcf3', '#1470b8', '#7acdf5', '#0a5fa0'] },
+      { name: 'purple', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#a259ff', '#883fe8', '#661ed9', '#b47dda', '#cda1ee', '#7a30cc'] },
+      { name: 'spruce', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#57c7af', '#228e74', '#44aa94', '#008359', '#6dd4be', '#1a7060'] },
+      { name: 'ocean', bg: '#f0f2f5', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#0a2948', '#355772', '#64808e', '#adc3ce', '#91acb7', '#1e4060'] },
+      { name: 'crimson', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#b50e08', '#c94040', '#de7070', '#f0a0a0', '#a01010', '#801010'] },
+      { name: 'amber', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#e08f0c', '#ecaf30', '#ffe399', '#ceae73', '#c07a00', '#f5c840'] },
       { name: 'ivy', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#268e1b', '#469d3c', '#76c66d', '#1c1c1a', '#95c190', '#3a8a30'] },
 
-      // 3. THE ATMOSPHERES (Tinted wash backgrounds with tonal layers)
+      // 3. THE ATMOSPHERES (Tinted wash backgrounds with tonal blocks)
       { name: 'breeze', bg: '#e3eef8', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#b8d9f0', '#7ab8e0', '#3e8ec4', '#c8e4f7', '#daeef9', '#5aaad8'] },
       { name: 'lichen', bg: '#e0edea', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8e4d8', '#6dd4be', '#44aa94', '#c4ede6', '#b2dfd5', '#228e74'] },
       { name: 'bloom', bg: '#fbe8e8', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#f0a0a0', '#de7070', '#c94040', '#f7c8c8', '#f2b6b6', '#b50e08'] },
@@ -542,17 +439,17 @@
       { name: 'sand', bg: '#f5d8ca', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#e8b89c', '#d8906e', '#f0c8b4', '#c06848', '#e3a98c', '#b35c3e'] },
       { name: 'cerulean', bg: '#e3f1f7', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8d3e6', '#82bcda', '#5da3c7', '#d0eaf5', '#bfe0f0', '#3b86ab'] },
       { name: 'seafoam', bg: '#e3f2ec', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8decb', '#7ec4ac', '#54a88b', '#cbf0e3', '#b8e8d8', '#34876c'] },
-      { name: 'frost', bg: '#e1e8f2', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a9c2e3', '#80a3d4', '#5985c2', '#d1e1f5', '#becff0', '#3866a8'] },
+      { name: 'cobalt', bg: '#e1e8f2', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a9c2e3', '#80a3d4', '#5985c2', '#d1e1f5', '#becff0', '#3866a8'] },
       { name: 'sage', bg: '#e8ece7', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#b6c9b6', '#91ad90', '#6e8f6d', '#d4e3d3', '#c6d9c5', '#4f704e'] },
       { name: 'clay', bg: '#f2e8e4', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#d1aca0', '#b58677', '#9c6655', '#e8cec5', '#debcaf', '#7a4635'] },
 
-      // 4. THE MUTED (Mid-tone colored paper with opaque high-contrast inks)
-      { name: 'heather', bg: '#7b7fc4', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#f0effa', '#e0dff5', '#2c2e7a', '#1a1c5e', '#c8c7ec', '#4a4c9e'] },
-      { name: 'mauve', bg: '#9e6e8c', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#f5e8f0', '#e8c8dc', '#3a1a30', '#5e1e48', '#c890b0', '#2a0e22'] },
-      { name: 'slate', bg: '#6e7e8c', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#e8edf0', '#c8d4da', '#1c2c38', '#304050', '#98aebc', '#0e1e2a'] },
-      { name: 'moss', bg: '#6e8c5e', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#e8f0e4', '#c8dcc0', '#1c3010', '#304820', '#9ab888', '#0e2008'] },
-      { name: 'rust', bg: '#a05030', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#f5e8e0', '#e8c8b4', '#2a0c00', '#4a1c08', '#c88060', '#1a0400'] },
-      { name: 'violet', bg: '#6040a0', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#f0eafa', '#d8c8f0', '#180830', '#301050', '#9878d0', '#0c0418'] },
+      // 4. THE MUTED (Dusty, desaturated mid-tones)
+      { name: 'periwinkle', bg: '#b8bcdb', category: 'muted', contrast: 'medium', temp: 'cool', colors: ['#9499c7', '#7b7fc4', '#5a5ea3', '#d6d8eb', '#c5c7e3', '#4a4c9e'] },
+      { name: 'mauve', bg: '#d4b4c7', category: 'muted', contrast: 'medium', temp: 'warm', colors: ['#c297af', '#9e6e8c', '#7d506d', '#e8d6e1', '#debdd0', '#5e3851'] },
+      { name: 'slate', bg: '#a3b0b8', category: 'muted', contrast: 'medium', temp: 'cool', colors: ['#8595a1', '#6e7e8c', '#4f5e6b', '#c4ced4', '#b6c2c9', '#34414d'] },
+      { name: 'moss', bg: '#abc2a3', category: 'muted', contrast: 'medium', temp: 'warm', colors: ['#8ea885', '#6e8c5e', '#4f6b40', '#cce3c5', '#bed6b6', '#354d27'] },
+      { name: 'rust', bg: '#cc8c74', category: 'muted', contrast: 'medium', temp: 'warm', colors: ['#ba7256', '#a05030', '#7a361c', '#e8b6a2', '#db9f88', '#5c2410'] },
+      { name: 'violet', bg: '#bbaecc', category: 'muted', contrast: 'medium', temp: 'cool', colors: ['#9a88b3', '#796696', '#5c467a', '#d2c7e3', '#c6bad6', '#432d5e'] },
 
       // 5. THE VOIDS (Near-black backgrounds with deep shadows and luminous pops)
       { name: 'tundra', bg: '#0b131a', category: 'void', contrast: 'high', temp: 'cool', colors: ['#164060', '#1c5070', '#5aaccc', '#0a2030', '#0e3040', '#8cd3eb'] },
@@ -562,13 +459,11 @@
       { name: 'charcoal', bg: '#080c12', category: 'void', contrast: 'high', temp: 'neutral', colors: ['#182430', '#607080', '#141c24', '#0c1018', '#101820', '#94a9be'] },
       { name: 'basalt', bg: '#0a0a09', category: 'void', contrast: 'high', temp: 'neutral', colors: ['#404040', '#707070', '#282826', '#141413', '#1f1f1d', '#b0b0a9'] },
 
-      // 6. THE MINERALS (Dedicated grayscales and high-contrast Meridian blends)
-      { name: 'carbon', bg: '#e8e6e2', category: 'mineral', contrast: 'high', temp: 'neutral', colors: ['#111110', '#222220', '#444440', '#666662', '#999996', '#ccccca'] },
+      // 6. THE MINERALS (Dedicated, physically-biased grayscale plotters)
       { name: 'graphite', bg: '#f0ede8', category: 'mineral', contrast: 'low', temp: 'neutral', colors: ['#1c1c1a', '#2e2e2c', '#585654', '#868482', '#b0aeac', '#d8d6d4'] },
+      { name: 'carbon', bg: '#e8e6e2', category: 'mineral', contrast: 'high', temp: 'neutral', colors: ['#111110', '#222220', '#444440', '#666662', '#999996', '#ccccca'] },
+      { name: 'chalk', bg: '#f8f7f5', category: 'mineral', contrast: 'low', temp: 'neutral', colors: ['#e8e6e3', '#d0cec9', '#b0aeaa', '#888884', '#555552', '#222220'] },
       { name: 'ash', bg: '#d0ccc6', category: 'mineral', contrast: 'low', temp: 'neutral', colors: ['#1a1816', '#3c3a38', '#606060', '#909090', '#c0c0be', '#f0eee8'] },
-      { name: 'bone', bg: '#efebe5', category: 'mineral', contrast: 'high', temp: 'warm', colors: ['#ffffff', '#0f0f0f', '#1f1f1f', '#353535', '#666666', '#a5a5a5'] },
-      { name: 'ivory', bg: '#ece9df', category: 'mineral', contrast: 'high', temp: 'warm', colors: ['#f9f9f9', '#141414', '#222222', '#3a3a39', '#8a8986', '#c8c6c0'] },
-      { name: 'flint', bg: '#f4f4f4', category: 'mineral', contrast: 'high', temp: 'cool', colors: ['#ffffff', '#050505', '#151515', '#2a2a2a', '#73777a', '#b5b8ba'] },
     ];
 
     const SHAPES = {
@@ -614,10 +509,6 @@
 
     // GLOBAL STATE
     let currentData = null;
-    let heightMode = 'multi';
-    let selectedHeightsMulti = new Set();
-    let rangeStart = null;
-    let rangeEnd = null;
 
     function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
     function shuffle(arr) {
@@ -798,9 +689,7 @@
       svg.setAttribute('width', CANVAS);
       svg.setAttribute('height', CANVAS);
 
-      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      bg.setAttribute('width', CANVAS); bg.setAttribute('height', CANVAS); bg.setAttribute('fill', pal.bg);
-      svg.appendChild(bg);
+      addRect(svg, 0, 0, CANVAS, CANVAS, pal.bg);
 
       placements.forEach(placement => {
         const shape = SHAPE_CATALOG[placement.id];
@@ -832,52 +721,44 @@
         });
       });
 
-      // ADAPT UI COLORS (Unifying all UI elements & Debug Panel)
+      // ADAPT OVERLAY COLORS (Protecting the light debug panel)
       const lightBg = isLight(pal.bg);
-      const baseRGB = lightBg ? '28, 28, 26' : '240, 238, 232';
+      const inkColor = lightBg ? 'rgb(28, 28, 26)' : 'rgba(240, 238, 232, 0.9)';
+      const inkMuted = lightBg ? 'rgba(28, 28, 26, 0.5)' : 'rgba(240, 238, 232, 0.45)';
+      const ruleColor = lightBg ? 'rgba(28, 28, 26, 0.1)' : 'rgba(240, 238, 232, 0.15)';
 
       const root = document.documentElement;
-      root.style.setProperty('--ui-bg', pal.bg);
-      root.style.setProperty('--ui-ink', `rgba(${baseRGB}, 0.9)`);
-      root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
-      root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
+      root.style.setProperty('--overlay-ink', inkColor);
+      root.style.setProperty('--overlay-ink-muted', inkMuted);
+      root.style.setProperty('--overlay-rule-color', ruleColor);
 
       // Info panel updates
-      const shapeCountEl = document.getElementById('shape-count');
-      if (shapeCountEl) shapeCountEl.textContent = placements.length;
-
-      const stackHeightEl = document.getElementById('stack-height');
-      if (stackHeightEl) stackHeightEl.textContent = heightUnits;
-
-      const palNameEl = document.getElementById('pal-name');
-      if (palNameEl) palNameEl.textContent = pal.name;
+      document.getElementById('shape-count').textContent = placements.length;
+      document.getElementById('col-h').textContent = heightUnits;
+      document.getElementById('pal-name').textContent = pal.name;
 
       const dots = document.getElementById('palette-dots');
-      if (dots) {
-        dots.innerHTML = '';
-        [pal.bg, ...pal.colors].forEach((c, i) => {
-          const d = document.createElement('div');
-          d.className = 'dot'; d.style.background = c;
-          if (i === 0) d.title = 'background';
-          dots.appendChild(d);
-        });
-      }
+      dots.innerHTML = '';
+      [pal.bg, ...pal.colors].forEach((c, i) => {
+        const d = document.createElement('div');
+        d.className = 'dot'; d.style.background = c;
+        if (i === 0) d.title = 'background';
+        dots.appendChild(d);
+      });
 
       const blocksList = document.getElementById('blocks-list');
-      if (blocksList) {
-        blocksList.innerHTML = '';
-        const counts = placements.reduce((acc, p) => {
-          const piece = SHAPE_CATALOG[p.id].piece;
-          acc[piece] = (acc[piece] || 0) + 1;
-          return acc;
-        }, {});
-        FAMILY_ORDER.filter(piece => counts[piece]).forEach(piece => {
-          const stat = document.createElement('div');
-          stat.className = 'stat';
-          stat.innerHTML = `<span class="stat-label">${piece}</span><span class="stat-value">${counts[piece]}</span>`;
-          blocksList.appendChild(stat);
-        });
-      }
+      blocksList.innerHTML = '';
+      const counts = placements.reduce((acc, p) => {
+        const piece = SHAPE_CATALOG[p.id].piece;
+        acc[piece] = (acc[piece] || 0) + 1;
+        return acc;
+      }, {});
+      FAMILY_ORDER.filter(piece => counts[piece]).forEach(piece => {
+        const stat = document.createElement('div');
+        stat.className = 'stat';
+        stat.innerHTML = `<span class="stat-label">${piece}</span><span class="stat-value">${counts[piece]}</span>`;
+        blocksList.appendChild(stat);
+      });
     }
 
     function generate() {
@@ -891,8 +772,8 @@
         toggleBorder.checked = !(pal.category === 'muted' || pal.category === 'void');
       }
 
-      const requiredShapeIds = []; // Shape filters removed
-      const selectedHeights = getActiveHeights();
+      const requiredShapeIds = [...document.querySelectorAll('#shape-filter-list input:checked')].map(i => i.value);
+      const selectedHeights = [...document.querySelectorAll('#height-filter-list input:checked')].map(i => Number(i.value));
 
       const solution = solveStack(requiredShapeIds, selectedHeights);
       if (!solution) return;
@@ -917,106 +798,14 @@
       render();
     }
 
-    function getActiveHeights() {
-      if (heightMode === 'multi') {
-        return Array.from(selectedHeightsMulti);
-      } else {
-        if (rangeStart !== null && rangeEnd !== null) {
-          const min = Math.min(rangeStart, rangeEnd);
-          const max = Math.max(rangeStart, rangeEnd);
-          return POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max);
-        } else if (rangeStart !== null) {
-          return [rangeStart];
-        } else {
-          return []; // Fallback 
-        }
-      }
-    }
-
-    function renderHeightList() {
-      const hList = document.getElementById('height-filter-container');
-      if (!hList) return;
-      hList.innerHTML = '';
-
-      POSSIBLE_HEIGHTS.slice().sort((a, b) => a - b).forEach(h => {
-        const cell = document.createElement('div');
-        cell.className = 'height-cell';
-
-        // Determine interaction classes
-        if (heightMode === 'multi') {
-          if (selectedHeightsMulti.has(h)) cell.classList.add('is-selected');
-        } else {
-          if (rangeStart !== null && rangeEnd !== null) {
-            const min = Math.min(rangeStart, rangeEnd);
-            const max = Math.max(rangeStart, rangeEnd);
-            if (h >= min && h <= max) {
-              cell.classList.add('in-range');
-              if (h === min) cell.classList.add('range-start');
-              if (h === max) cell.classList.add('range-end');
-            }
-          } else if (rangeStart !== null && h === rangeStart) {
-            cell.classList.add('in-range', 'range-start', 'range-end');
-          }
-        }
-
-        cell.innerHTML = `<span>${h}</span>`;
-
-        cell.addEventListener('click', () => {
-          if (heightMode === 'multi') {
-            if (selectedHeightsMulti.has(h)) selectedHeightsMulti.delete(h);
-            else selectedHeightsMulti.add(h);
-          } else {
-            // Range logic: Click 1 = start, Click 2 = end, Click 3 = reset start
-            if (rangeStart === null || (rangeStart !== null && rangeEnd !== null)) {
-              rangeStart = h;
-              rangeEnd = null;
-            } else {
-              rangeEnd = h;
-            }
-          }
-          renderHeightList();
-          generate();
-        });
-
-        hList.appendChild(cell);
-      });
-    }
-
     // INITIALIZATION & BINDING
     function bindDebugPanel() {
-      // Range toggle smart listener
-      const rangeToggle = document.getElementById('toggle-range-mode');
-      if (rangeToggle) {
-        rangeToggle.addEventListener('change', (e) => {
-          heightMode = e.target.checked ? 'range' : 'multi';
-
-          // Smart state transfer between modes
-          if (heightMode === 'range') {
-            const arr = Array.from(selectedHeightsMulti).sort((a, b) => a - b);
-            if (arr.length > 0) {
-              rangeStart = arr[0];
-              rangeEnd = arr[arr.length - 1];
-            } else {
-              rangeStart = null;
-              rangeEnd = null;
-            }
-          } else {
-            if (rangeStart !== null && rangeEnd !== null) {
-              const min = Math.min(rangeStart, rangeEnd);
-              const max = Math.max(rangeStart, rangeEnd);
-              selectedHeightsMulti = new Set(POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max));
-            } else if (rangeStart !== null) {
-              selectedHeightsMulti = new Set([rangeStart]);
-            } else {
-              selectedHeightsMulti = new Set();
-            }
-          }
-          renderHeightList();
-          generate();
-        });
-      }
-
-      renderHeightList();
+      const hList = document.getElementById('height-filter-list');
+      POSSIBLE_HEIGHTS.slice().sort((a, b) => b - a).forEach(h => {
+        const l = document.createElement('label'); l.className = 'shape-filter-item';
+        l.innerHTML = `<input type="checkbox" value="${h}"><code>${h}</code>`;
+        hList.appendChild(l);
+      });
 
       const pList = document.getElementById('palette-filter-list');
 
@@ -1034,27 +823,26 @@
         pList.appendChild(header);
 
         groupedPalettes[category].forEach(p => {
-          const l = document.createElement('label'); l.className = 'setting-item';
+          const l = document.createElement('label'); l.className = 'shape-filter-item';
           l.innerHTML = `<input type="checkbox" value="${p.name}"><code>${p.name}</code>`;
           pList.appendChild(l);
         });
       });
 
-      pList.addEventListener('change', generate);
+      const sList = document.getElementById('shape-filter-list');
+      BASE_STACK_SHAPES.filter(s => STRICT_SHAPE_IDS.has(s.id)).forEach(s => {
+        const l = document.createElement('label'); l.className = 'shape-filter-item';
+        l.innerHTML = `<input type="checkbox" value="${s.id}"><code>${s.id}</code>`;
+        sList.appendChild(l);
+      });
+
+      [hList, pList, sList].forEach(el => el.addEventListener('change', generate));
 
       document.getElementById('toggle-ink-border')?.addEventListener('change', render);
 
       document.getElementById('select-none-btn')?.addEventListener('click', () => {
         document.querySelectorAll('#debug-panel input[type="checkbox"]').forEach(i => i.checked = false);
         document.getElementById('toggle-ink-border').checked = true;
-
-        // Reset height state
-        heightMode = 'multi';
-        selectedHeightsMulti.clear();
-        rangeStart = null;
-        rangeEnd = null;
-        renderHeightList();
-
         generate();
       });
     }
@@ -1070,7 +858,7 @@
         if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
         const key = e.key.toLowerCase();
         if (key === 'r') generate();
-        if (key === 'i') ['info-panel', 'logo-overlay', 'controls-overlay', 'debug-panel'].forEach(id => document.getElementById(id)?.classList.toggle('is-hidden'));
+        if (key === 'i') ['info-panel', 'logo-overlay', 'controls-overlay'].forEach(id => document.getElementById(id)?.classList.toggle('is-hidden'));
         if (key === 'p') downloadPNG();
         if (key === 's') downloadSVG();
       });
@@ -1086,6 +874,12 @@
       if (!clone.getAttribute('xmlns')) {
         clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
       }
+
+      // Resolve CSS variables for export (Image objects can't read parent page variables)
+      const overlayInk = getComputedStyle(document.documentElement).getPropertyValue('--overlay-ink');
+      clone.querySelectorAll('[fill^="var(--overlay-ink)"]').forEach(el => {
+        el.setAttribute('fill', overlayInk);
+      });
 
       return new XMLSerializer().serializeToString(clone);
     }
@@ -1120,13 +914,10 @@
         a.href = c.toDataURL('image/png');
         a.download = '4x4rt-stacks.png';
         a.click();
-
-        URL.revokeObjectURL(url);
       };
 
       img.onerror = (e) => {
         console.error("PNG rendering failed", e);
-        URL.revokeObjectURL(url);
       };
 
       img.src = url;
