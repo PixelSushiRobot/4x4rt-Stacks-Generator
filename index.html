@@ -1049,9 +1049,6 @@
         if (SHAPE_PRIORITY[a.piece] !== SHAPE_PRIORITY[b.piece]) return SHAPE_PRIORITY[a.piece] - SHAPE_PRIORITY[b.piece];
         return a.id.localeCompare(b.id);
       });
-    // Descending array of valid stack heights (in grid units). The '- 3' floor
-    // excludes heights too short to ever pack 16 blocks with the available shapes.
-    const POSSIBLE_HEIGHTS = Array.from({ length: MAX_STACK_HEIGHT_UNITS - 3 }, (_, index) => MAX_STACK_HEIGHT_UNITS - index);
     // The active shape palette for this generator. Only these O and I variants are
     // passed to the solver; all other catalog entries are excluded.
     const STRICT_SHAPE_IDS = new Set(['O-1', 'O-4', 'I-2-R0', 'I-2-R90', 'I-3-R0', 'I-4-R0']);
@@ -1199,9 +1196,20 @@
       return null;
     }
 
-    /**
-     * PURE GENERATION ENGINE WITH REJECTION SAMPLING
-     */
+    // Pre-flight validation: test every candidate height by actually running the solver.
+    // Only heights where the solver finds at least one valid solution are included.
+    // This replaces the old hardcoded '- 3' floor with a proved-valid set, and correctly
+    // handles any height that is geometrically impossible regardless of available area.
+    function computeValidHeights() {
+      const validHeights = [];
+      for (let h = MAX_STACK_HEIGHT_UNITS; h >= 1; h--) {
+        if (solveStackForHeight(h) !== null) validHeights.push(h);
+      }
+      return validHeights; // Descending order (tallest first), matching original POSSIBLE_HEIGHTS shape.
+    }
+    const POSSIBLE_HEIGHTS = computeValidHeights();
+
+
     function generateStack(params) {
       let currentSeed = params.seed;
       let palette;
