@@ -66,7 +66,6 @@
       align-items: center;
       font-size: calc(var(--canvas-size) * 0.024);
       line-height: 1;
-      /* Removes default text spacing for perfect vertical centering */
       text-transform: uppercase;
       color: var(--ui-ink);
       margin-bottom: calc(var(--canvas-size) * 0.015);
@@ -84,7 +83,6 @@
     }
 
     .shuffle-btn svg {
-      /* Increased to offset the SVG's internal viewbox padding */
       width: calc(var(--canvas-size) * 0.032);
       height: calc(var(--canvas-size) * 0.032);
     }
@@ -167,7 +165,6 @@
       display: flex;
       flex-wrap: wrap;
       gap: calc(var(--canvas-size) * 0.01) 0;
-      /* vertical gap only, horizontal handled natively by cells */
     }
 
     .height-cell {
@@ -177,14 +174,7 @@
       justify-content: center;
       height: calc(var(--canvas-size) * 0.03);
       min-width: calc(var(--canvas-size) * 0.064);
-
-      /* ASYMMETRICAL PADDING ALIGNMENT FIX */
-      /* Left padding matches text centering intent. 
-         Right padding is increased to contain the physical visual gap between pills.
-         This mathematically locks the visual left edge to 0, aligning it perfectly with checkboxes above!
-      */
       padding: 0 calc(var(--canvas-size) * 0.025) 0 calc(var(--canvas-size) * 0.015);
-
       color: var(--ui-ink);
       font-family: 'Space Mono', monospace;
       font-size: calc(var(--canvas-size) * 0.018);
@@ -194,7 +184,6 @@
     .height-cell::before {
       content: '';
       position: absolute;
-      /* Inset only applies to the right, creating the physical gap while keeping the left edge locked at 0 */
       inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
       border: 2px solid var(--ui-ink);
       border-radius: 999px;
@@ -206,7 +195,6 @@
       z-index: 1;
     }
 
-    /* Active Multi-Select & Range States */
     .height-cell.is-selected,
     .height-cell.in-range {
       color: var(--ui-bg);
@@ -218,29 +206,23 @@
       border-color: transparent;
     }
 
-    /* Calendar Range Extending Logic */
     .height-cell.in-range::before {
       inset: 0;
-      /* Bridges right gap completely to touch adjacent cell */
       border-radius: 0;
-      /* Squares off corners */
     }
 
     .height-cell.range-start::before {
       inset: 0;
-      /* Bridges right gap completely */
       border-radius: 999px 0 0 999px;
     }
 
     .height-cell.range-end::before {
       inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
-      /* Preserves right gap as this is the end */
       border-radius: 0 999px 999px 0;
     }
 
     .height-cell.range-start.range-end::before {
       inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
-      /* Preserves right gap */
       border-radius: 999px;
     }
 
@@ -308,6 +290,10 @@
       cursor: pointer;
       text-box-trim: trim-both;
       text-box-edge: cap alphabetic;
+    }
+
+    .params-link:hover {
+      opacity: 0.7;
     }
 
     .svg-container {
@@ -415,6 +401,10 @@
       color: var(--ui-ink-muted);
     }
 
+    #seed-display {
+      cursor: pointer;
+    }
+
     .shapes-list .stat {
       color: var(--ui-ink-muted);
       padding-top: calc(var(--canvas-size) * 0.015);
@@ -478,6 +468,12 @@
         <svg id="svg-out" class="svg-out" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
 
         <div id="metadata-overlay" class="metadata-overlay">
+          <!-- Deterministic Seed Display -->
+          <div class="stat">
+            <span class="stat-label">Seed</span>
+            <span class="stat-value" id="seed-display">—</span>
+          </div>
+
           <div class="stat">
             <span class="stat-label">Palette</span>
             <span class="stat-value" id="palette-name">—</span>
@@ -498,7 +494,7 @@
             <span class="stat-label">Shapes</span>
             <span class="stat-value" id="shape-count">—</span>
           </div>
-          <div id="shapes-list" class="shapes-list" aria-labelledby="shapes-heading"></div>
+          <div id="shapes-list" class="shapes-list" role="list" aria-labelledby="shapes-heading"></div>
         </div>
 
         <div id="logo-overlay" class="logo-overlay">
@@ -600,10 +596,12 @@
         </div>
         <div id="height-filter-container" class="height-filter-list"></div>
       </div>
+
       <div class="params-section">
         <div class="params-section-title">Palettes</div>
         <div id="palette-filter-list" class="palette-filter-list"></div>
       </div>
+
       <div class="params-actions">
         <button class="params-link" id="select-none-btn" type="button">clear all</button>
       </div>
@@ -691,6 +689,56 @@
       root.style.setProperty('--ui-rule', 'rgba(28, 28, 26, 0.1)');
     })();
 
+    // --- DETERMINISTIC PRNG (Seed Engine) ---
+    function xmur3(str) {
+      for (var i = 0, h = 1779033703 ^ str.length; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = h << 13 | h >>> 19;
+      } return function () {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        return (h ^= h >>> 16) >>> 0;
+      }
+    }
+
+    function mulberry32(a) {
+      return function () {
+        var t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      }
+    }
+
+    let nextRandom = Math.random;
+
+    function setSeed(seedStr) {
+      if (!seedStr) {
+        nextRandom = Math.random;
+        return;
+      }
+      const seedFunc = xmur3(seedStr);
+      nextRandom = mulberry32(seedFunc());
+    }
+
+    function generateRandomSeed() {
+      const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let result = '';
+      for (let i = 0; i < 6; i++) result += chars[Math.floor(Math.random() * 36)];
+      return result;
+    }
+
+    function getLuminance(hex) {
+      const c = hex.replace('#', '');
+      const r = parseInt(c.slice(0, 2), 16) / 255;
+      const g = parseInt(c.slice(2, 4), 16) / 255;
+      const b = parseInt(c.slice(4, 6), 16) / 255;
+      const toLinear = x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+      return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    }
+
+    function isLight(hex) { return getLuminance(hex) > 0.35; }
+
     const SHAPES = {
       'O-1': { piece: 'O', rotation: 0, blocks: 2, units: 1, width: 1, height: 1, area: 1, mask: ['1'] },
       'O-4': { piece: 'O', rotation: 0, blocks: 2, units: 4, width: 2, height: 2, area: 4, mask: ['11', '11'] },
@@ -727,30 +775,36 @@
     const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP);
     const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z'];
     const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 };
-    const MAX_SOLUTIONS = 96;
     const MAX_SOLUTIONS_PER_HEIGHT = 24;
 
-    // GLOBAL STATE
-    let currentData = null;
-    const heightState = {
-      mode: 'multi',
-      selectedMulti: new Set(),
+    // GLOBAL STATE LAYER
+    const appState = {
+      heightMode: 'multi',
+      selectedHeights: new Set(),
       rangeStart: null,
       rangeEnd: null,
+
+      selectedPalettes: [],
+      selectedProfiles: [],
+
+      showOutline: true,
+      showMetadata: true,
+      showExport: true,
+
+      seed: null, // The string guaranteeing exact reproduction
+      artwork: null, // Holds the output of the generation engine
+      shareUrl: null // Safe fallback URL for environments that block replaceState
     };
 
-    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    // --- HELPER FUNCTIONS ---
+    function pick(arr) { return arr[Math.floor(nextRandom() * arr.length)]; }
     function shuffle(arr) {
       const copy = arr.slice();
       for (let index = copy.length - 1; index > 0; index -= 1) {
-        const swapIndex = Math.floor(Math.random() * (index + 1));
+        const swapIndex = Math.floor(nextRandom() * (index + 1));
         [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
       }
       return copy;
-    }
-    function randFrom(palette, exclude) {
-      const pool = palette.filter(c => !exclude || !exclude.includes(c));
-      return pick(pool.length ? pool : palette);
     }
     function getShapeCells(shape) {
       const cells = [];
@@ -823,24 +877,20 @@
       const counts = {};
       placements.forEach(p => { counts[p.id] = (counts[p.id] || 0) + 1; });
 
-      // Discourage spamming identical shapes (max 2 of any specific exact rotation/piece, except the 1x1 filler)
       for (const id in counts) {
         if (id !== 'O-1' && counts[id] > 2) return false;
       }
 
-      // Encourage structural diversity (at least 3 unique shapes if the stack is reasonably sized)
       const uniqueIds = Object.keys(counts).length;
       if (placements.length >= 4 && uniqueIds < 3) return false;
 
       return true;
     }
 
-    function searchStack(grid, targetHeight, blocksUsed, placements, solutions, fallbackSolutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
-      // 1. Stop immediately if we found our quota for this specific height (24, not 96)
-      if (solutions.length >= MAX_SOLUTIONS_PER_HEIGHT) return;
+    // --- CORE GENERATION ALGORITHMS ---
 
-      // 2. SAFETY VALVE: If we've found 100+ fallback solutions but are struggling to find 
-      // preferred diverse solutions, stop exhaustively searching the tree and just use what we have.
+    function searchStack(grid, targetHeight, blocksUsed, placements, solutions, fallbackSolutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
+      if (solutions.length >= MAX_SOLUTIONS_PER_HEIGHT) return;
       if (fallbackSolutions.length >= MAX_SOLUTIONS_PER_HEIGHT * 4) return;
 
       if (blocksUsed > TARGET_BLOCKS) return;
@@ -850,7 +900,7 @@
 
       const firstEmpty = findFirstEmptyCell(grid);
       if (!firstEmpty) {
-        if (blocksUsed === TARGET_BLOCKS && includesRequiredShapes(placements, requiredShapeIds)) {
+        if (blocksUsed === TARGET_BLOCKS) {
           const snapshot = placements.map(placement => ({ id: placement.id, x: placement.x, y: placement.y }));
           if (isPreferredSolution(placements)) {
             solutions.push(snapshot);
@@ -869,7 +919,6 @@
         placements.pop();
         applyShape(grid, option.shape, option.x, option.y, false);
 
-        // Re-check exit conditions to break out of loops early
         if (solutions.length >= MAX_SOLUTIONS_PER_HEIGHT) return;
         if (fallbackSolutions.length >= MAX_SOLUTIONS_PER_HEIGHT * 4) return;
       }
@@ -894,60 +943,323 @@
       return shuffle(placements);
     }
 
-    function includesRequiredShapes(placements, requiredShapeIds) {
-      if (!requiredShapeIds.length) return true;
-      const used = new Set(placements.map(placement => placement.id));
-      return requiredShapeIds.every(id => used.has(id));
-    }
-
-    function solveStack(requiredShapeIds = [], selectedHeights = []) {
+    function solveStackForHeight(targetHeight) {
       const stackShapes = BASE_STACK_SHAPES.filter(shape => STRICT_SHAPE_IDS.has(shape.id));
-
-      // Curated piece weights to bias generation toward solid, structural feeling chunks over tiny filler slices
-      const curatedWeights = {
-        'O-4': 6,
-        'I-4-R0': 6,
-        'I-3-R0': 5,
-        'I-2-R90': 4,
-        'I-2-R0': 3,
-        'O-1': 1,
-      };
+      const curatedWeights = { 'O-4': 6, 'I-4-R0': 6, 'I-3-R0': 5, 'I-2-R90': 4, 'I-2-R0': 3, 'O-1': 1 };
       const stackShapeWeights = new Map(stackShapes.map(shape => [shape.id, curatedWeights[shape.id] || 1]));
 
       const minBlocksPerUnit = Math.min(...stackShapes.map(shape => shape.blocks / shape.units));
       const maxBlocksPerUnit = Math.max(...stackShapes.map(shape => shape.blocks / shape.units));
-      const allSolutions = [];
-      const heights = selectedHeights.length ? selectedHeights : POSSIBLE_HEIGHTS;
 
-      for (const targetHeight of shuffle(heights)) {
-        const grid = createGrid(targetHeight);
-        const solutions = [];
-        const fallbackSolutions = [];
-        searchStack(grid, targetHeight, 0, [], solutions, fallbackSolutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
+      const grid = createGrid(targetHeight);
+      const solutions = [];
+      const fallbackSolutions = [];
 
-        // Use preferred diverse solutions if we found any, otherwise safely fallback to repetitive solutions
-        const finalSolutions = solutions.length > 0 ? solutions : fallbackSolutions;
-        if (finalSolutions.length) {
-          finalSolutions.slice(0, MAX_SOLUTIONS_PER_HEIGHT).forEach(placements => {
-            allSolutions.push({ placements, heightUnits: targetHeight });
-          });
-          if (allSolutions.length >= MAX_SOLUTIONS) break;
+      searchStack(grid, targetHeight, 0, [], solutions, fallbackSolutions, [], stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
+
+      const finalSolutions = solutions.length > 0 ? solutions : fallbackSolutions;
+      if (finalSolutions.length) {
+        return pick(finalSolutions);
+      }
+      return null;
+    }
+
+    /**
+     * PURE GENERATION ENGINE WITH REJECTION SAMPLING
+     */
+    function generateStack(params) {
+      let currentSeed = params.seed;
+      let palette;
+      let activeProfile;
+      let solution;
+      let heightUnits;
+
+      const isForcedSeed = !!currentSeed;
+      let attempts = 0;
+
+      // Defensive defaults to prevent undefined errors when mapping parameters
+      const allowedPalettes = params.allowedPalettes || [];
+      const allowedProfiles = params.allowedProfiles || [];
+      const allowedHeights = params.allowedHeights || [];
+
+      while (true) {
+        attempts++;
+        if (attempts > 15000) {
+          console.error("Failsafe triggered: Could not find a valid stack matching these specific constraints.");
+          return null;
+        }
+
+        if (!isForcedSeed) {
+          currentSeed = generateRandomSeed();
+        }
+        setSeed(currentSeed);
+
+        // 1. Pick Palette natively from the PRNG
+        palette = pick(PALETTES);
+        if (!isForcedSeed && allowedPalettes.length > 0 && !allowedPalettes.includes(palette.name)) continue;
+
+        // 2. Pick Profile natively from the PRNG
+        const profileMode = nextRandom();
+        if (profileMode < 0.35) activeProfile = 'isolate';
+        else if (profileMode < 0.70) activeProfile = 'drift';
+        else activeProfile = 'spectrum';
+
+        if (!isForcedSeed && allowedProfiles.length > 0 && !allowedProfiles.includes(activeProfile)) continue;
+
+        // 3. Pick Height natively from the PRNG
+        heightUnits = pick(POSSIBLE_HEIGHTS);
+        if (!isForcedSeed && allowedHeights.length > 0 && !allowedHeights.includes(heightUnits)) continue;
+
+        // 4. Attempt to mathematically solve the structure with the current PRNG seed
+        const placements = solveStackForHeight(heightUnits);
+        if (!placements) {
+          if (isForcedSeed) return null; // If a shared URL seed is mathematically broken, abort cleanly
+          continue;
+        }
+
+        solution = { placements, heightUnits };
+        break; // We found a naturally occurring seed that matches every constraint!
+      }
+
+      // --- Biased Deck & Coloring Logic ---
+      const colorWeights = new Array(palette.colors.length).fill(0);
+      let activeIndices = shuffle([...Array(palette.colors.length).keys()]);
+      const numShapes = solution.placements.length;
+
+      if (activeProfile === 'isolate') {
+        const keepCount = (numShapes <= 6) ? 2 : (nextRandom() > 0.5 ? 2 : 3);
+        if (keepCount === 2) {
+          colorWeights[activeIndices[0]] = 10;
+          colorWeights[activeIndices[1]] = 10;
+        } else {
+          colorWeights[activeIndices[0]] = 10;
+          colorWeights[activeIndices[1]] = 5;
+          colorWeights[activeIndices[2]] = 2;
+        }
+      } else if (activeProfile === 'drift') {
+        const keepCount = nextRandom() > 0.5 ? 4 : 5;
+        for (let i = 0; i < keepCount; i++) {
+          colorWeights[activeIndices[i]] = keepCount - i + 1;
+        }
+      } else {
+        for (let i = 0; i < palette.colors.length; i++) {
+          colorWeights[i] = 1;
         }
       }
-      return allSolutions.length ? pick(allSolutions) : null;
+
+      const buildBiasedDeck = () => {
+        let deck = [];
+        palette.colors.forEach((c, i) => {
+          for (let j = 0; j < colorWeights[i]; j++) deck.push(c);
+        });
+        return shuffle(deck);
+      };
+
+      const colorGrid = Array.from({ length: heightUnits }, () => [null, null]);
+      const placementsWithShapes = solution.placements
+        .map(p => ({ ...p, shape: SHAPE_CATALOG[p.id] }))
+        .sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+
+      let colorDeck = buildBiasedDeck();
+
+      const placementsWithColors = placementsWithShapes.map(p => {
+        const neighborColors = new Set();
+        const enforceAdjacency = nextRandom() > 0.25;
+
+        if (enforceAdjacency) {
+          p.shape.cells.forEach(cell => {
+            const gridX = p.x + cell.x;
+            const gridY = p.y + cell.y;
+
+            if (gridY + 1 < heightUnits && colorGrid[gridY + 1][gridX]) neighborColors.add(colorGrid[gridY + 1][gridX]);
+            if (gridY - 1 >= 0 && colorGrid[gridY - 1][gridX]) neighborColors.add(colorGrid[gridY - 1][gridX]);
+            if (gridX - 1 >= 0 && colorGrid[gridY][gridX - 1]) neighborColors.add(colorGrid[gridY][gridX - 1]);
+            if (gridX + 1 < 2 && colorGrid[gridY][gridX + 1]) neighborColors.add(colorGrid[gridY][gridX + 1]);
+          });
+        }
+
+        let validColors = colorDeck.filter(c => !neighborColors.has(c));
+
+        if (validColors.length === 0) {
+          colorDeck = buildBiasedDeck();
+          validColors = colorDeck.filter(c => !neighborColors.has(c));
+
+          if (validColors.length === 0) {
+            validColors = palette.colors.filter(c => !neighborColors.has(c));
+          }
+          if (validColors.length === 0) {
+            validColors = palette.colors;
+          }
+        }
+
+        const color = validColors[0];
+        const deckIndex = colorDeck.indexOf(color);
+        if (deckIndex > -1) colorDeck.splice(deckIndex, 1);
+
+        p.shape.cells.forEach(cell => {
+          colorGrid[p.y + cell.y][p.x + cell.x] = color;
+        });
+
+        return { ...p, color };
+      });
+
+      return {
+        placements: placementsWithColors,
+        heightUnits,
+        palette,
+        activeProfile,
+        seed: currentSeed
+      };
     }
 
-    function getLuminance(hex) {
-      const c = hex.replace('#', '');
-      const r = parseInt(c.slice(0, 2), 16) / 255;
-      const g = parseInt(c.slice(2, 4), 16) / 255;
-      const b = parseInt(c.slice(4, 6), 16) / 255;
-      const toLinear = x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
-      return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    // --- URL STATE SYNCING ---
+    function parseURLToState() {
+      const params = new URLSearchParams(window.location.search);
+
+      if (params.has('seed')) appState.seed = params.get('seed');
+      else appState.seed = null;
+
+      if (params.has('palettes')) appState.selectedPalettes = params.get('palettes').split(',').filter(Boolean);
+      else appState.selectedPalettes = [];
+
+      if (params.has('profiles')) appState.selectedProfiles = params.get('profiles').split(',').filter(Boolean);
+      else appState.selectedProfiles = [];
+
+      if (params.has('mode')) appState.heightMode = params.get('mode');
+      else appState.heightMode = 'multi';
+
+      if (params.has('heights')) appState.selectedHeights = new Set(params.get('heights').split(',').filter(Boolean).map(Number));
+      else appState.selectedHeights = new Set();
+
+      if (params.has('rstart')) appState.rangeStart = Number(params.get('rstart'));
+      else appState.rangeStart = null;
+
+      if (params.has('rend')) appState.rangeEnd = Number(params.get('rend'));
+      else appState.rangeEnd = null;
+
+      if (params.has('outline')) appState.showOutline = params.get('outline') !== 'false';
+      else appState.showOutline = true;
+
+      if (params.has('meta')) appState.showMetadata = params.get('meta') !== 'false';
+      else appState.showMetadata = true;
+
+      if (params.has('export')) appState.showExport = params.get('export') !== 'false';
+      else appState.showExport = true;
     }
 
-    function isLight(hex) { return getLuminance(hex) > 0.35; }
+    function syncStateToURL() {
+      const url = new URL(window.location);
+      url.search = ''; // Strip everything cleanly before rebuilding
 
+      // Always include active structural parameters so loaded links function correctly
+      if (appState.selectedPalettes.length) url.searchParams.set('palettes', appState.selectedPalettes.join(','));
+      if (appState.selectedProfiles.length) url.searchParams.set('profiles', appState.selectedProfiles.join(','));
+
+      if (appState.selectedHeights.size) {
+        url.searchParams.set('heights', Array.from(appState.selectedHeights).join(','));
+        url.searchParams.set('mode', appState.heightMode);
+        if (appState.heightMode === 'range') {
+          if (appState.rangeStart !== null) url.searchParams.set('rstart', appState.rangeStart);
+          if (appState.rangeEnd !== null) url.searchParams.set('rend', appState.rangeEnd);
+        }
+      }
+
+      // Always append flags when diverging from defaults (Render Modes)
+      if (!appState.showOutline) url.searchParams.set('outline', 'false');
+      if (!appState.showMetadata) url.searchParams.set('meta', 'false');
+      if (!appState.showExport) url.searchParams.set('export', 'false');
+
+      // Always include Seed
+      if (appState.seed) url.searchParams.set('seed', appState.seed);
+
+      appState.shareUrl = url.href;
+
+      try {
+        window.history.replaceState(null, '', url);
+      } catch (e) {
+        console.warn("Could not update URL history state in this environment.", e);
+      }
+    }
+
+    function applyStateToDOM() {
+      document.querySelectorAll('#palette-filter-list input[type="checkbox"]').forEach(c => {
+        c.checked = appState.selectedPalettes.includes(c.value);
+      });
+      document.querySelectorAll('#profile-filter-list input[type="checkbox"]').forEach(c => {
+        c.checked = appState.selectedProfiles.includes(c.value);
+      });
+
+      const rangeToggleEl = document.getElementById('toggle-range-mode');
+      if (rangeToggleEl) rangeToggleEl.checked = (appState.heightMode === 'range');
+
+      const outlineEl = document.getElementById('toggle-outline');
+      if (outlineEl) outlineEl.checked = appState.showOutline;
+
+      const metadataEl = document.getElementById('toggle-metadata');
+      if (metadataEl) metadataEl.checked = appState.showMetadata;
+
+      const exportEl = document.getElementById('toggle-export');
+      if (exportEl) exportEl.checked = appState.showExport;
+
+      renderHeightList();
+    }
+
+    // --- CONTROLLER LAYER ---
+    function getActiveHeights() {
+      return Array.from(appState.selectedHeights);
+    }
+
+    function syncStateFromDOM() {
+      appState.selectedPalettes = [...document.querySelectorAll('#palette-filter-list input:checked')].map(i => i.value);
+      appState.selectedProfiles = [...document.querySelectorAll('#profile-filter-list input:checked')].map(i => i.value);
+
+      appState.showOutline = document.getElementById('toggle-outline')?.checked ?? true;
+      appState.showMetadata = document.getElementById('toggle-metadata')?.checked ?? true;
+      appState.showExport = document.getElementById('toggle-export')?.checked ?? true;
+    }
+
+    function triggerGeneration() {
+      syncStateFromDOM();
+
+      let wasSeedForced = !!appState.seed;
+
+      const params = {
+        allowedPalettes: appState.selectedPalettes || [],
+        allowedProfiles: appState.selectedProfiles || [],
+        allowedHeights: getActiveHeights() || [],
+        seed: appState.seed
+      };
+
+      let newArtwork = generateStack(params);
+
+      // Automatic failsafe: if a shared seed was mathematically invalid somehow, regenerate cleanly
+      if (!newArtwork && appState.seed) {
+        params.seed = null;
+        appState.seed = null;
+        wasSeedForced = false;
+        newArtwork = generateStack(params);
+      }
+
+      if (newArtwork) {
+        appState.artwork = newArtwork;
+
+        // Auto-toggle outline based on palette category for fresh generations
+        // only if no specific palettes (colors) are selected.
+        if (!wasSeedForced && appState.selectedPalettes.length === 0) {
+          appState.showOutline = !(newArtwork.palette.category === 'muted' || newArtwork.palette.category === 'void');
+          const toggleBorder = document.getElementById('toggle-outline');
+          if (toggleBorder) {
+            toggleBorder.checked = appState.showOutline;
+          }
+        }
+
+        appState.seed = newArtwork.seed;
+        renderUI();
+        syncStateToURL();
+      }
+    }
+
+    // --- RENDER LAYER ---
     function buildDotStrip(container, colors) {
       if (!container) return;
       container.innerHTML = '';
@@ -960,10 +1272,9 @@
       });
     }
 
-    function render() {
-      if (!currentData) return;
-      const { placements, heightUnits, palette } = currentData;
-      const showInkBorder = document.getElementById('toggle-outline')?.checked;
+    function renderUI() {
+      if (!appState.artwork) return;
+      const { placements, heightUnits, palette, activeProfile } = appState.artwork;
 
       const svg = document.getElementById('svg-out');
       svg.innerHTML = '';
@@ -983,7 +1294,7 @@
 
       placements.forEach(placement => {
         const shape = SHAPE_CATALOG[placement.id];
-        const color = placement.color; // Using pre-assigned color
+        const color = placement.color;
 
         const occupied = new Set(shape.cells.map(cell => `${cell.x},${cell.y}`));
         shape.cells.forEach(cell => {
@@ -996,9 +1307,7 @@
           const insetTop = occupied.has(`${cell.x},${cell.y + 1}`) ? 0 : BORDER_WIDTH;
           const insetBottom = occupied.has(`${cell.x},${cell.y - 1}`) ? 0 : BORDER_WIDTH;
 
-          // If ink borders are OFF, show background color in the gaps (floating look)
-          // If ON, always use the fixed dark structural ink
-          const effectiveGapColor = showInkBorder ? INK_COLOR : palette.bg;
+          const effectiveGapColor = appState.showOutline ? INK_COLOR : palette.bg;
 
           addRect(svg, cellX, cellY, CELL_SIZE, CELL_SIZE, effectiveGapColor);
           addRect(
@@ -1012,7 +1321,7 @@
         });
       });
 
-      // ADAPT UI COLORS (Unifying all HTML UI elements & Parameters Panel)
+      // ADAPT UI COLORS
       const lightBg = isLight(palette.bg);
       const baseRGB = lightBg ? '28, 28, 26' : '240, 238, 232';
 
@@ -1022,7 +1331,14 @@
       root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
       root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
 
-      // Metadata overlay updates
+      // OVERLAY VISIBILITY
+      document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !appState.showMetadata);
+      document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
+
+      // METADATA TEXT & DOTS
+      const seedDisplayEl = document.getElementById('seed-display');
+      if (seedDisplayEl) seedDisplayEl.textContent = appState.seed;
+
       const shapeCountEl = document.getElementById('shape-count');
       if (shapeCountEl) shapeCountEl.textContent = placements.length;
 
@@ -1033,7 +1349,7 @@
       if (paletteNameEl) paletteNameEl.textContent = palette.name;
 
       const profileNameEl = document.getElementById('profile-name');
-      if (profileNameEl) profileNameEl.textContent = currentData.activeProfile;
+      if (profileNameEl) profileNameEl.textContent = activeProfile;
 
       const usedColors = new Set(placements.map(p => p.color));
       const sortedUsedColors = palette.colors.filter(c => usedColors.has(c));
@@ -1064,173 +1380,6 @@
       }
     }
 
-    function generate(preservePalette = false) {
-      const selectedPaletteNames = [...document.querySelectorAll('#palette-filter-list input:checked')].map(i => i.value);
-      const availablePalettes = selectedPaletteNames.length ? PALETTES.filter(p => selectedPaletteNames.includes(p.name)) : PALETTES;
-
-      let palette;
-      if (preservePalette && currentData && availablePalettes.some(p => p.name === currentData.palette.name)) {
-        palette = currentData.palette;
-      } else {
-        palette = pick(availablePalettes);
-      }
-
-      const toggleBorder = document.getElementById('toggle-outline');
-      // Only auto-toggle outline if NO palettes are explicitly selected (full random mode).
-      // If the user has filtered to specific palettes, respect their current Outline toggle state.
-      if (!preservePalette && toggleBorder) {
-        if (selectedPaletteNames.length === 0) {
-          toggleBorder.checked = !(palette.category === 'muted' || palette.category === 'void');
-        }
-      }
-
-      const requiredShapeIds = [];
-      const selectedHeights = getActiveHeights();
-
-      const solution = solveStack(requiredShapeIds, selectedHeights);
-      if (!solution) return;
-
-      // --- MERIDIAN-STYLE COLOR SHIFTING ---
-      // Determine the profile based on manual filters
-      const selectedProfiles = [...document.querySelectorAll('#profile-filter-list input:checked')].map(i => i.value);
-      let activeProfile = '';
-      if (selectedProfiles.length > 0) {
-        activeProfile = pick(selectedProfiles);
-      } else {
-        // Default weighted probability if no overrides are selected
-        const profileMode = Math.random();
-        if (profileMode < 0.35) activeProfile = 'isolate';
-        else if (profileMode < 0.70) activeProfile = 'drift';
-        else activeProfile = 'spectrum';
-      }
-
-      // Generate a biased weight profile for this specific stack to create distinct color themes
-      const colorWeights = new Array(palette.colors.length).fill(0);
-      let activeIndices = shuffle([...Array(palette.colors.length).keys()]);
-      const numShapes = solution.placements.length;
-
-      if (activeProfile === 'isolate') {
-        // "Isolate": Strict Duotone or Trio-tone. 
-        // For small stacks, force a strict duotone to ensure it looks starkly different from Drift.
-        const keepCount = (numShapes <= 6) ? 2 : (Math.random() > 0.5 ? 2 : 3);
-
-        if (keepCount === 2) {
-          colorWeights[activeIndices[0]] = 10; // Hero
-          colorWeights[activeIndices[1]] = 10; // Co-Hero (forced to alternate due to adjacency rule)
-        } else {
-          colorWeights[activeIndices[0]] = 10; // Hero
-          colorWeights[activeIndices[1]] = 5;  // Secondary
-          colorWeights[activeIndices[2]] = 2;  // Accent
-        }
-      } else if (activeProfile === 'drift') {
-        // "Drift": Drops 1 or 2 colors entirely, heavily staggering the remaining weights
-        const keepCount = Math.random() > 0.5 ? 4 : 5;
-        for (let i = 0; i < keepCount; i++) {
-          colorWeights[activeIndices[i]] = keepCount - i + 1; // Creates a lean (e.g., 5, 4, 3, 2)
-        }
-      } else {
-        // "Spectrum": Uses all 6 colors perfectly evenly
-        for (let i = 0; i < palette.colors.length; i++) {
-          colorWeights[i] = 1;
-        }
-      }
-
-      const buildBiasedDeck = () => {
-        let deck = [];
-        palette.colors.forEach((c, i) => {
-          for (let j = 0; j < colorWeights[i]; j++) deck.push(c);
-        });
-        return shuffle(deck);
-      };
-
-      // Create a grid to track which colors are placed where
-      const colorGrid = Array.from({ length: solution.heightUnits }, () => [null, null]);
-      const placementsWithShapes = solution.placements
-        .map(p => ({ ...p, shape: SHAPE_CATALOG[p.id] }))
-        .sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
-
-      // Initialize the biased deck
-      let colorDeck = buildBiasedDeck();
-
-      const placementsWithColors = placementsWithShapes.map(p => {
-        // 1. Find all colors currently touching this shape's footprint
-        const neighborColors = new Set();
-
-        // Relax the adjacency rule ~25% of the time. 
-        // This allows shapes to occasionally "clump" together into larger meta-shapes, 
-        // completely breaking the forced checkerboard pattern on smaller stacks!
-        const enforceAdjacency = Math.random() > 0.25;
-
-        if (enforceAdjacency) {
-          p.shape.cells.forEach(cell => {
-            const gridX = p.x + cell.x;
-            const gridY = p.y + cell.y;
-
-            // Check adjacent cells (Up, Down, Left, Right)
-            if (gridY + 1 < solution.heightUnits && colorGrid[gridY + 1][gridX]) neighborColors.add(colorGrid[gridY + 1][gridX]);
-            if (gridY - 1 >= 0 && colorGrid[gridY - 1][gridX]) neighborColors.add(colorGrid[gridY - 1][gridX]);
-            if (gridX - 1 >= 0 && colorGrid[gridY][gridX - 1]) neighborColors.add(colorGrid[gridY][gridX - 1]);
-            if (gridX + 1 < 2 && colorGrid[gridY][gridX + 1]) neighborColors.add(colorGrid[gridY][gridX + 1]);
-          });
-        }
-
-        // 2. Filter the current deck to only include safe colors
-        let validColors = colorDeck.filter(c => !neighborColors.has(c));
-
-        // 3. If the deck is empty (or has no safe colors), draw a fresh biased deck
-        if (validColors.length === 0) {
-          colorDeck = buildBiasedDeck();
-          validColors = colorDeck.filter(c => !neighborColors.has(c));
-
-          // Absolute fallback: If surrounded by ALL our biased colors, break the bias and use full palette
-          if (validColors.length === 0) {
-            validColors = palette.colors.filter(c => !neighborColors.has(c));
-          }
-          // Emergency fallback: If literally completely trapped, just pick from full palette
-          if (validColors.length === 0) {
-            validColors = palette.colors;
-          }
-        }
-
-        // 4. Pick the first valid color and remove ONE instance from the deck
-        const color = validColors[0];
-        const deckIndex = colorDeck.indexOf(color);
-        if (deckIndex > -1) colorDeck.splice(deckIndex, 1);
-
-        // 5. Claim these grid cells with the new color so future shapes can see it
-        p.shape.cells.forEach(cell => {
-          colorGrid[p.y + cell.y][p.x + cell.x] = color;
-        });
-
-        return { ...p, color };
-      });
-
-      currentData = {
-        placements: placementsWithColors,
-        heightUnits: solution.heightUnits,
-        palette,
-        activeProfile
-      };
-
-      render();
-    }
-
-    function getActiveHeights() {
-      if (heightState.mode === 'multi') {
-        return Array.from(heightState.selectedMulti);
-      } else {
-        if (heightState.rangeStart !== null && heightState.rangeEnd !== null) {
-          const min = Math.min(heightState.rangeStart, heightState.rangeEnd);
-          const max = Math.max(heightState.rangeStart, heightState.rangeEnd);
-          return POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max);
-        } else if (heightState.rangeStart !== null) {
-          return [heightState.rangeStart];
-        } else {
-          return []; // Fallback 
-        }
-      }
-    }
-
     function renderHeightList() {
       const hList = document.getElementById('height-filter-container');
       if (!hList) return;
@@ -1240,84 +1389,81 @@
         const cell = document.createElement('div');
         cell.className = 'height-cell';
 
-        // Determine interaction classes
-        if (heightState.mode === 'multi') {
-          if (heightState.selectedMulti.has(h)) cell.classList.add('is-selected');
+        // Styling purely references the single source of truth: selectedHeights
+        if (appState.heightMode === 'multi') {
+          if (appState.selectedHeights.has(h)) cell.classList.add('is-selected');
         } else {
-          if (heightState.rangeStart !== null && heightState.rangeEnd !== null) {
-            const min = Math.min(heightState.rangeStart, heightState.rangeEnd);
-            const max = Math.max(heightState.rangeStart, heightState.rangeEnd);
-            if (h >= min && h <= max) {
-              cell.classList.add('in-range');
-              if (h === min) cell.classList.add('range-start');
-              if (h === max) cell.classList.add('range-end');
-            }
-          } else if (heightState.rangeStart !== null && h === heightState.rangeStart) {
-            cell.classList.add('in-range', 'range-start', 'range-end');
+          if (appState.selectedHeights.has(h)) {
+            cell.classList.add('in-range');
+            const min = appState.rangeEnd !== null ? Math.min(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
+            const max = appState.rangeEnd !== null ? Math.max(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
+            if (h === min) cell.classList.add('range-start');
+            if (h === max) cell.classList.add('range-end');
           }
         }
 
         cell.innerHTML = `<span>${h}</span>`;
 
+        // Click logic modifies the single source of truth: selectedHeights
         cell.addEventListener('click', () => {
-          if (heightState.mode === 'multi') {
-            if (heightState.selectedMulti.has(h)) heightState.selectedMulti.delete(h);
-            else heightState.selectedMulti.add(h);
+          if (appState.heightMode === 'multi') {
+            if (appState.selectedHeights.has(h)) appState.selectedHeights.delete(h);
+            else appState.selectedHeights.add(h);
           } else {
-            // Range logic: Click 1 = start, Click 2 = end, Click 3 = reset start
-            if (heightState.rangeStart === null || (heightState.rangeStart !== null && heightState.rangeEnd !== null)) {
-              heightState.rangeStart = h;
-              heightState.rangeEnd = null;
+            if (appState.rangeStart === null || (appState.rangeStart !== null && appState.rangeEnd !== null)) {
+              appState.rangeStart = h;
+              appState.rangeEnd = null;
+              appState.selectedHeights = new Set([h]); // Instantly translates UI action to engine data
             } else {
-              heightState.rangeEnd = h;
+              appState.rangeEnd = h;
+              const min = Math.min(appState.rangeStart, appState.rangeEnd);
+              const max = Math.max(appState.rangeStart, appState.rangeEnd);
+              appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(val => val >= min && val <= max));
             }
           }
+          appState.seed = null;
           renderHeightList();
-          generate(true); // Preserve palette when editing height parameters
+          triggerGeneration();
         });
 
         hList.appendChild(cell);
       });
     }
 
-    // INITIALIZATION & BINDING
+    // --- INITIALIZATION & BINDING ---
     function bindParamsPanel() {
-      // Range toggle smart listener
+      // 2. Height Logic
       const rangeToggle = document.getElementById('toggle-range-mode');
       if (rangeToggle) {
         rangeToggle.addEventListener('change', (e) => {
-          heightState.mode = e.target.checked ? 'range' : 'multi';
+          appState.heightMode = e.target.checked ? 'range' : 'multi';
 
-          // Smart state transfer between modes
-          if (heightState.mode === 'range') {
-            const arr = Array.from(heightState.selectedMulti).sort((a, b) => a - b);
+          // When switching modes, calculate UI representation from the single source of truth
+          if (appState.heightMode === 'range') {
+            const arr = Array.from(appState.selectedHeights).sort((a, b) => a - b);
             if (arr.length > 0) {
-              heightState.rangeStart = arr[0];
-              heightState.rangeEnd = arr[arr.length - 1];
+              appState.rangeStart = arr[0];
+              appState.rangeEnd = arr[arr.length - 1];
+              const min = Math.min(appState.rangeStart, appState.rangeEnd);
+              const max = Math.max(appState.rangeStart, appState.rangeEnd);
+              appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max));
             } else {
-              heightState.rangeStart = null;
-              heightState.rangeEnd = null;
+              appState.rangeStart = null;
+              appState.rangeEnd = null;
             }
           } else {
-            if (heightState.rangeStart !== null && heightState.rangeEnd !== null) {
-              const min = Math.min(heightState.rangeStart, heightState.rangeEnd);
-              const max = Math.max(heightState.rangeStart, heightState.rangeEnd);
-              heightState.selectedMulti = new Set(POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max));
-            } else if (heightState.rangeStart !== null) {
-              heightState.selectedMulti = new Set([heightState.rangeStart]);
-            } else {
-              heightState.selectedMulti = new Set();
-            }
+            appState.rangeStart = null;
+            appState.rangeEnd = null;
           }
+          appState.seed = null;
           renderHeightList();
+          triggerGeneration();
         });
       }
-
       renderHeightList();
 
+      // 3. Dynamic Palettes (Restored Checkboxes)
       const pList = document.getElementById('palette-filter-list');
-
-      // Group palettes visually by category
       const groupedPalettes = {};
       PALETTES.forEach(p => {
         if (!groupedPalettes[p.category]) groupedPalettes[p.category] = [];
@@ -1335,97 +1481,142 @@
         header.addEventListener('click', () => {
           const allChecked = categoryInputs.every(input => input.checked);
           categoryInputs.forEach(input => input.checked = !allChecked);
-          generate(false);
+          appState.seed = null;
+          triggerGeneration();
         });
 
         pList.appendChild(header);
 
         groupedPalettes[category].forEach(p => {
-          const l = document.createElement('label'); l.className = 'setting-item';
+          const l = document.createElement('label');
+          l.className = 'setting-item';
           l.innerHTML = `<input type="checkbox" value="${p.name}"><code>${p.name}</code>`;
           categoryInputs.push(l.querySelector('input'));
           pList.appendChild(l);
         });
       });
 
-      // Palette changes explicitly request a new palette
-      pList.addEventListener('change', () => generate(false));
+      // Listeners for UI Checkboxes
+      pList.addEventListener('change', () => {
+        appState.seed = null;
+        triggerGeneration();
+      });
 
-      // Profile changes keep the same palette to show color variations
-      document.getElementById('profile-filter-list')?.addEventListener('change', () => generate(true));
+      document.getElementById('profile-filter-list')?.addEventListener('change', () => {
+        appState.seed = null;
+        triggerGeneration();
+      });
 
-      document.getElementById('toggle-outline')?.addEventListener('change', render);
+      // 5. Render Mode Listeners (These do NOT clear the seed!)
+      document.getElementById('toggle-outline')?.addEventListener('change', (e) => {
+        appState.showOutline = e.target.checked;
+        renderUI();
+        syncStateToURL();
+      });
 
       document.getElementById('toggle-metadata')?.addEventListener('change', (e) => {
-        document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !e.target.checked);
+        appState.showMetadata = e.target.checked;
+        renderUI();
+        syncStateToURL();
       });
 
       document.getElementById('toggle-export')?.addEventListener('change', (e) => {
-        document.getElementById('export-overlay')?.classList.toggle('is-hidden', !e.target.checked);
+        appState.showExport = e.target.checked;
+        renderUI();
+        syncStateToURL();
       });
 
+      // 6. Clear All
       document.getElementById('select-none-btn')?.addEventListener('click', () => {
-        document.querySelectorAll('#params-panel input[type="checkbox"]').forEach(i => i.checked = false);
+        document.querySelectorAll('#profile-filter-list input, #palette-filter-list input').forEach(c => c.checked = false);
 
-        // Restore render mode defaults so UI doesn't disappear on clear
-        document.getElementById('toggle-outline').checked = true;
-        document.getElementById('toggle-metadata').checked = true;
-        document.getElementById('toggle-export').checked = true;
-        document.getElementById('metadata-overlay')?.classList.remove('is-hidden');
-        document.getElementById('export-overlay')?.classList.remove('is-hidden');
+        const outlineEl = document.getElementById('toggle-outline');
+        if (outlineEl) outlineEl.checked = true;
 
-        // Reset height state
-        heightState.mode = 'multi';
-        heightState.selectedMulti.clear();
-        heightState.rangeStart = null;
-        heightState.rangeEnd = null;
+        const metadataEl = document.getElementById('toggle-metadata');
+        if (metadataEl) metadataEl.checked = true;
 
-        // Reset the mode toggle switch UI visually back to multi
+        const exportEl = document.getElementById('toggle-export');
+        if (exportEl) exportEl.checked = true;
+
         const rangeToggleEl = document.getElementById('toggle-range-mode');
         if (rangeToggleEl) rangeToggleEl.checked = false;
 
-        renderHeightList();
+        // Reset state
+        appState.heightMode = 'multi';
+        appState.selectedHeights.clear(); // Clear single source of truth
+        appState.rangeStart = null;
+        appState.rangeEnd = null;
+        appState.showOutline = true;
+        appState.showMetadata = true;
+        appState.showExport = true;
 
-        // Clearing explicitly requests a new default palette
-        generate(false);
+        appState.seed = null;
+        renderHeightList();
+        triggerGeneration();
       });
     }
 
     function bindControls() {
-      // Manual regeneration explicitly requests a new palette
-      document.getElementById('panel-shuffle-btn')?.addEventListener('click', () => generate(false));
+      // Manual shuffle explicitly requests a newly generated seed
+      document.getElementById('panel-shuffle-btn')?.addEventListener('click', () => {
+        appState.seed = null;
+        triggerGeneration();
+      });
       document.getElementById('download-png-btn')?.addEventListener('click', downloadPNG);
       document.getElementById('download-svg-btn')?.addEventListener('click', downloadSVG);
+
+      // Copy Link via Seed Display
+      document.getElementById('seed-display')?.addEventListener('click', () => {
+        if (!appState.seed) return;
+        const url = appState.shareUrl || window.location.href;
+        const tempInput = document.createElement('input');
+        tempInput.value = url;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+
+        const display = document.getElementById('seed-display');
+        const orig = display.textContent;
+        display.innerHTML = '<span style="color: var(--ui-ink-muted);">COPIED</span>';
+        setTimeout(() => {
+          // Double check the seed hasn't changed while waiting
+          if (appState.seed === orig) {
+            display.textContent = orig;
+          } else {
+            display.textContent = appState.seed;
+          }
+        }, 1500);
+      });
     }
 
     function bindShortcuts() {
       document.addEventListener('keydown', e => {
         if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
         const key = e.key.toLowerCase();
-        if (key === 'r') generate(false);
+
+        // Manual shuffle explicitly requests a newly generated seed
+        if (key === 'r') {
+          appState.seed = null;
+          triggerGeneration();
+        }
+
         if (key === 'i') {
           const paramsPanel = document.getElementById('params-panel');
           const isHiding = !paramsPanel.classList.contains('is-hidden');
 
           if (isHiding) {
-            // Hide all UI elements to enter clean presentation mode
             ['metadata-overlay', 'logo-overlay', 'export-overlay', 'params-panel'].forEach(id => {
               document.getElementById(id)?.classList.add('is-hidden');
             });
           } else {
-            // Show core UI elements
             paramsPanel.classList.remove('is-hidden');
             document.getElementById('logo-overlay')?.classList.remove('is-hidden');
 
-            // Conditionally show toggleable elements based strictly on their checkbox states
-            const metadataOverlay = document.getElementById('metadata-overlay');
-            const exportOverlay = document.getElementById('export-overlay');
-
-            const showMetadata = document.getElementById('toggle-metadata')?.checked;
-            metadataOverlay?.classList.toggle('is-hidden', !showMetadata);
-
-            const showExport = document.getElementById('toggle-export')?.checked;
-            exportOverlay?.classList.toggle('is-hidden', !showExport);
+            // UI elements sync back to true appState
+            document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !appState.showMetadata);
+            document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
           }
         }
         if (key === 'p') downloadPNG();
@@ -1433,11 +1624,12 @@
       });
     }
 
+    // --- EXPORT PIPELINE ---
+
     function getSVGString() {
       const svg = document.getElementById('svg-out');
       const clone = svg.cloneNode(true);
 
-      // Ensure explicit dimensions are in the string
       clone.setAttribute('width', CANVAS_SIZE);
       clone.setAttribute('height', CANVAS_SIZE);
       if (!clone.getAttribute('xmlns')) {
@@ -1457,20 +1649,14 @@
     function downloadPNG() {
       const svgString = getSVGString();
       const img = new Image();
-      // Using encodeURIComponent is highly reliable for rendering SVGs to Canvas across all browsers
       const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
 
       img.onload = () => {
         const c = document.createElement('canvas');
         const scale = 2;
-        // Export at 2x resolution
         c.width = CANVAS_SIZE * scale;
         c.height = CANVAS_SIZE * scale;
         const ctx = c.getContext('2d');
-
-        // Safari/WebKit Fix: Do NOT use ctx.scale() for SVGs, as it double-scales internal drawing
-        // operations against the viewBox, causing shapes to shift to the bottom right and clip.
-        // Instead, explicitly draw the image at the scaled destination dimensions.
         ctx.drawImage(img, 0, 0, CANVAS_SIZE * scale, CANVAS_SIZE * scale);
 
         const a = document.createElement('a');
@@ -1486,10 +1672,15 @@
       img.src = url;
     }
 
+    // --- INIT SEQUENCE ---
     bindControls();
-    bindParamsPanel();
+    parseURLToState();    // 1. Read URL configurations shared by a friend
+    bindParamsPanel();    // 2. Build DOM structures (Palettes list, heights list)
     bindShortcuts();
-    generate(false);
+    applyStateToDOM();    // 3. Tick checkboxes to match URL parameters
+
+    // 4. Boot engine
+    triggerGeneration(); 
   </script>
 </body>
 
