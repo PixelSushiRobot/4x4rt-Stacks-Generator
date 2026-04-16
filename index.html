@@ -485,6 +485,10 @@
             <span class="stat-value" id="profile-name">—</span>
             <div id="actual-palette-dots" class="palette-dots"></div>
           </div>
+          <div class="stat">
+            <span class="stat-label">Limit</span>
+            <span class="stat-value"><span id="limit-display">—</span><span class="stat-suffix"> Blocks</span></span>
+          </div>
 
           <div class="stat">
             <span class="stat-label">Height</span>
@@ -574,6 +578,10 @@
             <code>Spectrum</code>
           </label>
         </div>
+      </div>
+      <div class="params-section">
+        <div class="params-section-title">Limit</div>
+        <div id="limit-filter-container" class="height-filter-list"></div>
       </div>
 
       <div class="params-section">
@@ -990,7 +998,11 @@
       },
     };
 
-    const TARGET_BLOCKS = 16; // The reason for the name 4x4art, every artwork uses exactly 16 blocks.
+    // Every artwork uses a deterministic number of "blocks" (SVG rect counts).
+    // This previously fixed 16-block constraint is now a user-controllable parameter.
+    // The default 16 blocks limit is the reason for the name 4x4art, every artwork uses exactly 16 blocks. 
+    const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2); // 2, 4, 6... 40
+
     const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
     const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
     const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z']; // Display order for the shapes breakdown in the metadata overlay.
@@ -1000,7 +1012,9 @@
     // GLOBAL STATE LAYER
     const appState = {
       heightMode: 'multi',
+      targetBlocks: 16,
       selectedHeights: new Set(),
+
       rangeStart: null,
       rangeEnd: null,
 
@@ -1123,14 +1137,14 @@
       if (solutions.length >= MAX_SOLUTIONS_PER_HEIGHT) return;
       if (fallbackSolutions.length >= MAX_SOLUTIONS_PER_HEIGHT * 4) return;
 
-      if (blocksUsed > TARGET_BLOCKS) return;
+      if (blocksUsed > appState.targetBlocks) return;
       const remainingUnits = countEmptyCells(grid);
-      if (blocksUsed + (remainingUnits * minBlocksPerUnit) > TARGET_BLOCKS) return;
-      if (blocksUsed + (remainingUnits * maxBlocksPerUnit) < TARGET_BLOCKS) return;
+      if (blocksUsed + (remainingUnits * minBlocksPerUnit) > appState.targetBlocks) return;
+      if (blocksUsed + (remainingUnits * maxBlocksPerUnit) < appState.targetBlocks) return;
 
       const firstEmpty = findFirstEmptyCell(grid);
       if (!firstEmpty) {
-        if (blocksUsed === TARGET_BLOCKS) {
+        if (blocksUsed === appState.targetBlocks) {
           const snapshot = placements.map(placement => ({ id: placement.id, x: placement.x, y: placement.y }));
           if (isPreferredSolution(placements)) {
             solutions.push(snapshot);
@@ -1207,7 +1221,7 @@
       }
       return validHeights; // Descending order (tallest first), matching original POSSIBLE_HEIGHTS shape.
     }
-    const POSSIBLE_HEIGHTS = computeValidHeights();
+    let POSSIBLE_HEIGHTS = computeValidHeights();
 
 
     function generateStack(params) {
@@ -1399,6 +1413,16 @@
 
       if (params.has('export')) appState.showExport = params.get('export') !== 'false';
       else appState.showExport = true;
+
+      if (params.has('limit')) {
+        const val = parseInt(params.get('limit'), 10);
+        if (!isNaN(val)) appState.targetBlocks = val;
+      } else {
+        appState.targetBlocks = 16;
+      }
+      // CRITICAL: Re-calculate valid heights immediately after state load, 
+      // as the solver constraints may have changed.
+      POSSIBLE_HEIGHTS = computeValidHeights();
     }
 
     function syncStateToURL() {
@@ -1406,7 +1430,7 @@
       const sp = url.searchParams;
       // Clean start
       sp.delete('seed'); sp.delete('palettes'); sp.delete('profiles'); sp.delete('heights');
-      sp.delete('outline'); sp.delete('meta'); sp.delete('export');
+      sp.delete('limit'); sp.delete('outline'); sp.delete('meta'); sp.delete('export');
 
       if (appState.selectedPalettes.length) sp.set('palettes', appState.selectedPalettes.join(','));
       if (appState.selectedProfiles.length) sp.set('profiles', appState.selectedProfiles.join(','));
@@ -1420,6 +1444,7 @@
           sp.set('heights', Array.from(appState.selectedHeights).sort((a, b) => a - b).join(','));
         }
       }
+      if (appState.targetBlocks !== 16) sp.set('limit', appState.targetBlocks);
 
       if (!appState.showOutline) sp.set('outline', 'false');
       if (!appState.showMetadata) sp.set('meta', 'false');
@@ -1613,6 +1638,9 @@
       const profileNameEl = document.getElementById('profile-name');
       if (profileNameEl) profileNameEl.textContent = activeProfile;
 
+      const limitDisplayEl = document.getElementById('limit-display');
+      if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
+
       const usedColors = new Set(placements.map(p => p.color));
       const sortedUsedColors = palette.colors.filter(c => usedColors.has(c));
 
@@ -1640,6 +1668,46 @@
           shapesList.appendChild(stat);
         });
       }
+    }
+
+    /**
+     * Renders the selectable Block Limit pills in the params panel.
+     * These limits (Total Blocks) are decoupled from height units.
+     */
+    function renderLimitList() {
+      const lList = document.getElementById('limit-filter-container');
+      if (!lList) return;
+      lList.innerHTML = '';
+
+      POSSIBLE_LIMITS.forEach(limit => {
+        const cell = document.createElement('div');
+        cell.className = 'height-cell';
+        if (appState.targetBlocks === limit) cell.classList.add('is-selected');
+        cell.textContent = limit;
+
+        cell.addEventListener('click', () => {
+          if (appState.targetBlocks === limit) return;
+          appState.targetBlocks = limit;
+          appState.seed = null;
+
+          // Re-calculate heights for the new limit
+          POSSIBLE_HEIGHTS = computeValidHeights();
+
+          // If the current multi-selection includes heights that are now invalid, remove them
+          const validSet = new Set(POSSIBLE_HEIGHTS);
+          [...appState.selectedHeights].forEach(h => {
+            if (!validSet.has(h)) appState.selectedHeights.delete(h);
+          });
+          // Also check range mode bounds if they were set
+          if (appState.rangeStart && !validSet.has(appState.rangeStart)) appState.rangeStart = null;
+          if (appState.rangeEnd && !validSet.has(appState.rangeEnd)) appState.rangeEnd = null;
+
+          renderLimitList();
+          renderHeightList();
+          triggerGeneration();
+        });
+        lList.appendChild(cell);
+      });
     }
 
     function renderHeightList() {
@@ -1722,6 +1790,7 @@
           triggerGeneration();
         });
       }
+      renderLimitList();
       renderHeightList();
 
       // 3. Dynamic Palettes (Restored Checkboxes)
@@ -1960,7 +2029,7 @@
 
     // --- INIT SEQUENCE ---
     bindControls();
-    parseURLToState();    // 1. Read URL configurations shared by a friend
+    parseURLToState();    // 1. Read URL configurations (updates POSSIBLE_HEIGHTS)
     bindParamsPanel();    // 2. Build DOM structures (Palettes list, heights list)
     bindShortcuts();
     applyStateToDOM();    // 3. Tick checkboxes to match URL parameters
