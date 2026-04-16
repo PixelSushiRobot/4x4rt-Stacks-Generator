@@ -108,11 +108,9 @@ Example URL parameters:
 | Param | Description |
 |-------|-------------|
 | `seed` | 6-char seed string |
-| `palettes` | Comma-separated palette names |
-| `profiles` | `isolate`, `drift`, or `spectrum` |
-| `mode` | `multi` or `range` |
-| `heights` | Comma-separated height values |
-| `rstart` / `rend` | Range mode bounds |
+| `palettes` | Comma-separated palette names (e.g. `spice,ember`) |
+| `profiles` | `isolate`, `drift`, or `spectrum` (comma-separated) |
+| `heights` | Height filter — comma-separated values for multi-select (e.g. `5,7,9`), or a `min-max` range (e.g. `5-10`) |
 | `outline` | `false` to hide outline |
 | `meta` | `false` to hide metadata |
 | `export` | `false` to hide export buttons |
