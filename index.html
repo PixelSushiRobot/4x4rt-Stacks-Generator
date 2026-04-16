@@ -1683,7 +1683,7 @@
         const cell = document.createElement('div');
         cell.className = 'height-cell';
         if (appState.targetBlocks === limit) cell.classList.add('is-selected');
-        cell.textContent = limit;
+        cell.innerHTML = `<span>${limit}</span>`;
 
         cell.addEventListener('click', () => {
           if (appState.targetBlocks === limit) return;
