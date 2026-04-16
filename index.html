@@ -611,73 +611,72 @@
     const BORDER_WIDTH = 10;
     const CANVAS_SIZE = 1000;
     const CELL_SIZE = 100;
-    const CELL_STEP = CELL_SIZE - BORDER_WIDTH;
-    const COLUMN_WIDTH = 2 * CELL_STEP + BORDER_WIDTH; // width of a 2-unit column: two steps + one closing border
+    const CELL_STEP = CELL_SIZE - BORDER_WIDTH; // Make sure 2 adjacent cells' borders overlap
+    const COLUMN_WIDTH = 2 * CELL_STEP + BORDER_WIDTH; // Width of a 2-unit column: two steps + one closing border
     const INK_COLOR = '#1c1c1a'; // Fixed dark ink specifically for the structural artwork outlines
 
     // A cohesive generative system: Curated, thematic, and distinct.
     const PALETTES = [
       // 1. THE CLASSICS (Anchored to Warm Cotton, Newsprint, and Kraft papers)
-      { name: 'spice', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
-      { name: 'storm', bg: '#e8e6e1', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#1c1a14', '#413819', '#f9cf45', '#fbd78b', '#948572', '#2c2618'] },
-      { name: 'flora', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
-      { name: 'earth', bg: '#e3d8c8', category: 'classic', contrast: 'medium', temp: 'warm', colors: ['#b66b56', '#284571', '#f6b36f', '#da6305', '#6e4354', '#ac9575'] },
-      { name: 'sunset', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#ee9340', '#133e71', '#e7bc6d', '#d8721e', '#c58583', '#7f9b9e'] },
-      { name: 'ember', bg: '#e3d8c8', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#dd4a14', '#33644f', '#c00b04', '#4d7d87', '#e08a19', '#23172d'] },
-      { name: 'copper', bg: '#e3d8c8', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#ed8836', '#362a40', '#53475f', '#cf5100', '#dba778', '#2a1e30'] },
-      { name: 'twilight', bg: '#e8e6e1', category: 'classic', contrast: 'medium', temp: 'cool', colors: ['#132a5e', '#cf445b', '#ef5a70', '#452c56', '#eba2a9', '#8a5370'] },
-      { name: 'plum', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'cool', colors: ['#e54c3c', '#343c7a', '#a90402', '#938cab', '#6d6789', '#b5aecd'] },
-      { name: 'blush', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
-      { name: 'orchid', bg: '#e8e6e1', category: 'classic', contrast: 'medium', temp: 'cool', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
+      { name: 'spice', bg: '#f4f1ea', category: 'classic', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
+      { name: 'storm', bg: '#e8e6e1', category: 'classic', colors: ['#1c1a14', '#413819', '#f9cf45', '#fbd78b', '#948572', '#2c2618'] },
+      { name: 'flora', bg: '#f4f1ea', category: 'classic', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
+      { name: 'earth', bg: '#e3d8c8', category: 'classic', colors: ['#b66b56', '#284571', '#f6b36f', '#da6305', '#6e4354', '#ac9575'] },
+      { name: 'sunset', bg: '#f4f1ea', category: 'classic', colors: ['#ee9340', '#133e71', '#e7bc6d', '#d8721e', '#c58583', '#7f9b9e'] },
+      { name: 'ember', bg: '#e3d8c8', category: 'classic', colors: ['#dd4a14', '#33644f', '#c00b04', '#4d7d87', '#e08a19', '#23172d'] },
+      { name: 'copper', bg: '#e3d8c8', category: 'classic', colors: ['#ed8836', '#362a40', '#53475f', '#cf5100', '#dba778', '#2a1e30'] },
+      { name: 'twilight', bg: '#e8e6e1', category: 'classic', colors: ['#132a5e', '#cf445b', '#ef5a70', '#452c56', '#eba2a9', '#8a5370'] },
+      { name: 'plum', bg: '#f4f1ea', category: 'classic', colors: ['#e54c3c', '#343c7a', '#a90402', '#938cab', '#6d6789', '#b5aecd'] },
+      { name: 'blush', bg: '#f4f1ea', category: 'classic', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
+      { name: 'orchid', bg: '#e8e6e1', category: 'classic', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
 
       // 2. THE BRIGHTS (Stark backgrounds with vibrant hues and deep, heavy anchor inks)
-      { name: 'marine', bg: '#f0f2f5', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#239de0', '#027fd3', '#5bbcf3', '#11151c', '#7acdf5', '#0a5fa0'] },
-      { name: 'amethyst', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#a259ff', '#883fe8', '#661ed9', '#150921', '#cda1ee', '#7a30cc'] },
-      { name: 'spruce', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#57c7af', '#228e74', '#44aa94', '#0a1a15', '#6dd4be', '#1a7060'] },
-      { name: 'ocean', bg: '#f0f2f5', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#05111c', '#355772', '#64808e', '#adc3ce', '#91acb7', '#1e4060'] },
-      { name: 'crimson', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#b50e08', '#c94040', '#de7070', '#1c0808', '#a01010', '#801010'] },
-      { name: 'topaz', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#e08f0c', '#ecaf30', '#ffe399', '#1c1408', '#c07a00', '#f5c840'] },
-      { name: 'ivy', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#268e1b', '#469d3c', '#76c66d', '#1c1c1a', '#95c190', '#3a8a30'] },
+      { name: 'marine', bg: '#f0f2f5', category: 'bright', colors: ['#239de0', '#027fd3', '#5bbcf3', '#11151c', '#7acdf5', '#0a5fa0'] },
+      { name: 'amethyst', bg: '#fdfcfb', category: 'bright', colors: ['#a259ff', '#883fe8', '#661ed9', '#150921', '#cda1ee', '#7a30cc'] },
+      { name: 'spruce', bg: '#fdfcfb', category: 'bright', colors: ['#57c7af', '#228e74', '#44aa94', '#0a1a15', '#6dd4be', '#1a7060'] },
+      { name: 'ocean', bg: '#f0f2f5', category: 'bright', colors: ['#05111c', '#355772', '#64808e', '#adc3ce', '#91acb7', '#1e4060'] },
+      { name: 'crimson', bg: '#fdfcfb', category: 'bright', colors: ['#b50e08', '#c94040', '#de7070', '#1c0808', '#a01010', '#801010'] },
+      { name: 'topaz', bg: '#fdfcfb', category: 'bright', colors: ['#e08f0c', '#ecaf30', '#ffe399', '#1c1408', '#c07a00', '#f5c840'] },
+      { name: 'ivy', bg: '#fdfcfb', category: 'bright', colors: ['#268e1b', '#469d3c', '#76c66d', '#1c1c1a', '#95c190', '#3a8a30'] },
 
       // 3. THE ATMOSPHERES (Tinted wash backgrounds with tonal layers)
-      { name: 'breeze', bg: '#e3eef8', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#b8d9f0', '#7ab8e0', '#3e8ec4', '#c8e4f7', '#daeef9', '#5aaad8'] },
-      { name: 'lichen', bg: '#e0edea', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8e4d8', '#6dd4be', '#44aa94', '#c4ede6', '#b2dfd5', '#228e74'] },
-      { name: 'bloom', bg: '#fbe8e8', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#f0a0a0', '#de7070', '#c94040', '#f7c8c8', '#f2b6b6', '#b50e08'] },
-      { name: 'dawn', bg: '#fdf5e6', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#ffe399', '#f5c840', '#ecaf30', '#fff3cc', '#fde8a0', '#c07a00'] },
-      { name: 'fern', bg: '#eaf2e8', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#95c190', '#76c66d', '#469d3c', '#c0ddb8', '#a7d1a2', '#268e1b'] },
-      { name: 'lilac', bg: '#f1eafa', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#cda1ee', '#b47dda', '#9966cc', '#e0c8f5', '#d8b9f2', '#883fe8'] },
-      { name: 'mist', bg: '#dee7ed', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#adc3ce', '#91acb7', '#6a8fa0', '#c8d8e0', '#baccd6', '#355772'] },
-      { name: 'cerulean', bg: '#e3f1f7', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8d3e6', '#82bcda', '#5da3c7', '#d0eaf5', '#bfe0f0', '#3b86ab'] },
-      { name: 'seafoam', bg: '#e3f2ec', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8decb', '#7ec4ac', '#54a88b', '#cbf0e3', '#b8e8d8', '#34876c'] },
-      { name: 'frost', bg: '#e1e8f2', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a9c2e3', '#80a3d4', '#5985c2', '#d1e1f5', '#becff0', '#3866a8'] },
-      { name: 'sage', bg: '#e8ece7', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#b6c9b6', '#91ad90', '#6e8f6d', '#d4e3d3', '#c6d9c5', '#4f704e'] },
-      { name: 'clay', bg: '#f2e8e4', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#d1aca0', '#b58677', '#9c6655', '#e8cec5', '#debcaf', '#7a4635'] },
+      { name: 'breeze', bg: '#e3eef8', category: 'atmosphere', colors: ['#b8d9f0', '#7ab8e0', '#3e8ec4', '#c8e4f7', '#daeef9', '#5aaad8'] },
+      { name: 'lichen', bg: '#e0edea', category: 'atmosphere', colors: ['#a8e4d8', '#6dd4be', '#44aa94', '#c4ede6', '#b2dfd5', '#228e74'] },
+      { name: 'bloom', bg: '#fbe8e8', category: 'atmosphere', colors: ['#f0a0a0', '#de7070', '#c94040', '#f7c8c8', '#f2b6b6', '#b50e08'] },
+      { name: 'dawn', bg: '#fdf5e6', category: 'atmosphere', colors: ['#ffe399', '#f5c840', '#ecaf30', '#fff3cc', '#fde8a0', '#c07a00'] },
+      { name: 'fern', bg: '#eaf2e8', category: 'atmosphere', colors: ['#95c190', '#76c66d', '#469d3c', '#c0ddb8', '#a7d1a2', '#268e1b'] },
+      { name: 'lilac', bg: '#f1eafa', category: 'atmosphere', colors: ['#cda1ee', '#b47dda', '#9966cc', '#e0c8f5', '#d8b9f2', '#883fe8'] },
+      { name: 'mist', bg: '#dee7ed', category: 'atmosphere', colors: ['#adc3ce', '#91acb7', '#6a8fa0', '#c8d8e0', '#baccd6', '#355772'] },
+      { name: 'cerulean', bg: '#e3f1f7', category: 'atmosphere', colors: ['#a8d3e6', '#82bcda', '#5da3c7', '#d0eaf5', '#bfe0f0', '#3b86ab'] },
+      { name: 'seafoam', bg: '#e3f2ec', category: 'atmosphere', colors: ['#a8decb', '#7ec4ac', '#54a88b', '#cbf0e3', '#b8e8d8', '#34876c'] },
+      { name: 'frost', bg: '#e1e8f2', category: 'atmosphere', colors: ['#a9c2e3', '#80a3d4', '#5985c2', '#d1e1f5', '#becff0', '#3866a8'] },
+      { name: 'sage', bg: '#e8ece7', category: 'atmosphere', colors: ['#b6c9b6', '#91ad90', '#6e8f6d', '#d4e3d3', '#c6d9c5', '#4f704e'] },
+      { name: 'clay', bg: '#f2e8e4', category: 'atmosphere', colors: ['#d1aca0', '#b58677', '#9c6655', '#e8cec5', '#debcaf', '#7a4635'] },
 
       // 4. THE MUTED (Mid-tone colored paper with opaque high-contrast inks)
-      { name: 'heather', bg: '#7b7fc4', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#f0effa', '#e0dff5', '#2c2e7a', '#1a1c5e', '#c8c7ec', '#4a4c9e'] },
-      { name: 'mauve', bg: '#9e6e8c', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#f5e8f0', '#e8c8dc', '#3a1a30', '#5e1e48', '#c890b0', '#2a0e22'] },
-      { name: 'slate', bg: '#6e7e8c', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#e8edf0', '#c8d4da', '#1c2c38', '#304050', '#98aebc', '#0e1e2a'] },
-      { name: 'moss', bg: '#6e8c5e', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#e8f0e4', '#c8dcc0', '#1c3010', '#304820', '#9ab888', '#0e2008'] },
-      { name: 'rust', bg: '#a05030', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#f5e8e0', '#e8c8b4', '#2a0c00', '#4a1c08', '#c88060', '#1a0400'] },
-      { name: 'violet', bg: '#6040a0', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#f0eafa', '#d8c8f0', '#180830', '#301050', '#9878d0', '#0c0418'] },
+      { name: 'heather', bg: '#7b7fc4', category: 'muted', colors: ['#f0effa', '#e0dff5', '#2c2e7a', '#1a1c5e', '#c8c7ec', '#4a4c9e'] },
+      { name: 'mauve', bg: '#9e6e8c', category: 'muted', colors: ['#f5e8f0', '#e8c8dc', '#3a1a30', '#5e1e48', '#c890b0', '#2a0e22'] },
+      { name: 'slate', bg: '#6e7e8c', category: 'muted', colors: ['#e8edf0', '#c8d4da', '#1c2c38', '#304050', '#98aebc', '#0e1e2a'] },
+      { name: 'moss', bg: '#6e8c5e', category: 'muted', colors: ['#e8f0e4', '#c8dcc0', '#1c3010', '#304820', '#9ab888', '#0e2008'] },
+      { name: 'rust', bg: '#a05030', category: 'muted', colors: ['#f5e8e0', '#e8c8b4', '#2a0c00', '#4a1c08', '#c88060', '#1a0400'] },
+      { name: 'violet', bg: '#6040a0', category: 'muted', colors: ['#f0eafa', '#d8c8f0', '#180830', '#301050', '#9878d0', '#0c0418'] },
 
       // 5. THE VOIDS (Near-black backgrounds with deep shadows and luminous pops)
-      { name: 'tundra', bg: '#0b131a', category: 'void', contrast: 'high', temp: 'cool', colors: ['#164060', '#1c5070', '#5aaccc', '#0a2030', '#0e3040', '#8cd3eb'] },
-      { name: 'abyss', bg: '#060b12', category: 'void', contrast: 'high', temp: 'cool', colors: ['#182840', '#203050', '#3d5a80', '#08101c', '#0c1828', '#6b95cc'] },
-      { name: 'pine', bg: '#050f09', category: 'void', contrast: 'high', temp: 'cool', colors: ['#182c18', '#2e6b4f', '#142818', '#081808', '#0c2010', '#5cb88f'] },
-      { name: 'wine', bg: '#120306', category: 'void', contrast: 'high', temp: 'warm', colors: ['#40101c', '#8c2840', '#340c18', '#1a0408', '#2c0810', '#cc4765'] },
-      { name: 'charcoal', bg: '#080c12', category: 'void', contrast: 'high', temp: 'neutral', colors: ['#182430', '#607080', '#141c24', '#0c1018', '#101820', '#94a9be'] },
-      { name: 'basalt', bg: '#0a0a09', category: 'void', contrast: 'high', temp: 'neutral', colors: ['#404040', '#707070', '#282826', '#141413', '#1f1f1d', '#b0b0a9'] },
+      { name: 'tundra', bg: '#0b131a', category: 'void', colors: ['#164060', '#1c5070', '#5aaccc', '#0a2030', '#0e3040', '#8cd3eb'] },
+      { name: 'abyss', bg: '#060b12', category: 'void', colors: ['#182840', '#203050', '#3d5a80', '#08101c', '#0c1828', '#6b95cc'] },
+      { name: 'pine', bg: '#050f09', category: 'void', colors: ['#182c18', '#2e6b4f', '#142818', '#081808', '#0c2010', '#5cb88f'] },
+      { name: 'wine', bg: '#120306', category: 'void', colors: ['#40101c', '#8c2840', '#340c18', '#1a0408', '#2c0810', '#cc4765'] },
+      { name: 'charcoal', bg: '#080c12', category: 'void', colors: ['#182430', '#607080', '#141c24', '#0c1018', '#101820', '#94a9be'] },
+      { name: 'basalt', bg: '#0a0a09', category: 'void', colors: ['#404040', '#707070', '#282826', '#141413', '#1f1f1d', '#b0b0a9'] },
 
       // 6. THE MINERALS (Dedicated grayscales and high-contrast Meridian blends)
-      { name: 'carbon', bg: '#e8e6e2', category: 'mineral', contrast: 'high', temp: 'neutral', colors: ['#111110', '#222220', '#444440', '#666662', '#999996', '#ccccca'] },
-      { name: 'graphite', bg: '#f0ede8', category: 'mineral', contrast: 'low', temp: 'neutral', colors: ['#1c1c1a', '#2e2e2c', '#585654', '#868482', '#b0aeac', '#d8d6d4'] },
-      { name: 'ash', bg: '#d0ccc6', category: 'mineral', contrast: 'low', temp: 'neutral', colors: ['#1a1816', '#3c3a38', '#606060', '#909090', '#c0c0be', '#f0eee8'] },
-      { name: 'bone', bg: '#efebe5', category: 'mineral', contrast: 'high', temp: 'warm', colors: ['#ffffff', '#0f0f0f', '#1f1f1f', '#353535', '#666666', '#a5a5a5'] },
-      { name: 'ivory', bg: '#ece9df', category: 'mineral', contrast: 'high', temp: 'warm', colors: ['#f9f9f9', '#141414', '#222222', '#3a3a39', '#8a8986', '#c8c6c0'] },
-      { name: 'flint', bg: '#f4f4f4', category: 'mineral', contrast: 'high', temp: 'cool', colors: ['#ffffff', '#050505', '#151515', '#2a2a2a', '#73777a', '#b5b8ba'] },
+      { name: 'carbon', bg: '#e8e6e2', category: 'mineral', colors: ['#111110', '#222220', '#444440', '#666662', '#999996', '#ccccca'] },
+      { name: 'graphite', bg: '#f0ede8', category: 'mineral', colors: ['#1c1c1a', '#2e2e2c', '#585654', '#868482', '#b0aeac', '#d8d6d4'] },
+      { name: 'ash', bg: '#d0ccc6', category: 'mineral', colors: ['#1a1816', '#3c3a38', '#606060', '#909090', '#c0c0be', '#f0eee8'] },
+      { name: 'bone', bg: '#efebe5', category: 'mineral', colors: ['#ffffff', '#0f0f0f', '#1f1f1f', '#353535', '#666666', '#a5a5a5'] },
+      { name: 'ivory', bg: '#ece9df', category: 'mineral', colors: ['#f9f9f9', '#141414', '#222222', '#3a3a39', '#8a8986', '#c8c6c0'] },
+      { name: 'flint', bg: '#f4f4f4', category: 'mineral', colors: ['#ffffff', '#050505', '#151515', '#2a2a2a', '#73777a', '#b5b8ba'] },
     ];
-
     // Initialize UI colors from data, not hardcoded CSS
     // Runs synchronously before first paint so there's no flash
     (function initUIColors() {
@@ -690,6 +689,7 @@
     })();
 
     // --- DETERMINISTIC PRNG (Seed Engine) ---
+    // xmur3: string hasher — converts the seed string into a numeric state used to initialize the PRNG.
     function xmur3(str) {
       for (var i = 0, h = 1779033703 ^ str.length; i < str.length; i++) {
         h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
@@ -701,6 +701,7 @@
       }
     }
 
+    // mulberry32: fast 32-bit PRNG — produces deterministic floats in [0, 1) from a numeric seed state.
     function mulberry32(a) {
       return function () {
         var t = a += 0x6D2B79F5;
@@ -710,6 +711,7 @@
       }
     }
 
+    // Hot function pointer — replaced by setSeed() to switch between seeded and unseeded modes.
     let nextRandom = Math.random;
 
     function setSeed(seedStr) {
@@ -728,6 +730,7 @@
       return result;
     }
 
+    // WCAG relative luminance — determines whether to apply light or dark UI ink over a palette background.
     function getLuminance(hex) {
       const c = hex.replace('#', '');
       const r = parseInt(c.slice(0, 2), 16) / 255;
@@ -737,45 +740,262 @@
       return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
     }
 
+    // Threshold of 0.35 is slightly lower than the WCAG midpoint (0.5), biased toward
+    // treating mid-tones as 'dark' so the UI renders lighter ink — avoiding muddy mid-tone text.
     function isLight(hex) { return getLuminance(hex) > 0.35; }
 
+    // --- SHAPE CATALOG ---
+    // Shape fields:
+    //   piece    — family letter (O, I, J, L, T, S, Z)
+    //   rotation — clockwise orientation in degrees
+    //   blocks   — SVG rect count drawn per shape
+    //   units    — number of grid cells this shape occupies
+    //   width    — bounding box width in grid units
+    //   height   — bounding box height in grid units
+    //   area     — bounding box area (width × height, includes any empty cells in the bounding box)
+    //   mask     — row strings, top-to-bottom: '1' = occupied cell, '0' = empty cell
+    //
+    // NOTE: J, L, T, S, Z entries are kept here for reference and future projects.
+    //       Only O and I shapes are active in this generator (see STRICT_SHAPE_IDS).
     const SHAPES = {
-      'O-1': { piece: 'O', rotation: 0, blocks: 2, units: 1, width: 1, height: 1, area: 1, mask: ['1'] },
-      'O-4': { piece: 'O', rotation: 0, blocks: 2, units: 4, width: 2, height: 2, area: 4, mask: ['11', '11'] },
-      'I-2-R0': { piece: 'I', rotation: 0, blocks: 4, units: 2, width: 1, height: 2, area: 2, mask: ['1', '1'] },
-      'I-2-R90': { piece: 'I', rotation: 90, blocks: 4, units: 2, width: 2, height: 1, area: 2, mask: ['11'] },
-      'I-3-R0': { piece: 'I', rotation: 0, blocks: 4, units: 3, width: 1, height: 3, area: 3, mask: ['1', '1', '1'] },
-      'I-3-R90': { piece: 'I', rotation: 90, blocks: 4, units: 3, width: 3, height: 1, area: 3, mask: ['111'] },
-      'I-4-R0': { piece: 'I', rotation: 0, blocks: 4, units: 4, width: 1, height: 4, area: 4, mask: ['1', '1', '1', '1'] },
-      'I-4-R90': { piece: 'I', rotation: 90, blocks: 4, units: 4, width: 4, height: 1, area: 4, mask: ['1111'] },
-      'J-3-R0': { piece: 'J', rotation: 0, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['01', '11'] },
-      'J-3-R90': { piece: 'J', rotation: 90, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['10', '11'] },
-      'J-3-R180': { piece: 'J', rotation: 180, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['11', '10'] },
-      'J-3-R270': { piece: 'J', rotation: 270, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['11', '01'] },
-      'J-4-R0': { piece: 'J', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['01', '01', '11'] },
-      'J-4-R90': { piece: 'J', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['100', '111'] },
-      'J-4-R180': { piece: 'J', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['11', '10', '10'] },
-      'J-4-R270': { piece: 'J', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['111', '001'] },
-      'L-4-R0': { piece: 'L', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['10', '10', '11'] },
-      'L-4-R90': { piece: 'L', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['111', '100'] },
-      'L-4-R180': { piece: 'L', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['11', '01', '01'] },
-      'L-4-R270': { piece: 'L', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['001', '111'] },
-      'T-4-R0': { piece: 'T', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['111', '010'] },
-      'T-4-R90': { piece: 'T', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['01', '11', '01'] },
-      'T-4-R180': { piece: 'T', rotation: 180, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['010', '111'] },
-      'T-4-R270': { piece: 'T', rotation: 270, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['10', '11', '10'] },
-      'S-4-R0': { piece: 'S', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['011', '110'] },
-      'S-4-R90': { piece: 'S', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['10', '11', '01'] },
-      'Z-4-R0': { piece: 'Z', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['110', '011'] },
-      'Z-4-R90': { piece: 'Z', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['01', '11', '10'] },
+      'O-1': {
+        piece: 'O', rotation: 0, blocks: 2, units: 1, width: 1, height: 1, area: 1,
+        mask: [
+          '1'
+        ]
+      },
+
+      'O-4': {
+        piece: 'O', rotation: 0, blocks: 2, units: 4, width: 2, height: 2, area: 4,
+        mask: [
+          '11',
+          '11'
+        ]
+      },
+
+      'I-2-R0': {
+        piece: 'I', rotation: 0, blocks: 4, units: 2, width: 1, height: 2, area: 2,
+        mask: [
+          '1',
+          '1'
+        ]
+      },
+
+      'I-2-R90': {
+        piece: 'I', rotation: 90, blocks: 4, units: 2, width: 2, height: 1, area: 2,
+        mask: [
+          '11'
+        ]
+      },
+
+      'I-3-R0': {
+        piece: 'I', rotation: 0, blocks: 4, units: 3, width: 1, height: 3, area: 3,
+        mask: [
+          '1',
+          '1',
+          '1'
+        ]
+      },
+
+      'I-3-R90': {
+        piece: 'I', rotation: 90, blocks: 4, units: 3, width: 3, height: 1, area: 3,
+        mask: [
+          '111'
+        ]
+      },
+
+      'I-4-R0': {
+        piece: 'I', rotation: 0, blocks: 4, units: 4, width: 1, height: 4, area: 4,
+        mask: [
+          '1',
+          '1',
+          '1',
+          '1'
+        ]
+      },
+
+      'I-4-R90': {
+        piece: 'I', rotation: 90, blocks: 4, units: 4, width: 4, height: 1, area: 4,
+        mask: [
+          '1111'
+        ]
+      },
+
+      'J-3-R0': {
+        piece: 'J', rotation: 0, blocks: 4, units: 3, width: 2, height: 2, area: 4,
+        mask: [
+          '01',
+          '11'
+        ]
+      },
+
+      'J-3-R90': {
+        piece: 'J', rotation: 90, blocks: 4, units: 3, width: 2, height: 2, area: 4,
+        mask: [
+          '10',
+          '11'
+        ]
+      },
+
+      'J-3-R180': {
+        piece: 'J', rotation: 180, blocks: 4, units: 3, width: 2, height: 2, area: 4,
+        mask: [
+          '11',
+          '10'
+        ]
+      },
+
+      'J-3-R270': {
+        piece: 'J', rotation: 270, blocks: 4, units: 3, width: 2, height: 2, area: 4,
+        mask: [
+          '11',
+          '01'
+        ]
+      },
+
+      'J-4-R0': {
+        piece: 'J', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6,
+        mask: [
+          '01',
+          '01',
+          '11'
+        ]
+      },
+
+      'J-4-R90': {
+        piece: 'J', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6,
+        mask: [
+          '100',
+          '111'
+        ]
+      },
+
+      'J-4-R180': {
+        piece: 'J', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6,
+        mask: [
+          '11',
+          '10',
+          '10'
+        ]
+      },
+
+      'J-4-R270': {
+        piece: 'J', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6,
+        mask: [
+          '111',
+          '001'
+        ]
+      },
+
+      'L-4-R0': {
+        piece: 'L', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6,
+        mask: [
+          '10',
+          '10',
+          '11'
+        ]
+      },
+
+      'L-4-R90': {
+        piece: 'L', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6,
+        mask: [
+          '111',
+          '100'
+        ]
+      },
+
+      'L-4-R180': {
+        piece: 'L', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6,
+        mask: [
+          '11',
+          '01',
+          '01'
+        ]
+      },
+
+      'L-4-R270': {
+        piece: 'L', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6,
+        mask: [
+          '001',
+          '111'
+        ]
+      },
+
+      'T-4-R0': {
+        piece: 'T', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6,
+        mask: [
+          '111',
+          '010'
+        ]
+      },
+
+      'T-4-R90': {
+        piece: 'T', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6,
+        mask: [
+          '01',
+          '11',
+          '01'
+        ]
+      },
+
+      'T-4-R180': {
+        piece: 'T', rotation: 180, blocks: 8, units: 4, width: 3, height: 2, area: 6,
+        mask: [
+          '010',
+          '111'
+        ]
+      },
+
+      'T-4-R270': {
+        piece: 'T', rotation: 270, blocks: 8, units: 4, width: 2, height: 3, area: 6,
+        mask: [
+          '10',
+          '11',
+          '10'
+        ]
+      },
+
+      'S-4-R0': {
+        piece: 'S', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6,
+        mask: [
+          '011',
+          '110'
+        ]
+      },
+
+      'S-4-R90': {
+        piece: 'S', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6,
+        mask: [
+          '10',
+          '11',
+          '01'
+        ]
+      },
+
+      'Z-4-R0': {
+        piece: 'Z', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6,
+        mask: [
+          '110',
+          '011'
+        ]
+      },
+
+      'Z-4-R90': {
+        piece: 'Z', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6,
+        mask: [
+          '01',
+          '11',
+          '10'
+        ]
+      },
     };
 
-    const TARGET_BLOCKS = 16;
-    const STACK_EDGE_MARGIN = 15;
-    const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP);
-    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z'];
-    const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 };
-    const MAX_SOLUTIONS_PER_HEIGHT = 24;
+    const TARGET_BLOCKS = 16; // The reason for the name 4x4art, every artwork uses exactly 16 blocks.
+    const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
+    const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
+    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z']; // Display order for the shapes breakdown in the metadata overlay.
+    const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 }; // Solver search order within the backtracker (lower = tried first).
+    const MAX_SOLUTIONS_PER_HEIGHT = 24; // Per-height solution cap — keeps the solver fast on complex heights.
 
     // GLOBAL STATE LAYER
     const appState = {
@@ -829,7 +1049,11 @@
         if (SHAPE_PRIORITY[a.piece] !== SHAPE_PRIORITY[b.piece]) return SHAPE_PRIORITY[a.piece] - SHAPE_PRIORITY[b.piece];
         return a.id.localeCompare(b.id);
       });
+    // Descending array of valid stack heights (in grid units). The '- 3' floor
+    // excludes heights too short to ever pack 16 blocks with the available shapes.
     const POSSIBLE_HEIGHTS = Array.from({ length: MAX_STACK_HEIGHT_UNITS - 3 }, (_, index) => MAX_STACK_HEIGHT_UNITS - index);
+    // The active shape palette for this generator. Only these O and I variants are
+    // passed to the solver; all other catalog entries are excluded.
     const STRICT_SHAPE_IDS = new Set(['O-1', 'O-4', 'I-2-R0', 'I-2-R90', 'I-3-R0', 'I-4-R0']);
 
     function addRect(svg, x, y, w, h, fill) {
@@ -840,6 +1064,7 @@
       svg.appendChild(r);
     }
 
+    // --- GRID & PLACEMENT UTILITIES ---
     function createGrid(height) {
       return Array.from({ length: height }, () => [false, false]);
     }
@@ -854,6 +1079,8 @@
       }
       return null;
     }
+    // Returns the valid x-start positions for a shape within the 2-unit-wide column.
+    // Width-1 shapes can start at x=0 or x=1; width-2 shapes must start at x=0.
     function getAllowedOffsets(shape) {
       return shape.width === 1 ? [0, 1] : [0];
     }
@@ -873,6 +1100,12 @@
       });
     }
 
+    // Quality filter applied before storing a candidate solution.
+    // A preferred solution must satisfy two criteria:
+    //   1. No shape ID used more than twice (O-1 singles are exempt).
+    //   2. Arrangements of 4+ shapes must include at least 3 distinct shape IDs.
+    // Solutions that fail are collected separately as fallbacks, used only when no
+    // preferred solutions exist for a given height.
     function isPreferredSolution(placements) {
       const counts = {};
       placements.forEach(p => { counts[p.id] = (counts[p.id] || 0) + 1; });
@@ -945,6 +1178,8 @@
 
     function solveStackForHeight(targetHeight) {
       const stackShapes = BASE_STACK_SHAPES.filter(shape => STRICT_SHAPE_IDS.has(shape.id));
+      // Weights bias the solver toward taller, more structural shapes.
+      // Higher weight = shape appears more times in the shuffled candidate list = chosen more often.
       const curatedWeights = { 'O-4': 6, 'I-4-R0': 6, 'I-3-R0': 5, 'I-2-R90': 4, 'I-2-R0': 3, 'O-1': 1 };
       const stackShapeWeights = new Map(stackShapes.map(shape => [shape.id, curatedWeights[shape.id] || 1]));
 
@@ -1309,12 +1544,15 @@
         const shape = SHAPE_CATALOG[placement.id];
         const color = placement.color;
 
+        // Fast adjacency lookup: check whether a neighboring cell belongs to the same shape.
         const occupied = new Set(shape.cells.map(cell => `${cell.x},${cell.y}`));
         shape.cells.forEach(cell => {
           const cellX = offsetX + ((placement.x + cell.x) * CELL_STEP);
           const gridY = placement.y + cell.y;
           const cellY = offsetY + ((heightUnits - 1 - gridY) * CELL_STEP);
 
+          // Inset = 0 on edges shared with a same-shape neighbor (no gap needed).
+          // Inset = BORDER_WIDTH on exposed edges (gap/outline color shows through).
           const insetLeft = occupied.has(`${cell.x - 1},${cell.y}`) ? 0 : BORDER_WIDTH;
           const insetRight = occupied.has(`${cell.x + 1},${cell.y}`) ? 0 : BORDER_WIDTH;
           const insetTop = occupied.has(`${cell.x},${cell.y + 1}`) ? 0 : BORDER_WIDTH;
@@ -1322,6 +1560,9 @@
 
           const effectiveGapColor = appState.showOutline ? INK_COLOR : palette.bg;
 
+          // Two-rect technique: draw a full-cell rect in the gap color first,
+          // then overlay an inset rect in the shape color on top.
+          // The gap color bleeds through the inset, creating the border without SVG strokes.
           addRect(svg, cellX, cellY, CELL_SIZE, CELL_SIZE, effectiveGapColor);
           addRect(
             svg,
