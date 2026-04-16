@@ -1658,39 +1658,55 @@
       return new XMLSerializer().serializeToString(clone);
     }
 
-    function downloadSVG() {
-      const a = document.createElement('a');
-      const blobUrl = URL.createObjectURL(new Blob([getSVGString()], { type: 'image/svg+xml' }));
-      a.href = blobUrl;
-      a.download = '4x4rt-stacks.svg';
-      a.click();
-      URL.revokeObjectURL(blobUrl);
+    /**
+     * REUSABLE UTILITY
+     * Handles the actual browser download process.
+     * No DOM append needed — modern browsers don't require it.
+     * Blob URLs are revoked after a short delay to ensure the download
+     * has been initiated before the URL is invalidated.
+     */
+    function triggerDownload(dataUrl, fileName) {
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = fileName;
+      link.click();
+      if (dataUrl.startsWith('blob:')) {
+        setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
+      }
     }
 
-    function downloadPNG() {
-      const svgString = getSVGString();
-      const img = new Image();
-      const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+    /**
+     * EXPORT 1: SVG
+     */
+    function downloadSVG() {
+      const blob = new Blob([getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
+      triggerDownload(URL.createObjectURL(blob), '4x4rt-stacks.svg');
+    }
 
-      img.onload = () => {
-        const c = document.createElement('canvas');
-        const scale = 2;
-        c.width = CANVAS_SIZE * scale;
-        c.height = CANVAS_SIZE * scale;
-        const ctx = c.getContext('2d');
-        ctx.drawImage(img, 0, 0, CANVAS_SIZE * scale, CANVAS_SIZE * scale);
+    /**
+     * EXPORT 2: PNG (Async)
+     */
+    async function downloadPNG() {
+      const scale = 2;
+      const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(getSVGString());
 
-        const a = document.createElement('a');
-        a.href = c.toDataURL('image/png');
-        a.download = '4x4rt-stacks.png';
-        a.click();
-      };
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = reject;
+          i.src = url;
+        });
 
-      img.onerror = (e) => {
-        console.error("PNG rendering failed", e);
-      };
+        const canvas = document.createElement('canvas');
+        canvas.width = CANVAS_SIZE * scale;
+        canvas.height = CANVAS_SIZE * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      img.src = url;
+        triggerDownload(canvas.toDataURL('image/png'), '4x4rt-stacks.png');
+      } catch (e) {
+        console.error('PNG download failed', e);
+      }
     }
 
     // --- INIT SEQUENCE ---
