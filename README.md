@@ -1,6 +1,6 @@
 # 4x4rt Stacks Generator
 
-A browser-based generative art tool that creates minimalist geometric stacks from exactly **16 blocks** of Tetromino-inspired shapes. Every output is deterministic — reproducible by seed, shareable by URL.
+A browser-based generative art tool that creates minimalist geometric stacks from exactly **16 blocks**. Every output is deterministic — reproducible by seed, shareable by URL.
 
 ---
 
@@ -27,17 +27,12 @@ The entire application ships as a single `index.html` with no build step, no dep
 
 ## Shape System
 
-Shapes are drawn from a curated subset of Tetromino pieces (and their rotations), all constrained to a **2-unit-wide column**. The solver uses a weighted backtracking search to find valid arrangements that fill the column to exactly 16 blocks.
+Shapes are constrained to a **2-unit-wide column** and drawn from two families: squares (O) and bars (I). The solver uses a weighted backtracking search to find valid arrangements that fill the column to exactly 16 blocks.
 
 | Family | Pieces Used |
 |--------|-------------|
 | O | 1×1, 2×2 |
 | I | 1×2, 1×3, 1×4, 2×1 |
-| J | 3-unit and 4-unit rotations |
-| L | 4-unit rotations |
-| T | 4-unit rotations |
-| S | 4-unit rotations |
-| Z | 4-unit rotations |
 
 Shape weights bias results toward taller, more structural stacks (O-4, I-4, I-3 are favored).
 
