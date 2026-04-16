@@ -15,11 +15,13 @@
       --page-pad-x: 40px;
       --page-pad-y: 40px;
       --canvas-size: 80vmin;
-      --ink: rgb(28, 28, 26);
-      /* #1C1C1A */
-      --ink-muted: rgba(28, 28, 26, 0.5);
-      --rule-color: rgba(28, 28, 26, 0.1);
       --rule-width: 1px;
+
+      /* Unified UI Colors - Dynamically updated by JS based on canvas background */
+      --ui-bg: #f4f1ea;
+      --ui-ink: rgba(28, 28, 26, 0.9);
+      --ui-ink-muted: rgba(28, 28, 26, 0.5);
+      --ui-rule: rgba(28, 28, 26, 0.1);
     }
 
     * {
@@ -40,7 +42,7 @@
 
     #app {
       display: flex;
-      gap: 40px;
+      gap: calc(var(--canvas-size) * 0.015);
       align-items: flex-start;
       width: fit-content;
       max-width: 100%;
@@ -51,108 +53,213 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
+      gap: calc(var(--canvas-size) * 0.02);
       width: var(--canvas-size);
     }
 
     #debug-panel {
-      width: min(280px, 32vw);
+      width: calc(var(--canvas-size) * 0.4);
       max-height: var(--canvas-size);
       overflow: auto;
-      padding: 16px;
-      background: #f1eee5;
-      color: rgb(28, 28, 26);
-      border: 1px solid rgba(28, 28, 26, 0.1);
-      border-radius: 12px;
+      padding: calc(var(--canvas-size) * 0.015);
+      background: var(--ui-bg);
+      color: var(--ui-ink);
     }
 
     .debug-title {
-      font-size: 14px;
+      font-size: calc(var(--canvas-size) * 0.024);
       text-transform: uppercase;
-      color: var(--ink);
-      margin-bottom: 12px;
+      color: var(--ui-ink);
+      margin-bottom: calc(var(--canvas-size) * 0.015);
     }
 
     .debug-copy {
-      font-size: 12px;
+      font-size: calc(var(--canvas-size) * 0.018);
       line-height: 1.5;
-      color: var(--ink-muted);
-      margin-bottom: 12px;
+      color: var(--ui-ink-muted);
+      margin-bottom: calc(var(--canvas-size) * 0.015);
     }
 
     .debug-section {
-      margin-bottom: 16px;
+      margin-bottom: calc(var(--canvas-size) * 0.02);
     }
 
     .debug-section-title {
-      font-size: 12px;
+      font-size: calc(var(--canvas-size) * 0.02);
       text-transform: uppercase;
-      color: var(--ink);
-      margin-bottom: 8px;
+      color: var(--ui-ink);
+      margin-bottom: calc(var(--canvas-size) * 0.01);
     }
 
-    #shape-filter-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .debug-subsection-title {
+      font-size: calc(var(--canvas-size) * 0.016);
+      text-transform: uppercase;
+      color: var(--ui-ink-muted);
+      margin-top: calc(var(--canvas-size) * 0.015);
+      margin-bottom: calc(var(--canvas-size) * 0.005);
+      letter-spacing: 0.05em;
     }
 
-    #height-filter-list {
+    .debug-subsection-title:first-child {
+      margin-top: 0;
+    }
+
+    .height-filter-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px 12px;
+      gap: calc(var(--canvas-size) * 0.01) 0;
+      /* vertical gap only, horizontal handled natively by cells */
+    }
+
+    .height-cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: calc(var(--canvas-size) * 0.04);
+      min-width: calc(var(--canvas-size) * 0.06);
+
+      /* ASYMMETRICAL PADDING ALIGNMENT FIX */
+      /* Left padding matches text centering intent. 
+         Right padding is increased to contain the physical visual gap between pills.
+         This mathematically locks the visual left edge to 0, aligning it perfectly with checkboxes above!
+      */
+      padding: 0 calc(var(--canvas-size) * 0.025) 0 calc(var(--canvas-size) * 0.015);
+
+      color: var(--ui-ink-muted);
+      font-family: 'Space Mono', monospace;
+      font-size: calc(var(--canvas-size) * 0.018);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s ease;
+    }
+
+    .height-cell::before {
+      content: '';
+      position: absolute;
+      /* Inset only applies to the right, creating the physical gap while keeping the left edge locked at 0 */
+      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
+      border: 2px solid var(--ui-rule);
+      border-radius: 999px;
+      z-index: 0;
+    }
+
+    .height-cell span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .height-cell:not(.is-selected):not(.in-range):hover {
+      color: var(--ui-ink);
+    }
+
+    .height-cell:not(.is-selected):not(.in-range):hover::before {
+      border-color: var(--ui-ink);
+    }
+
+    /* Active Multi-Select & Range States */
+    .height-cell.is-selected,
+    .height-cell.in-range {
+      color: var(--ui-bg);
+    }
+
+    .height-cell.is-selected::before,
+    .height-cell.in-range::before {
+      background-color: var(--ui-ink);
+      border-color: transparent;
+    }
+
+    /* Calendar Range Extending Logic */
+    .height-cell.in-range::before {
+      inset: 0;
+      /* Bridges right gap completely to touch adjacent cell */
+      border-radius: 0;
+      /* Squares off corners */
+    }
+
+    .height-cell.range-start::before {
+      inset: 0;
+      /* Bridges right gap completely */
+      border-radius: 999px 0 0 999px;
+    }
+
+    .height-cell.range-end::before {
+      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
+      /* Preserves right gap as this is the end */
+      border-radius: 0 999px 999px 0;
+    }
+
+    .height-cell.range-start.range-end::before {
+      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
+      /* Preserves right gap */
+      border-radius: 999px;
     }
 
     #palette-filter-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: calc(var(--canvas-size) * 0.01);
     }
 
-    .debug-mode-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .shape-filter-item {
+    .setting-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-size: 12px;
+      gap: calc(var(--canvas-size) * 0.012);
+      font-size: calc(var(--canvas-size) * 0.018);
       text-transform: uppercase;
-      color: var(--ink);
+      cursor: pointer;
     }
 
-    .shape-filter-item input {
-      accent-color: var(--ink);
-      width: 14px;
-      height: 14px;
+    .setting-item input {
+      appearance: none;
+      width: calc(var(--canvas-size) * 0.022);
+      height: calc(var(--canvas-size) * 0.022);
       flex: 0 0 auto;
+      border: 2px solid var(--ui-ink);
+      border-radius: 4px;
+      background-color: transparent;
+      margin: 0;
+      cursor: pointer;
     }
 
-    .shape-filter-item.is-disabled {
-      color: var(--ink-muted);
+    .setting-item input:checked {
+      border-color: var(--ui-ink);
+      background-color: var(--ui-ink);
+      box-shadow: inset 0 0 0 2px var(--ui-bg);
     }
 
-    .shape-filter-item code {
+    .setting-item code {
       font-family: 'Space Mono', monospace;
-      font-size: 12px;
+      font-size: calc(var(--canvas-size) * 0.018);
+      color: var(--ui-ink);
+      transition: color 0.2s ease;
+    }
+
+    .setting-item input:checked+code {
+      color: var(--ui-ink);
+    }
+
+    .setting-item:hover input:not(:checked) {
+      border-color: var(--ui-ink);
+    }
+
+    .setting-item:hover input:not(:checked)+code {
+      color: var(--ui-ink);
     }
 
     .debug-actions {
       display: flex;
-      gap: 12px;
+      gap: calc(var(--canvas-size) * 0.015);
       flex-wrap: wrap;
-      font-size: 12px;
+      font-size: calc(var(--canvas-size) * 0.018);
       text-transform: uppercase;
     }
 
     .debug-link {
       font-family: 'Space Mono', monospace;
-      font-size: 12px;
+      font-size: calc(var(--canvas-size) * 0.018);
       text-transform: uppercase;
-      color: var(--ink);
+      color: var(--ui-ink);
       background: none;
       border: none;
       padding: 0;
@@ -165,12 +272,13 @@
       position: relative;
       width: var(--canvas-size);
       height: var(--canvas-size);
+      background: #000;
     }
 
     #svg-out {
       display: block;
-      width: var(--canvas-size);
-      height: var(--canvas-size);
+      width: 100%;
+      height: 100%;
     }
 
     svg,
@@ -185,7 +293,7 @@
       display: flex;
       flex-direction: column;
       gap: calc(var(--canvas-size) * 0.015);
-      color: var(--ink);
+      color: var(--ui-ink);
       z-index: 2;
       text-transform: uppercase;
       width: calc(var(--canvas-size) * 0.375);
@@ -199,7 +307,6 @@
       height: calc(var(--canvas-size) * 0.03);
       z-index: 3;
       pointer-events: none;
-      opacity: 0.5;
     }
 
     #controls-overlay {
@@ -209,7 +316,7 @@
       display: flex;
       flex-direction: row;
       gap: calc(var(--canvas-size) * 0.05);
-      z-index: 3;
+      z-index: 10;
     }
 
     .is-hidden {
@@ -221,7 +328,7 @@
       font-weight: 400;
       font-size: calc(var(--canvas-size) * 0.029);
       text-transform: uppercase;
-      color: var(--ink);
+      color: var(--ui-ink);
       white-space: nowrap;
       text-box-trim: trim-both;
       text-box-edge: cap alphabetic;
@@ -230,15 +337,6 @@
       border: none;
       padding: 0;
       margin: 0;
-    }
-
-    .control-btn:hover {
-      background: none;
-    }
-
-    .control-btn:active {
-      /* opacity: 0.5; */
-      transform: none;
     }
 
     .arrow-symbol {
@@ -254,54 +352,40 @@
       column-gap: calc(var(--canvas-size) * 0.016);
       width: 100%;
       font-size: calc(var(--canvas-size) * 0.024);
-      color: var(--ink-muted);
-    }
-
-    .stat-label,
-    .stat-value,
-    .stat-suffix {
-      text-box-trim: trim-both;
-      text-box-edge: cap alphabetic;
+      color: var(--ui-ink-muted);
     }
 
     .stat+.stat {
       padding-top: calc(var(--canvas-size) * 0.015);
-      border-top: var(--rule-width) solid var(--rule-color);
+      border-top: var(--rule-width) solid var(--ui-rule);
     }
 
     .stat-value {
-      color: var(--ink);
+      color: var(--ui-ink);
       justify-self: end;
     }
 
     .stat-suffix {
-      color: var(--ink-muted);
-    }
-
-    #blocks-list {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
+      color: var(--ui-ink-muted);
     }
 
     #blocks-list .stat {
-      color: var(--ink-muted);
+      color: var(--ui-ink-muted);
       padding-top: calc(var(--canvas-size) * 0.015);
       padding-bottom: calc(var(--canvas-size) * 0.015);
       border-top: none;
     }
 
     #blocks-list .stat:first-child {
-      border-top: var(--rule-width) solid var(--rule-color);
+      border-top: var(--rule-width) solid var(--ui-rule);
     }
 
     #blocks-list .stat+.stat {
-      border-top: var(--rule-width) solid var(--rule-color);
+      border-top: var(--rule-width) solid var(--ui-rule);
     }
 
     #blocks-list .stat:last-child {
-      border-bottom: var(--rule-width) solid var(--rule-color);
+      border-bottom: var(--rule-width) solid var(--ui-rule);
     }
 
     #palette-dots {
@@ -311,7 +395,7 @@
       gap: 0;
       flex-wrap: nowrap;
       margin-top: calc(var(--canvas-size) * 0.008);
-      border: var(--rule-width) solid var(--rule-color);
+      border: var(--rule-width) solid var(--ui-rule);
       border-radius: calc(var(--canvas-size) * 0.03);
       overflow: hidden;
     }
@@ -340,7 +424,8 @@
   <div id="app">
     <div id="canvas-wrap">
       <div id="svg-container">
-        <svg id="svg-out" xmlns="http://www.w3.org/2000/svg"></svg>
+        <svg id="svg-out" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
+
         <div id="info-panel">
           <div class="stat">
             <span class="stat-label">palette</span>
@@ -350,7 +435,7 @@
 
           <div class="stat">
             <span class="stat-label">height</span>
-            <span class="stat-value"><span id="col-h">—</span><span class="stat-suffix"> units</span></span>
+            <span class="stat-value"><span id="stack-height">—</span><span class="stat-suffix"> units</span></span>
           </div>
           <div class="stat">
             <span class="stat-label">shapes</span>
@@ -358,26 +443,28 @@
           </div>
           <div id="blocks-list"></div>
         </div>
+
         <div id="logo-overlay">
           <svg width="100%" height="100%" viewBox="0 0 90 30" preserveAspectRatio="none"
             xmlns="http://www.w3.org/2000/svg" style="display: block;">
-            <rect width="24" height="6" fill="rgb(28, 28, 26)" />
-            <rect y="16" width="24" height="6" fill="rgb(28, 28, 26)" />
-            <rect y="24" width="12" height="6" fill="rgb(28, 28, 26)" />
-            <rect x="12" y="8" width="18" height="6" fill="rgb(28, 28, 26)" />
+            <rect width="24" height="6" fill="var(--ui-ink-muted)" />
+            <rect y="16" width="24" height="6" fill="var(--ui-ink-muted)" />
+            <rect y="24" width="12" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="12" y="8" width="18" height="6" fill="var(--ui-ink-muted)" />
 
-            <rect x="30" y="8" width="24" height="6" fill="rgb(28, 28, 26)" />
-            <rect x="30" y="24" width="24" height="6" fill="rgb(28, 28, 26)" />
-            <rect x="36" width="24" height="6" fill="rgb(28, 28, 26)" />
-            <rect x="36" y="16" width="24" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="30" y="8" width="24" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="30" y="24" width="24" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="36" width="24" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="36" y="16" width="24" height="6" fill="var(--ui-ink-muted)" />
 
-            <rect x="60" width="24" height="6" fill="rgb(28, 28, 26)" />
-            <rect x="60" y="16" width="24" height="6" fill="rgb(28, 28, 26)" />
-            <rect x="60" y="24" width="12" height="6" fill="rgb(28, 28, 26)" />
-            <rect x="72" y="8" width="18" height="6" fill="rgb(28, 28, 26)" />
-            <rect x="78" y="24" width="12" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="60" width="24" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="60" y="16" width="24" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="60" y="24" width="12" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="72" y="8" width="18" height="6" fill="var(--ui-ink-muted)" />
+            <rect x="78" y="24" width="12" height="6" fill="var(--ui-ink-muted)" />
           </svg>
         </div>
+
         <div id="controls-overlay">
           <button class="control-btn" id="regenerate-btn">regenerate<span class="arrow-symbol">↑</span></button>
           <button class="control-btn" id="download-png-btn">PNG<span class="arrow-symbol">↓</span></button>
@@ -386,16 +473,23 @@
       </div>
     </div>
     <aside id="debug-panel">
-      <div class="debug-title">Shape Filters</div>
-      <div class="debug-copy">Temporary control panel. Checked shapes must appear at least once in the generated stack.
+      <div class="debug-title">Settings</div>
+
+      <div class="debug-section">
+        <div class="debug-section-title">Render Mode</div>
+        <label class="setting-item">
+          <input type="checkbox" id="toggle-ink-border" checked>
+          <code>Ink Borders</code>
+        </label>
       </div>
+
       <div class="debug-section">
         <div class="debug-section-title">Height</div>
-        <div id="height-filter-list"></div>
-      </div>
-      <div class="debug-section">
-        <div class="debug-section-title">Shapes</div>
-        <div id="shape-filter-list"></div>
+        <label class="setting-item" style="margin-bottom: calc(var(--canvas-size) * 0.015);">
+          <input type="checkbox" id="toggle-range-mode">
+          <code>Range Mode</code>
+        </label>
+        <div id="height-filter-container" class="height-filter-list"></div>
       </div>
       <div class="debug-section">
         <div class="debug-section-title">Palettes</div>
@@ -410,59 +504,71 @@
     const B = 10;
     const CANVAS = 1000;
     const COL_W = 190;
-    const BLACK = 'rgb(28, 28, 26)'; // #1C1C1A
+    // The key hex color for the fixed shape borders: #1C1C1A
+    const BLACK = 'rgb(28, 28, 26)';
 
-    // tone: 'light' = mostly light colors on bg, 'dark' = mostly dark, 'mix' = balanced
+    // A cohesive generative system: Curated, thematic, and distinct.
     const PALETTES = [
-      // --- original light-bg palettes ---
-      { name: 'spice', bg: '#f1eee5', tone: 'mix', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
-      { name: 'vivid', bg: '#f1eee5', tone: 'mix', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
-      { name: 'earth', bg: '#eae3d5', tone: 'mix', colors: ['#b66b56', '#284571', '#f6b36f', '#da6305', '#6e4354', '#ac9575'] },
-      { name: 'sunset', bg: '#f1eee5', tone: 'mix', colors: ['#ee9340', '#133e71', '#e7bc6d', '#d8721e', '#c58583', '#7f9b9e'] },
-      { name: 'ember', bg: '#f1eee5', tone: 'mix', colors: ['#dd4a14', '#33644f', '#c00b04', '#4d7d87', '#e08a19', '#23172d'] },
-      { name: 'copper', bg: '#f1eee5', tone: 'mix', colors: ['#ed8836', '#362a40', '#53475f', '#cf5100', '#dba778', '#2a1e30'] },
-      { name: 'twilight', bg: '#e5e0d4', tone: 'mix', colors: ['#132a5e', '#cf445b', '#ef5a70', '#452c56', '#eba2a9', '#8a5370'] },
-      { name: 'plum', bg: '#f1eee5', tone: 'mix', colors: ['#e54c3c', '#343c7a', '#a90402', '#938cab', '#6d6789', '#b5aecd'] },
-      { name: 'blush', bg: '#f1eee5', tone: 'mix', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
-      { name: 'orchid', bg: '#f1eee5', tone: 'mix', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
+      // 1. THE CLASSICS (Anchored to Warm Cotton, Newsprint, and Kraft papers)
+      { name: 'spice', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
+      { name: 'storm', bg: '#e8e6e1', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#1c1a14', '#413819', '#f9cf45', '#fbd78b', '#948572', '#2c2618'] },
+      { name: 'flora', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
+      { name: 'earth', bg: '#e3d8c8', category: 'classic', contrast: 'medium', temp: 'warm', colors: ['#b66b56', '#284571', '#f6b36f', '#da6305', '#6e4354', '#ac9575'] },
+      { name: 'sunset', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#ee9340', '#133e71', '#e7bc6d', '#d8721e', '#c58583', '#7f9b9e'] },
+      { name: 'ember', bg: '#e3d8c8', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#dd4a14', '#33644f', '#c00b04', '#4d7d87', '#e08a19', '#23172d'] },
+      { name: 'copper', bg: '#e3d8c8', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#ed8836', '#362a40', '#53475f', '#cf5100', '#dba778', '#2a1e30'] },
+      { name: 'twilight', bg: '#e8e6e1', category: 'classic', contrast: 'medium', temp: 'cool', colors: ['#132a5e', '#cf445b', '#ef5a70', '#452c56', '#eba2a9', '#8a5370'] },
+      { name: 'plum', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'cool', colors: ['#e54c3c', '#343c7a', '#a90402', '#938cab', '#6d6789', '#b5aecd'] },
+      { name: 'blush', bg: '#f4f1ea', category: 'classic', contrast: 'high', temp: 'warm', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
+      { name: 'orchid', bg: '#e8e6e1', category: 'classic', contrast: 'medium', temp: 'cool', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
 
-      // --- light bg, mostly light shapes (image 2 style) ---
-      { name: 'blue-light', bg: '#f5f4f9', tone: 'light', colors: ['#b8d9f0', '#7ab8e0', '#3e8ec4', '#c8e4f7', '#daeef9', '#5aaad8'] },
-      { name: 'spruce-light', bg: '#f2f2f2', tone: 'light', colors: ['#a8e4d8', '#6dd4be', '#44aa94', '#c4ede6', '#e0f5f1', '#228e74'] },
-      { name: 'crimson-light', bg: '#fdf4f4', tone: 'light', colors: ['#f0a0a0', '#de7070', '#c94040', '#f7c8c8', '#fae0e0', '#b50e08'] },
-      { name: 'amber-light', bg: '#faf9f6', tone: 'light', colors: ['#ffe399', '#f5c840', '#ecaf30', '#fff3cc', '#fde8a0', '#c07a00'] },
-      { name: 'ivy-light', bg: '#f7f7f7', tone: 'light', colors: ['#95c190', '#76c66d', '#469d3c', '#c0ddb8', '#daefd6', '#268e1b'] },
-      { name: 'purple-light', bg: '#f6f1eb', tone: 'light', colors: ['#cda1ee', '#b47dda', '#9966cc', '#e0c8f5', '#ede0fa', '#883fe8'] },
-      { name: 'ocean-light', bg: '#eef4f8', tone: 'light', colors: ['#adc3ce', '#91acb7', '#6a8fa0', '#c8d8e0', '#e0eaf0', '#355772'] },
+      // 2. THE BRIGHTS (Stark backgrounds with vibrant hues and deep, heavy anchor inks)
+      { name: 'marine', bg: '#f0f2f5', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#239de0', '#027fd3', '#5bbcf3', '#11151c', '#7acdf5', '#0a5fa0'] },
+      { name: 'amethyst', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#a259ff', '#883fe8', '#661ed9', '#150921', '#cda1ee', '#7a30cc'] },
+      { name: 'spruce', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#57c7af', '#228e74', '#44aa94', '#0a1a15', '#6dd4be', '#1a7060'] },
+      { name: 'ocean', bg: '#f0f2f5', category: 'bright', contrast: 'high', temp: 'cool', colors: ['#05111c', '#355772', '#64808e', '#adc3ce', '#91acb7', '#1e4060'] },
+      { name: 'crimson', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#b50e08', '#c94040', '#de7070', '#1c0808', '#a01010', '#801010'] },
+      { name: 'topaz', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#e08f0c', '#ecaf30', '#ffe399', '#1c1408', '#c07a00', '#f5c840'] },
+      { name: 'ivy', bg: '#fdfcfb', category: 'bright', contrast: 'high', temp: 'warm', colors: ['#268e1b', '#469d3c', '#76c66d', '#1c1c1a', '#95c190', '#3a8a30'] },
 
-      // --- colored bg, mostly light shapes (image 2 style) ---
-      { name: 'cerulean', bg: '#4d9ec4', tone: 'light', colors: ['#c8e8f5', '#e8f5fc', '#a0d4eb', '#f5fbff', '#78bcd9', '#d8eefc'] },
-      { name: 'teal-wash', bg: '#3a9e8a', tone: 'light', colors: ['#c0ede4', '#e8f8f5', '#a8e4d8', '#f0faf8', '#70cabb', '#d4f2ec'] },
-      { name: 'cobalt', bg: '#2855a0', tone: 'light', colors: ['#b0c8f0', '#d8e5fa', '#90aee0', '#eef3fc', '#6088cc', '#c4d5f5'] },
-      { name: 'sage', bg: '#5e8c68', tone: 'light', colors: ['#c0dbc4', '#e0ede2', '#a8ccac', '#f0f6f1', '#80b088', '#d0e5d3'] },
-      { name: 'terracotta-wash', bg: '#c06848', tone: 'light', colors: ['#f5d8ca', '#fceee8', '#e8b89c', '#fff5f0', '#d8906e', '#f0c8b4'] },
+      // 3. THE ATMOSPHERES (Tinted wash backgrounds with tonal layers)
+      { name: 'breeze', bg: '#e3eef8', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#b8d9f0', '#7ab8e0', '#3e8ec4', '#c8e4f7', '#daeef9', '#5aaad8'] },
+      { name: 'lichen', bg: '#e0edea', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8e4d8', '#6dd4be', '#44aa94', '#c4ede6', '#b2dfd5', '#228e74'] },
+      { name: 'bloom', bg: '#fbe8e8', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#f0a0a0', '#de7070', '#c94040', '#f7c8c8', '#f2b6b6', '#b50e08'] },
+      { name: 'dawn', bg: '#fdf5e6', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#ffe399', '#f5c840', '#ecaf30', '#fff3cc', '#fde8a0', '#c07a00'] },
+      { name: 'fern', bg: '#eaf2e8', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#95c190', '#76c66d', '#469d3c', '#c0ddb8', '#a7d1a2', '#268e1b'] },
+      { name: 'lilac', bg: '#f1eafa', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#cda1ee', '#b47dda', '#9966cc', '#e0c8f5', '#d8b9f2', '#883fe8'] },
+      { name: 'mist', bg: '#dee7ed', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#adc3ce', '#91acb7', '#6a8fa0', '#c8d8e0', '#baccd6', '#355772'] },
+      { name: 'sand', bg: '#f5d8ca', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#e8b89c', '#d8906e', '#f0c8b4', '#c06848', '#e3a98c', '#b35c3e'] },
+      { name: 'cerulean', bg: '#e3f1f7', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8d3e6', '#82bcda', '#5da3c7', '#d0eaf5', '#bfe0f0', '#3b86ab'] },
+      { name: 'seafoam', bg: '#e3f2ec', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a8decb', '#7ec4ac', '#54a88b', '#cbf0e3', '#b8e8d8', '#34876c'] },
+      { name: 'frost', bg: '#e1e8f2', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#a9c2e3', '#80a3d4', '#5985c2', '#d1e1f5', '#becff0', '#3866a8'] },
+      { name: 'sage', bg: '#e8ece7', category: 'atmosphere', contrast: 'low', temp: 'cool', colors: ['#b6c9b6', '#91ad90', '#6e8f6d', '#d4e3d3', '#c6d9c5', '#4f704e'] },
+      { name: 'clay', bg: '#f2e8e4', category: 'atmosphere', contrast: 'low', temp: 'warm', colors: ['#d1aca0', '#b58677', '#9c6655', '#e8cec5', '#debcaf', '#7a4635'] },
 
-      // --- colored bg, mixed tones (image 3 style) ---
-      { name: 'periwinkle', bg: '#7b7fc4', tone: 'mix', colors: ['#f0effa', '#e0dff5', '#2c2e7a', '#1a1c5e', '#c8c7ec', '#4a4c9e'] },
-      { name: 'mauve', bg: '#9e6e8c', tone: 'mix', colors: ['#f5e8f0', '#e8c8dc', '#3a1a30', '#5e1e48', '#c890b0', '#2a0e22'] },
-      { name: 'slate', bg: '#6e7e8c', tone: 'mix', colors: ['#e8edf0', '#c8d4da', '#1c2c38', '#304050', '#98aebc', '#0e1e2a'] },
-      { name: 'moss', bg: '#6e8c5e', tone: 'mix', colors: ['#e8f0e4', '#c8dcc0', '#1c3010', '#304820', '#9ab888', '#0e2008'] },
-      { name: 'rust', bg: '#a05030', tone: 'mix', colors: ['#f5e8e0', '#e8c8b4', '#2a0c00', '#4a1c08', '#c88060', '#1a0400'] },
-      { name: 'violet', bg: '#6040a0', tone: 'mix', colors: ['#f0eafa', '#d8c8f0', '#180830', '#301050', '#9878d0', '#0c0418'] },
+      // 4. THE MUTED (Mid-tone colored paper with opaque high-contrast inks)
+      { name: 'heather', bg: '#7b7fc4', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#f0effa', '#e0dff5', '#2c2e7a', '#1a1c5e', '#c8c7ec', '#4a4c9e'] },
+      { name: 'mauve', bg: '#9e6e8c', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#f5e8f0', '#e8c8dc', '#3a1a30', '#5e1e48', '#c890b0', '#2a0e22'] },
+      { name: 'slate', bg: '#6e7e8c', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#e8edf0', '#c8d4da', '#1c2c38', '#304050', '#98aebc', '#0e1e2a'] },
+      { name: 'moss', bg: '#6e8c5e', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#e8f0e4', '#c8dcc0', '#1c3010', '#304820', '#9ab888', '#0e2008'] },
+      { name: 'rust', bg: '#a05030', category: 'muted', contrast: 'high', temp: 'warm', colors: ['#f5e8e0', '#e8c8b4', '#2a0c00', '#4a1c08', '#c88060', '#1a0400'] },
+      { name: 'violet', bg: '#6040a0', category: 'muted', contrast: 'high', temp: 'cool', colors: ['#f0eafa', '#d8c8f0', '#180830', '#301050', '#9878d0', '#0c0418'] },
 
-      // --- colored bg, mostly dark shapes (image 4 style) ---
-      { name: 'arctic', bg: '#5aaccc', tone: 'dark', colors: ['#0a2030', '#0e3040', '#164060', '#1c5070', '#082838', '#0a1828'] },
-      { name: 'midnight', bg: '#3d5a80', tone: 'dark', colors: ['#08101c', '#0c1828', '#182840', '#203050', '#060e18', '#101e30'] },
-      { name: 'pine', bg: '#2e6b4f', tone: 'dark', colors: ['#081808', '#0c2010', '#182c18', '#0a2410', '#061008', '#142818'] },
-      { name: 'burgundy', bg: '#8c2840', tone: 'dark', colors: ['#1a0408', '#2c0810', '#40101c', '#200610', '#100204', '#340c18'] },
-      { name: 'charcoal', bg: '#607080', tone: 'dark', colors: ['#0c1018', '#101820', '#182430', '#0a0e14', '#141c24', '#1c2838'] },
+      // 5. THE VOIDS (Near-black backgrounds with deep shadows and luminous pops)
+      { name: 'tundra', bg: '#0b131a', category: 'void', contrast: 'high', temp: 'cool', colors: ['#164060', '#1c5070', '#5aaccc', '#0a2030', '#0e3040', '#8cd3eb'] },
+      { name: 'abyss', bg: '#060b12', category: 'void', contrast: 'high', temp: 'cool', colors: ['#182840', '#203050', '#3d5a80', '#08101c', '#0c1828', '#6b95cc'] },
+      { name: 'pine', bg: '#050f09', category: 'void', contrast: 'high', temp: 'cool', colors: ['#182c18', '#2e6b4f', '#142818', '#081808', '#0c2010', '#5cb88f'] },
+      { name: 'wine', bg: '#120306', category: 'void', contrast: 'high', temp: 'warm', colors: ['#40101c', '#8c2840', '#340c18', '#1a0408', '#2c0810', '#cc4765'] },
+      { name: 'charcoal', bg: '#080c12', category: 'void', contrast: 'high', temp: 'neutral', colors: ['#182430', '#607080', '#141c24', '#0c1018', '#101820', '#94a9be'] },
+      { name: 'basalt', bg: '#0a0a09', category: 'void', contrast: 'high', temp: 'neutral', colors: ['#404040', '#707070', '#282826', '#141413', '#1f1f1d', '#b0b0a9'] },
 
-      // --- near black & white / monochrome (image 1 style) ---
-      { name: 'graphite', bg: '#f0ede8', tone: 'mix', colors: ['#1c1c1a', '#2e2e2c', '#585654', '#868482', '#b0aeac', '#d8d6d4'] },
-      { name: 'carbon', bg: '#e8e6e2', tone: 'mix', colors: ['#111110', '#222220', '#444440', '#666662', '#999996', '#ccccca'] },
-      { name: 'noir', bg: '#1a1a18', tone: 'dark', colors: ['#f0ede8', '#c8c6c2', '#a0a09e', '#707070', '#404040', '#282826'] },
-      { name: 'chalk', bg: '#f8f7f5', tone: 'light', colors: ['#e8e6e3', '#d0cec9', '#b0aeaa', '#888884', '#555552', '#222220'] },
-      { name: 'ash', bg: '#d0ccc6', tone: 'mix', colors: ['#1a1816', '#3c3a38', '#606060', '#909090', '#c0c0be', '#f0eee8'] },
+      // 6. THE MINERALS (Dedicated grayscales and high-contrast Meridian blends)
+      { name: 'carbon', bg: '#e8e6e2', category: 'mineral', contrast: 'high', temp: 'neutral', colors: ['#111110', '#222220', '#444440', '#666662', '#999996', '#ccccca'] },
+      { name: 'graphite', bg: '#f0ede8', category: 'mineral', contrast: 'low', temp: 'neutral', colors: ['#1c1c1a', '#2e2e2c', '#585654', '#868482', '#b0aeac', '#d8d6d4'] },
+      { name: 'ash', bg: '#d0ccc6', category: 'mineral', contrast: 'low', temp: 'neutral', colors: ['#1a1816', '#3c3a38', '#606060', '#909090', '#c0c0be', '#f0eee8'] },
+      { name: 'bone', bg: '#efebe5', category: 'mineral', contrast: 'high', temp: 'warm', colors: ['#ffffff', '#0f0f0f', '#1f1f1f', '#353535', '#666666', '#a5a5a5'] },
+      { name: 'ivory', bg: '#ece9df', category: 'mineral', contrast: 'high', temp: 'warm', colors: ['#f9f9f9', '#141414', '#222222', '#3a3a39', '#8a8986', '#c8c6c0'] },
+      { name: 'flint', bg: '#f4f4f4', category: 'mineral', contrast: 'high', temp: 'cool', colors: ['#ffffff', '#050505', '#151515', '#2a2a2a', '#73777a', '#b5b8ba'] },
     ];
 
     const SHAPES = {
@@ -506,6 +612,13 @@
     const MAX_SOLUTIONS = 96;
     const MAX_SOLUTIONS_PER_HEIGHT = 24;
 
+    // GLOBAL STATE
+    let currentData = null;
+    let heightMode = 'multi';
+    let selectedHeightsMulti = new Set();
+    let rangeStart = null;
+    let rangeEnd = null;
+
     function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
     function shuffle(arr) {
       const copy = arr.slice();
@@ -544,6 +657,7 @@
       });
     const POSSIBLE_HEIGHTS = Array.from({ length: MAX_STACK_HEIGHT_UNITS - 3 }, (_, index) => MAX_STACK_HEIGHT_UNITS - index);
     const STRICT_SHAPE_IDS = new Set(['O-1', 'O-4', 'I-2-R0', 'I-2-R90', 'I-3-R0', 'I-4-R0']);
+
     function addRect(svg, x, y, w, h, fill) {
       const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       r.setAttribute('x', x); r.setAttribute('y', y);
@@ -551,6 +665,7 @@
       r.setAttribute('fill', fill);
       svg.appendChild(r);
     }
+
     function createGrid(height) {
       return Array.from({ length: height }, () => [false, false]);
     }
@@ -583,33 +698,10 @@
         grid[y + cell.y][x + cell.x] = value;
       });
     }
-    function buildPlacementOptions(grid, targetHeight, firstEmpty, stackShapes, stackShapeWeights) {
-      const placements = [];
-      stackShapes.forEach(shape => {
-        getAllowedOffsets(shape).forEach(x => {
-          const minY = Math.max(0, firstEmpty.y - (shape.height - 1));
-          const maxY = Math.min(firstEmpty.y, targetHeight - shape.height);
-          for (let y = minY; y <= maxY; y += 1) {
-            if (!placementCoversCell(shape, x, y, firstEmpty.x, firstEmpty.y)) continue;
-            if (!canPlaceShape(grid, shape, x, y)) continue;
-            const weight = stackShapeWeights.get(shape.id) || 1;
-            for (let count = 0; count < weight; count += 1) {
-              placements.push({ shape, x, y });
-            }
-          }
-        });
-      });
-      return shuffle(placements);
-    }
-    function includesRequiredShapes(placements, requiredShapeIds) {
-      if (!requiredShapeIds.length) return true;
-      const used = new Set(placements.map(placement => placement.id));
-      return requiredShapeIds.every(id => used.has(id));
-    }
+
     function searchStack(grid, targetHeight, blocksUsed, placements, solutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
       if (solutions.length >= MAX_SOLUTIONS) return;
       if (blocksUsed > TARGET_BLOCKS) return;
-
       const remainingUnits = countEmptyCells(grid);
       if (blocksUsed + (remainingUnits * minBlocksPerUnit) > TARGET_BLOCKS) return;
       if (blocksUsed + (remainingUnits * maxBlocksPerUnit) < TARGET_BLOCKS) return;
@@ -632,55 +724,53 @@
         if (solutions.length >= MAX_SOLUTIONS) return;
       }
     }
-    function getAllowedHeights(selectedHeights = []) {
-      return selectedHeights.length ? selectedHeights : POSSIBLE_HEIGHTS;
+
+    function buildPlacementOptions(grid, targetHeight, firstEmpty, stackShapes, stackShapeWeights) {
+      const placements = [];
+      stackShapes.forEach(shape => {
+        getAllowedOffsets(shape).forEach(x => {
+          const minY = Math.max(0, firstEmpty.y - (shape.height - 1));
+          const maxY = Math.min(firstEmpty.y, targetHeight - shape.height);
+          for (let y = minY; y <= maxY; y += 1) {
+            if (!placementCoversCell(shape, x, y, firstEmpty.x, firstEmpty.y)) continue;
+            if (!canPlaceShape(grid, shape, x, y)) continue;
+            const weight = stackShapeWeights.get(shape.id) || 1;
+            for (let count = 0; count < weight; count += 1) {
+              placements.push({ shape, x, y });
+            }
+          }
+        });
+      });
+      return shuffle(placements);
     }
-    function getActiveStackShapes() {
-      return BASE_STACK_SHAPES.filter(shape => STRICT_SHAPE_IDS.has(shape.id));
+
+    function includesRequiredShapes(placements, requiredShapeIds) {
+      if (!requiredShapeIds.length) return true;
+      const used = new Set(placements.map(placement => placement.id));
+      return requiredShapeIds.every(id => used.has(id));
     }
-    function getStackShapeWeights(stackShapes) {
-      const STRICT_WEIGHTS = {
-        'O-4': 6,
-        'I-4-R0': 6,
-        'I-3-R0': 5,
-        'I-2-R90': 4,
-        'I-2-R0': 3,
-        'O-1': 1,
-      };
-      return new Map(stackShapes.map(shape => [shape.id, STRICT_WEIGHTS[shape.id] || 1]));
-    }
+
     function solveStack(requiredShapeIds = [], selectedHeights = []) {
-      const stackShapes = getActiveStackShapes();
-      const stackShapeWeights = getStackShapeWeights(stackShapes);
+      const stackShapes = BASE_STACK_SHAPES.filter(shape => STRICT_SHAPE_IDS.has(shape.id));
+      const stackShapeWeights = new Map(stackShapes.map(shape => [shape.id, 1]));
       const minBlocksPerUnit = Math.min(...stackShapes.map(shape => shape.blocks / shape.units));
       const maxBlocksPerUnit = Math.max(...stackShapes.map(shape => shape.blocks / shape.units));
       const allSolutions = [];
-      for (const targetHeight of shuffle(getAllowedHeights(selectedHeights))) {
+      const heights = selectedHeights.length ? selectedHeights : POSSIBLE_HEIGHTS;
+      for (const targetHeight of shuffle(heights)) {
         const grid = createGrid(targetHeight);
         const solutions = [];
         searchStack(grid, targetHeight, 0, [], solutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
         if (solutions.length) {
-          const preferredSolutions = solutions.filter(isPreferredSolution);
-          const sampledSolutions = preferredSolutions.length ? preferredSolutions : solutions;
-          shuffle(sampledSolutions)
-            .slice(0, MAX_SOLUTIONS_PER_HEIGHT)
-            .forEach(placements => {
-              allSolutions.push({ placements, heightUnits: targetHeight });
-            });
+          solutions.slice(0, MAX_SOLUTIONS_PER_HEIGHT).forEach(placements => {
+            allSolutions.push({ placements, heightUnits: targetHeight });
+          });
           if (allSolutions.length >= MAX_SOLUTIONS) break;
         }
       }
       return allSolutions.length ? pick(allSolutions) : null;
     }
-    function getStackHeightPx(heightUnits) {
-      return (heightUnits * UNIT_STEP) + B;
-    }
-    function getCellBounds(offsetX, offsetY, placement, cell, heightUnits) {
-      const cellX = offsetX + ((placement.x + cell.x) * UNIT_STEP);
-      const gridY = placement.y + cell.y;
-      const cellY = offsetY + ((heightUnits - 1 - gridY) * UNIT_STEP);
-      return { x: cellX, y: cellY };
-    }
+
     function getLuminance(hex) {
       const c = hex.replace('#', '');
       const r = parseInt(c.slice(0, 2), 16) / 255;
@@ -690,287 +780,355 @@
       return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
     }
     function isLight(hex) { return getLuminance(hex) > 0.35; }
-    function drawShapePlacement(svg, shape, placement, color, offsetX, offsetY, heightUnits, gapColor) {
-      const occupied = new Set(shape.cells.map(cell => `${cell.x},${cell.y}`));
-      shape.cells.forEach(cell => {
-        const { x, y } = getCellBounds(offsetX, offsetY, placement, cell, heightUnits);
-        const hasLeft = occupied.has(`${cell.x - 1},${cell.y}`);
-        const hasRight = occupied.has(`${cell.x + 1},${cell.y}`);
-        const hasAbove = occupied.has(`${cell.x},${cell.y + 1}`);
-        const hasBelow = occupied.has(`${cell.x},${cell.y - 1}`);
-        const insetLeft = hasLeft ? 0 : B;
-        const insetRight = hasRight ? 0 : B;
-        const insetTop = hasAbove ? 0 : B;
-        const insetBottom = hasBelow ? 0 : B;
-        addRect(svg, x, y, UNIT_SIZE, UNIT_SIZE, gapColor);
-        addRect(
-          svg,
-          x + insetLeft,
-          y + insetTop,
-          UNIT_SIZE - insetLeft - insetRight,
-          UNIT_SIZE - insetTop - insetBottom,
-          color
-        );
-      });
-    }
-    function buildFamilyStats(placements) {
-      const counts = placements.reduce((acc, placement) => {
-        const piece = SHAPE_CATALOG[placement.id].piece;
-        acc[piece] = (acc[piece] || 0) + 1;
-        return acc;
-      }, {});
-      return FAMILY_ORDER.filter(piece => counts[piece]).map(piece => ({ label: piece, value: counts[piece] }));
-    }
-    function hasUniqueShapeIds(placements) {
-      return new Set(placements.map(placement => placement.id)).size === placements.length;
-    }
-    function hasUniqueFamilyRotations(placements) {
-      const seen = new Map();
-      return placements.every(placement => {
-        const shape = SHAPE_CATALOG[placement.id];
-        const usedRotations = seen.get(shape.piece) || new Set();
-        if (usedRotations.has(shape.rotation)) return false;
-        usedRotations.add(shape.rotation);
-        seen.set(shape.piece, usedRotations);
-        return true;
-      });
-    }
-    function isPreferredSolution(placements) {
-      return hasUniqueShapeIds(placements) && hasUniqueFamilyRotations(placements);
-    }
-    function getRequiredShapeIds() {
-      return [...document.querySelectorAll('#shape-filter-list input:checked')].map(input => input.value);
-    }
-    function getSelectedHeights() {
-      return [...document.querySelectorAll('#height-filter-list input:checked')].map(input => Number(input.value));
-    }
-    function getSelectedPaletteNames() {
-      return [...document.querySelectorAll('#palette-filter-list input:checked')].map(input => input.value);
-    }
-    function populateHeightFilterPanel() {
-      const list = document.getElementById('height-filter-list');
-      if (!list) return;
-      list.innerHTML = '';
-      POSSIBLE_HEIGHTS.slice().sort((a, b) => b - a).forEach(height => {
-        const label = document.createElement('label');
-        label.className = 'shape-filter-item';
-        label.innerHTML = `<input type="checkbox" value="${height}"><code>${height}</code>`;
-        list.appendChild(label);
-      });
-    }
-    function populatePaletteFilterPanel() {
-      const list = document.getElementById('palette-filter-list');
-      if (!list) return;
-      list.innerHTML = '';
-      PALETTES.forEach(palette => {
-        const label = document.createElement('label');
-        label.className = 'shape-filter-item';
-        label.innerHTML = `<input type="checkbox" value="${palette.name}"><code>${palette.name}</code>`;
-        list.appendChild(label);
-      });
-    }
-    function populateShapeFilterPanel() {
-      const list = document.getElementById('shape-filter-list');
-      if (!list) return;
-      const selectedIds = new Set(getRequiredShapeIds());
-      list.innerHTML = '';
-      getActiveStackShapes().forEach(shape => {
-        const label = document.createElement('label');
-        label.className = 'shape-filter-item';
-        label.innerHTML = `<input type="checkbox" value="${shape.id}" ${selectedIds.has(shape.id) ? 'checked' : ''}><code>${shape.id}</code>`;
-        list.appendChild(label);
-      });
-    }
-    function setAllShapeFilters(checked) {
-      document.querySelectorAll('#shape-filter-list input').forEach(input => {
-        if (!input.disabled) input.checked = checked;
-      });
-      refreshFilterAvailability();
-      generate();
-    }
-    function setShapeFilterDisabledState(input, disabled) {
-      input.disabled = disabled;
-      input.parentElement?.classList.toggle('is-disabled', disabled);
-    }
-    function refreshFilterAvailability() {
-      const shapeInputs = [...document.querySelectorAll('#shape-filter-list input')];
-      const heightInputs = [...document.querySelectorAll('#height-filter-list input')];
-      const selectedIds = shapeInputs.filter(input => input.checked).map(input => input.value);
-      const selectedHeights = heightInputs.filter(input => input.checked).map(input => Number(input.value));
 
-      heightInputs.forEach(input => {
-        if (input.checked) {
-          setShapeFilterDisabledState(input, false);
-          return;
-        }
-        const candidateHeights = [...selectedHeights, Number(input.value)];
-        setShapeFilterDisabledState(input, !solveStack(selectedIds, candidateHeights));
-      });
+    function render() {
+      if (!currentData) return;
+      const { placements, heightUnits, pal } = currentData;
+      const showInkBorder = document.getElementById('toggle-ink-border')?.checked;
 
-      shapeInputs.forEach(input => {
-        if (input.checked) {
-          setShapeFilterDisabledState(input, false);
-          return;
-        }
-        const candidateIds = [...selectedIds, input.value];
-        setShapeFilterDisabledState(input, !solveStack(candidateIds, selectedHeights));
-      });
-    }
-    function bindDebugPanel() {
-      populateHeightFilterPanel();
-      populateShapeFilterPanel();
-      populatePaletteFilterPanel();
-      document.getElementById('height-filter-list')?.addEventListener('change', () => {
-        refreshFilterAvailability();
-        generate();
-      });
-      document.getElementById('shape-filter-list')?.addEventListener('change', () => {
-        refreshFilterAvailability();
-        generate();
-      });
-      document.getElementById('palette-filter-list')?.addEventListener('change', () => {
-        generate();
-      });
-      document.getElementById('select-none-btn')?.addEventListener('click', () => {
-        document.querySelectorAll('#height-filter-list input').forEach(input => {
-          input.checked = false;
-        });
-        document.querySelectorAll('#palette-filter-list input').forEach(input => {
-          input.checked = false;
-        });
-        setAllShapeFilters(false);
-      });
-      refreshFilterAvailability();
-    }
-
-    function generate() {
       const svg = document.getElementById('svg-out');
       svg.innerHTML = '';
 
-      const selectedPaletteNames = getSelectedPaletteNames();
-      const availablePalettes = selectedPaletteNames.length
-        ? PALETTES.filter(palette => selectedPaletteNames.includes(palette.name))
-        : PALETTES;
-      const pal = pick(availablePalettes);
-      const requiredShapeIds = getRequiredShapeIds();
-      const selectedHeights = getSelectedHeights();
-      const solution = solveStack(requiredShapeIds, selectedHeights);
-      if (!solution) return;
-
-      const { placements, heightUnits } = solution;
-      const stackHeightPx = getStackHeightPx(heightUnits);
+      const stackHeightPx = (heightUnits * UNIT_STEP) + B;
       const offsetX = Math.round((CANVAS - COL_W) / 2);
       const offsetY = Math.round((CANVAS - stackHeightPx) / 2);
 
+      // Lock dimensions explicitly for PNG export
       svg.setAttribute('viewBox', `0 0 ${CANVAS} ${CANVAS}`);
       svg.setAttribute('width', CANVAS);
       svg.setAttribute('height', CANVAS);
 
-      addRect(svg, 0, 0, CANVAS, CANVAS, pal.bg);
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bg.setAttribute('width', CANVAS); bg.setAttribute('height', CANVAS); bg.setAttribute('fill', pal.bg);
+      svg.appendChild(bg);
 
-      // gap color = bg (so blocks appear to float on bg, gaps match bg)
-      const gapColor = pal.bg;
+      placements.forEach(placement => {
+        const shape = SHAPE_CATALOG[placement.id];
+        const color = placement.color; // Using pre-assigned color
 
-      const orderedPlacements = placements
-        .map(placement => ({ ...placement, shape: SHAPE_CATALOG[placement.id] }))
-        .sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
-      let prevColor = null;
-      orderedPlacements.forEach(placement => {
-        const color = randFrom(pal.colors, prevColor ? [prevColor] : []);
-        prevColor = color;
-        drawShapePlacement(svg, placement.shape, placement, color, offsetX, offsetY, heightUnits, gapColor);
+        const occupied = new Set(shape.cells.map(cell => `${cell.x},${cell.y}`));
+        shape.cells.forEach(cell => {
+          const cellX = offsetX + ((placement.x + cell.x) * UNIT_STEP);
+          const gridY = placement.y + cell.y;
+          const cellY = offsetY + ((heightUnits - 1 - gridY) * UNIT_STEP);
+
+          const insetLeft = occupied.has(`${cell.x - 1},${cell.y}`) ? 0 : B;
+          const insetRight = occupied.has(`${cell.x + 1},${cell.y}`) ? 0 : B;
+          const insetTop = occupied.has(`${cell.x},${cell.y + 1}`) ? 0 : B;
+          const insetBottom = occupied.has(`${cell.x},${cell.y - 1}`) ? 0 : B;
+
+          // If ink borders are OFF, show background color in the gaps (floating look)
+          const effectiveGapColor = showInkBorder ? BLACK : pal.bg;
+
+          addRect(svg, cellX, cellY, UNIT_SIZE, UNIT_SIZE, effectiveGapColor);
+          addRect(
+            svg,
+            cellX + insetLeft,
+            cellY + insetTop,
+            UNIT_SIZE - insetLeft - insetRight,
+            UNIT_SIZE - insetTop - insetBottom,
+            color
+          );
+        });
       });
 
-      // adapt overlay ink color to bg luminance
-      const inkColor = isLight(pal.bg) ? 'rgb(28, 28, 26)' : 'rgba(240, 238, 232, 0.9)';
-      const inkMuted = isLight(pal.bg) ? 'rgba(28, 28, 26, 0.5)' : 'rgba(240, 238, 232, 0.45)';
-      const ruleColor = isLight(pal.bg) ? 'rgba(28, 28, 26, 0.1)' : 'rgba(240, 238, 232, 0.15)';
-      document.documentElement.style.setProperty('--ink', inkColor);
-      document.documentElement.style.setProperty('--ink-muted', inkMuted);
-      document.documentElement.style.setProperty('--rule-color', ruleColor);
-      // update logo SVG fill
-      document.querySelectorAll('#logo-overlay rect').forEach(r => r.setAttribute('fill', inkColor));
-      // update control btn colors inline
-      document.querySelectorAll('.control-btn').forEach(b => b.style.color = inkColor);
+      // ADAPT UI COLORS (Unifying all UI elements & Debug Panel)
+      const lightBg = isLight(pal.bg);
+      const baseRGB = lightBg ? '28, 28, 26' : '240, 238, 232';
 
-      document.getElementById('shape-count').textContent = placements.length;
-      document.getElementById('col-h').textContent = heightUnits;
-      document.getElementById('pal-name').textContent = pal.name;
+      const root = document.documentElement;
+      root.style.setProperty('--ui-bg', pal.bg);
+      root.style.setProperty('--ui-ink', `rgba(${baseRGB}, 0.9)`);
+      root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
+      root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
+
+      // Info panel updates
+      const shapeCountEl = document.getElementById('shape-count');
+      if (shapeCountEl) shapeCountEl.textContent = placements.length;
+
+      const stackHeightEl = document.getElementById('stack-height');
+      if (stackHeightEl) stackHeightEl.textContent = heightUnits;
+
+      const palNameEl = document.getElementById('pal-name');
+      if (palNameEl) palNameEl.textContent = pal.name;
 
       const dots = document.getElementById('palette-dots');
-      dots.innerHTML = '';
-      const bgDot = document.createElement('div');
-      bgDot.className = 'dot'; bgDot.style.background = pal.bg; bgDot.title = 'background';
-      dots.appendChild(bgDot);
-      pal.colors.forEach(c => {
-        const d = document.createElement('div');
-        d.className = 'dot'; d.style.background = c;
-        dots.appendChild(d);
-      });
+      if (dots) {
+        dots.innerHTML = '';
+        [pal.bg, ...pal.colors].forEach((c, i) => {
+          const d = document.createElement('div');
+          d.className = 'dot'; d.style.background = c;
+          if (i === 0) d.title = 'background';
+          dots.appendChild(d);
+        });
+      }
 
       const blocksList = document.getElementById('blocks-list');
-      blocksList.innerHTML = '';
-      buildFamilyStats(placements).forEach(item => {
-        const stat = document.createElement('div');
-        stat.className = 'stat';
-        stat.innerHTML = `<span class="stat-label">${item.label}</span><span class="stat-value">${item.value}</span>`;
-        blocksList.appendChild(stat);
+      if (blocksList) {
+        blocksList.innerHTML = '';
+        const counts = placements.reduce((acc, p) => {
+          const piece = SHAPE_CATALOG[p.id].piece;
+          acc[piece] = (acc[piece] || 0) + 1;
+          return acc;
+        }, {});
+        FAMILY_ORDER.filter(piece => counts[piece]).forEach(piece => {
+          const stat = document.createElement('div');
+          stat.className = 'stat';
+          stat.innerHTML = `<span class="stat-label">${piece}</span><span class="stat-value">${counts[piece]}</span>`;
+          blocksList.appendChild(stat);
+        });
+      }
+    }
+
+    function generate() {
+      const selectedPaletteNames = [...document.querySelectorAll('#palette-filter-list input:checked')].map(i => i.value);
+      const availablePalettes = selectedPaletteNames.length ? PALETTES.filter(p => selectedPaletteNames.includes(p.name)) : PALETTES;
+      const pal = pick(availablePalettes);
+
+      // Auto-toggle ink borders: OFF by default for muted or void categories
+      const toggleBorder = document.getElementById('toggle-ink-border');
+      if (toggleBorder) {
+        toggleBorder.checked = !(pal.category === 'muted' || pal.category === 'void');
+      }
+
+      const requiredShapeIds = []; // Shape filters removed
+      const selectedHeights = getActiveHeights();
+
+      const solution = solveStack(requiredShapeIds, selectedHeights);
+      if (!solution) return;
+
+      // PRE-ASSIGN COLORS TO DATA to prevent color regeneration on render-only updates (like border toggle)
+      let prevColor = null;
+      const placementsWithColors = solution.placements
+        .map(p => ({ ...p, shape: SHAPE_CATALOG[p.id] }))
+        .sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id))
+        .map(p => {
+          const color = randFrom(pal.colors, prevColor ? [prevColor] : []);
+          prevColor = color;
+          return { ...p, color };
+        });
+
+      currentData = {
+        placements: placementsWithColors,
+        heightUnits: solution.heightUnits,
+        pal
+      };
+
+      render();
+    }
+
+    function getActiveHeights() {
+      if (heightMode === 'multi') {
+        return Array.from(selectedHeightsMulti);
+      } else {
+        if (rangeStart !== null && rangeEnd !== null) {
+          const min = Math.min(rangeStart, rangeEnd);
+          const max = Math.max(rangeStart, rangeEnd);
+          return POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max);
+        } else if (rangeStart !== null) {
+          return [rangeStart];
+        } else {
+          return []; // Fallback 
+        }
+      }
+    }
+
+    function renderHeightList() {
+      const hList = document.getElementById('height-filter-container');
+      if (!hList) return;
+      hList.innerHTML = '';
+
+      POSSIBLE_HEIGHTS.slice().sort((a, b) => a - b).forEach(h => {
+        const cell = document.createElement('div');
+        cell.className = 'height-cell';
+
+        // Determine interaction classes
+        if (heightMode === 'multi') {
+          if (selectedHeightsMulti.has(h)) cell.classList.add('is-selected');
+        } else {
+          if (rangeStart !== null && rangeEnd !== null) {
+            const min = Math.min(rangeStart, rangeEnd);
+            const max = Math.max(rangeStart, rangeEnd);
+            if (h >= min && h <= max) {
+              cell.classList.add('in-range');
+              if (h === min) cell.classList.add('range-start');
+              if (h === max) cell.classList.add('range-end');
+            }
+          } else if (rangeStart !== null && h === rangeStart) {
+            cell.classList.add('in-range', 'range-start', 'range-end');
+          }
+        }
+
+        cell.innerHTML = `<span>${h}</span>`;
+
+        cell.addEventListener('click', () => {
+          if (heightMode === 'multi') {
+            if (selectedHeightsMulti.has(h)) selectedHeightsMulti.delete(h);
+            else selectedHeightsMulti.add(h);
+          } else {
+            // Range logic: Click 1 = start, Click 2 = end, Click 3 = reset start
+            if (rangeStart === null || (rangeStart !== null && rangeEnd !== null)) {
+              rangeStart = h;
+              rangeEnd = null;
+            } else {
+              rangeEnd = h;
+            }
+          }
+          renderHeightList();
+          generate();
+        });
+
+        hList.appendChild(cell);
       });
     }
 
-    function getSVGString() {
-      let str = new XMLSerializer().serializeToString(document.getElementById('svg-out'));
-      if (!str.includes('xmlns=')) str = str.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"'); return str;
-    }
-    function toggleOverlays() {
-      ['info-panel', 'logo-overlay', 'controls-overlay'].forEach(id => {
-        document.getElementById(id)?.classList.toggle('is-hidden');
+    // INITIALIZATION & BINDING
+    function bindDebugPanel() {
+      // Range toggle smart listener
+      const rangeToggle = document.getElementById('toggle-range-mode');
+      if (rangeToggle) {
+        rangeToggle.addEventListener('change', (e) => {
+          heightMode = e.target.checked ? 'range' : 'multi';
+
+          // Smart state transfer between modes
+          if (heightMode === 'range') {
+            const arr = Array.from(selectedHeightsMulti).sort((a, b) => a - b);
+            if (arr.length > 0) {
+              rangeStart = arr[0];
+              rangeEnd = arr[arr.length - 1];
+            } else {
+              rangeStart = null;
+              rangeEnd = null;
+            }
+          } else {
+            if (rangeStart !== null && rangeEnd !== null) {
+              const min = Math.min(rangeStart, rangeEnd);
+              const max = Math.max(rangeStart, rangeEnd);
+              selectedHeightsMulti = new Set(POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max));
+            } else if (rangeStart !== null) {
+              selectedHeightsMulti = new Set([rangeStart]);
+            } else {
+              selectedHeightsMulti = new Set();
+            }
+          }
+          renderHeightList();
+          generate();
+        });
+      }
+
+      renderHeightList();
+
+      const pList = document.getElementById('palette-filter-list');
+
+      // Group palettes visually by category
+      const groupedPalettes = {};
+      PALETTES.forEach(p => {
+        if (!groupedPalettes[p.category]) groupedPalettes[p.category] = [];
+        groupedPalettes[p.category].push(p);
+      });
+
+      Object.keys(groupedPalettes).forEach(category => {
+        const header = document.createElement('div');
+        header.className = 'debug-subsection-title';
+        header.textContent = category;
+        pList.appendChild(header);
+
+        groupedPalettes[category].forEach(p => {
+          const l = document.createElement('label'); l.className = 'setting-item';
+          l.innerHTML = `<input type="checkbox" value="${p.name}"><code>${p.name}</code>`;
+          pList.appendChild(l);
+        });
+      });
+
+      pList.addEventListener('change', generate);
+
+      document.getElementById('toggle-ink-border')?.addEventListener('change', render);
+
+      document.getElementById('select-none-btn')?.addEventListener('click', () => {
+        document.querySelectorAll('#debug-panel input[type="checkbox"]').forEach(i => i.checked = false);
+        document.getElementById('toggle-ink-border').checked = true;
+
+        // Reset height state
+        heightMode = 'multi';
+        selectedHeightsMulti.clear();
+        rangeStart = null;
+        rangeEnd = null;
+        renderHeightList();
+
+        generate();
       });
     }
+
     function bindControls() {
       document.getElementById('regenerate-btn')?.addEventListener('click', generate);
       document.getElementById('download-png-btn')?.addEventListener('click', downloadPNG);
       document.getElementById('download-svg-btn')?.addEventListener('click', downloadSVG);
     }
-    function bindShortcuts() {
-      document.addEventListener('keydown', event => {
-        const target = event.target;
-        const tagName = target?.tagName;
-        const isTypingTarget = target?.isContentEditable || tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
-        if (isTypingTarget || event.metaKey || event.ctrlKey || event.altKey) return;
 
-        const key = event.key.toLowerCase();
-        if (key === 'i') {
-          event.preventDefault();
-          toggleOverlays();
-        } else if (key === 'r') {
-          event.preventDefault();
-          generate();
-        } else if (key === 'p') {
-          event.preventDefault();
-          downloadPNG();
-        } else if (key === 's') {
-          event.preventDefault();
-          downloadSVG();
-        }
+    function bindShortcuts() {
+      document.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
+        const key = e.key.toLowerCase();
+        if (key === 'r') generate();
+        if (key === 'i') ['info-panel', 'logo-overlay', 'controls-overlay', 'debug-panel'].forEach(id => document.getElementById(id)?.classList.toggle('is-hidden'));
+        if (key === 'p') downloadPNG();
+        if (key === 's') downloadSVG();
       });
     }
+
+    function getSVGString() {
+      const svg = document.getElementById('svg-out');
+      const clone = svg.cloneNode(true);
+
+      // Ensure explicit dimensions are in the string
+      clone.setAttribute('width', CANVAS);
+      clone.setAttribute('height', CANVAS);
+      if (!clone.getAttribute('xmlns')) {
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      }
+
+      return new XMLSerializer().serializeToString(clone);
+    }
+
     function downloadSVG() {
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([getSVGString()], {
-        type: 'image/svg+xml'
-      })); a.download = '4x4rt-stacks-preview.svg'; a.click();
-    } function downloadPNG() {
-      const img = new
-        Image(); const url = URL.createObjectURL(new Blob([getSVGString()], { type: 'image/svg+xml' })); img.onload = () => {
-          const c = document.createElement('canvas');
-          c.width = CANVAS * 2; c.height = CANVAS * 2;
-          const ctx = c.getContext('2d');
-          ctx.scale(2, 2); ctx.drawImage(img, 0, 0);
-          URL.revokeObjectURL(url);
-          const a = document.createElement('a');
-          a.href = c.toDataURL('image/png');
-          a.download = '4x4rt-stacks-preview.png'; a.click();
-        };
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([getSVGString()], { type: 'image/svg+xml' }));
+      a.download = '4x4rt-stacks.svg';
+      a.click();
+    }
+
+    function downloadPNG() {
+      const svgString = getSVGString();
+      const img = new Image();
+      // Using encodeURIComponent is highly reliable for rendering SVGs to Canvas across all browsers
+      const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        const scale = 2;
+        // Export at 2x resolution
+        c.width = CANVAS * scale;
+        c.height = CANVAS * scale;
+        const ctx = c.getContext('2d');
+
+        // Safari/WebKit Fix: Do NOT use ctx.scale() for SVGs, as it double-scales internal drawing
+        // operations against the viewBox, causing shapes to shift to the bottom right and clip.
+        // Instead, explicitly draw the image at the scaled destination dimensions.
+        ctx.drawImage(img, 0, 0, CANVAS * scale, CANVAS * scale);
+
+        const a = document.createElement('a');
+        a.href = c.toDataURL('image/png');
+        a.download = '4x4rt-stacks.png';
+        a.click();
+
+        URL.revokeObjectURL(url);
+      };
+
+      img.onerror = (e) => {
+        console.error("PNG rendering failed", e);
+        URL.revokeObjectURL(url);
+      };
+
       img.src = url;
     }
 
