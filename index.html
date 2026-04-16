@@ -1125,17 +1125,28 @@
       if (params.has('profiles')) appState.selectedProfiles = params.get('profiles').split(',').filter(Boolean);
       else appState.selectedProfiles = [];
 
-      if (params.has('mode')) appState.heightMode = params.get('mode');
-      else appState.heightMode = 'multi';
-
-      if (params.has('heights')) appState.selectedHeights = new Set(params.get('heights').split(',').filter(Boolean).map(Number));
-      else appState.selectedHeights = new Set();
-
-      if (params.has('rstart')) appState.rangeStart = Number(params.get('rstart'));
-      else appState.rangeStart = null;
-
-      if (params.has('rend')) appState.rangeEnd = Number(params.get('rend'));
-      else appState.rangeEnd = null;
+      if (params.has('heights')) {
+        const val = params.get('heights');
+        if (val.includes('-')) {
+          appState.heightMode = 'range';
+          const parts = val.split('-').map(Number);
+          appState.rangeStart = parts[0];
+          appState.rangeEnd = parts[1];
+          const min = Math.min(appState.rangeStart, appState.rangeEnd);
+          const max = Math.max(appState.rangeStart, appState.rangeEnd);
+          appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max));
+        } else {
+          appState.heightMode = 'multi';
+          appState.selectedHeights = new Set(val.split(',').filter(Boolean).map(Number));
+          appState.rangeStart = null;
+          appState.rangeEnd = null;
+        }
+      } else {
+        appState.heightMode = 'multi';
+        appState.selectedHeights = new Set();
+        appState.rangeStart = null;
+        appState.rangeEnd = null;
+      }
 
       if (params.has('outline')) appState.showOutline = params.get('outline') !== 'false';
       else appState.showOutline = true;
@@ -1149,33 +1160,35 @@
 
     function syncStateToURL() {
       const url = new URL(window.location);
-      url.search = ''; // Strip everything cleanly before rebuilding
+      const sp = url.searchParams;
+      // Clean start
+      sp.delete('seed'); sp.delete('palettes'); sp.delete('profiles'); sp.delete('heights');
+      sp.delete('outline'); sp.delete('meta'); sp.delete('export');
 
-      // Always include active structural parameters so loaded links function correctly
-      if (appState.selectedPalettes.length) url.searchParams.set('palettes', appState.selectedPalettes.join(','));
-      if (appState.selectedProfiles.length) url.searchParams.set('profiles', appState.selectedProfiles.join(','));
+      if (appState.selectedPalettes.length) sp.set('palettes', appState.selectedPalettes.join(','));
+      if (appState.selectedProfiles.length) sp.set('profiles', appState.selectedProfiles.join(','));
 
-      if (appState.selectedHeights.size) {
-        url.searchParams.set('heights', Array.from(appState.selectedHeights).join(','));
-        url.searchParams.set('mode', appState.heightMode);
-        if (appState.heightMode === 'range') {
-          if (appState.rangeStart !== null) url.searchParams.set('rstart', appState.rangeStart);
-          if (appState.rangeEnd !== null) url.searchParams.set('rend', appState.rangeEnd);
+      if (appState.selectedHeights.size > 0) {
+        if (appState.heightMode === 'range' && appState.rangeStart !== null && appState.rangeEnd !== null) {
+          const min = Math.min(appState.rangeStart, appState.rangeEnd);
+          const max = Math.max(appState.rangeStart, appState.rangeEnd);
+          sp.set('heights', `${min}-${max}`);
+        } else {
+          sp.set('heights', Array.from(appState.selectedHeights).sort((a, b) => a - b).join(','));
         }
       }
 
-      // Always append flags when diverging from defaults (Render Modes)
-      if (!appState.showOutline) url.searchParams.set('outline', 'false');
-      if (!appState.showMetadata) url.searchParams.set('meta', 'false');
-      if (!appState.showExport) url.searchParams.set('export', 'false');
+      if (!appState.showOutline) sp.set('outline', 'false');
+      if (!appState.showMetadata) sp.set('meta', 'false');
+      if (!appState.showExport) sp.set('export', 'false');
+      if (appState.seed) sp.set('seed', appState.seed);
 
-      // Always include Seed
-      if (appState.seed) url.searchParams.set('seed', appState.seed);
-
-      appState.shareUrl = url.href;
+      // Pretty construct the final string with actual commas
+      const searchString = sp.toString().replace(/%2C/g, ',');
+      appState.shareUrl = url.origin + url.pathname + (searchString ? '?' + searchString : '');
 
       try {
-        window.history.replaceState(null, '', url);
+        window.history.replaceState(null, '', appState.shareUrl);
       } catch (e) {
         console.warn("Could not update URL history state in this environment.", e);
       }
