@@ -61,8 +61,8 @@
       overflow: auto;
       padding: 16px;
       background: #f1eee5;
-      color: var(--ink);
-      border: var(--rule-width) solid var(--rule-color);
+      color: rgb(28, 28, 26);
+      border: 1px solid rgba(28, 28, 26, 0.1);
       border-radius: 12px;
     }
 
@@ -412,25 +412,57 @@
     const COL_W = 190;
     const BLACK = 'rgb(28, 28, 26)'; // #1C1C1A
 
+    // tone: 'light' = mostly light colors on bg, 'dark' = mostly dark, 'mix' = balanced
     const PALETTES = [
-      { name: 'spice', bg: '#f1eee5', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
-      { name: 'vivid', bg: '#f1eee5', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
-      { name: 'earth', bg: '#eae3d5', colors: ['#b66b56', '#284571', '#f6b36f', '#da6305', '#6e4354', '#ac9575'] },
-      { name: 'blue', bg: '#f5f4f9', colors: ['#239de0', '#027fd3', '#5bbcf3', '#1470b8', '#7acdf5', '#0a5fa0'] },
-      { name: 'purple', bg: '#f6f1eb', colors: ['#a259ff', '#883fe8', '#661ed9', '#b47dda', '#cda1ee', '#7a30cc'] },
-      { name: 'spruce', bg: '#f2f2f2', colors: ['#57c7af', '#228e74', '#44aa94', '#008359', '#6dd4be', '#1a7060'] },
-      { name: 'sunset', bg: '#f1eee5', colors: ['#ee9340', '#133e71', '#e7bc6d', '#d8721e', '#c58583', '#7f9b9e'] },
-      { name: 'ember', bg: '#f1eee5', colors: ['#dd4a14', '#33644f', '#c00b04', '#4d7d87', '#e08a19', '#23172d'] },
-      { name: 'ocean', bg: '#f1eee5', colors: ['#0a2948', '#355772', '#64808e', '#adc3ce', '#91acb7', '#1e4060'] },
-      { name: 'storm', bg: '#f1eee5', colors: ['#1c1a14', '#413819', '#f9cf45', '#fbd78b', '#948572', '#2c2618'] },
-      { name: 'crimson', bg: '#f2ede7', colors: ['#b50e08', '#c94040', '#de7070', '#f0a0a0', '#a01010', '#801010'] },
-      { name: 'amber', bg: '#faf9f6', colors: ['#e08f0c', '#ecaf30', '#ffe399', '#ceae73', '#c07a00', '#f5c840'] },
-      { name: 'ivy', bg: '#f7f7f7', colors: ['#268e1b', '#469d3c', '#76c66d', '#1c1c1a', '#95c190', '#3a8a30'] },
-      { name: 'copper', bg: '#f1eee5', colors: ['#ed8836', '#362a40', '#53475f', '#cf5100', '#dba778', '#2a1e30'] },
-      { name: 'twilight', bg: '#e5e0d4', colors: ['#132a5e', '#cf445b', '#ef5a70', '#452c56', '#eba2a9', '#8a5370'] },
-      { name: 'plum', bg: '#f1eee5', colors: ['#e54c3c', '#343c7a', '#a90402', '#938cab', '#6d6789', '#b5aecd'] },
-      { name: 'blush', bg: '#f1eee5', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
-      { name: 'orchid', bg: '#f1eee5', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
+      // --- original light-bg palettes ---
+      { name: 'spice', bg: '#f1eee5', tone: 'mix', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
+      { name: 'vivid', bg: '#f1eee5', tone: 'mix', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
+      { name: 'earth', bg: '#eae3d5', tone: 'mix', colors: ['#b66b56', '#284571', '#f6b36f', '#da6305', '#6e4354', '#ac9575'] },
+      { name: 'sunset', bg: '#f1eee5', tone: 'mix', colors: ['#ee9340', '#133e71', '#e7bc6d', '#d8721e', '#c58583', '#7f9b9e'] },
+      { name: 'ember', bg: '#f1eee5', tone: 'mix', colors: ['#dd4a14', '#33644f', '#c00b04', '#4d7d87', '#e08a19', '#23172d'] },
+      { name: 'copper', bg: '#f1eee5', tone: 'mix', colors: ['#ed8836', '#362a40', '#53475f', '#cf5100', '#dba778', '#2a1e30'] },
+      { name: 'twilight', bg: '#e5e0d4', tone: 'mix', colors: ['#132a5e', '#cf445b', '#ef5a70', '#452c56', '#eba2a9', '#8a5370'] },
+      { name: 'plum', bg: '#f1eee5', tone: 'mix', colors: ['#e54c3c', '#343c7a', '#a90402', '#938cab', '#6d6789', '#b5aecd'] },
+      { name: 'blush', bg: '#f1eee5', tone: 'mix', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
+      { name: 'orchid', bg: '#f1eee5', tone: 'mix', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
+
+      // --- light bg, mostly light shapes (image 2 style) ---
+      { name: 'blue-light', bg: '#f5f4f9', tone: 'light', colors: ['#b8d9f0', '#7ab8e0', '#3e8ec4', '#c8e4f7', '#daeef9', '#5aaad8'] },
+      { name: 'spruce-light', bg: '#f2f2f2', tone: 'light', colors: ['#a8e4d8', '#6dd4be', '#44aa94', '#c4ede6', '#e0f5f1', '#228e74'] },
+      { name: 'crimson-light', bg: '#fdf4f4', tone: 'light', colors: ['#f0a0a0', '#de7070', '#c94040', '#f7c8c8', '#fae0e0', '#b50e08'] },
+      { name: 'amber-light', bg: '#faf9f6', tone: 'light', colors: ['#ffe399', '#f5c840', '#ecaf30', '#fff3cc', '#fde8a0', '#c07a00'] },
+      { name: 'ivy-light', bg: '#f7f7f7', tone: 'light', colors: ['#95c190', '#76c66d', '#469d3c', '#c0ddb8', '#daefd6', '#268e1b'] },
+      { name: 'purple-light', bg: '#f6f1eb', tone: 'light', colors: ['#cda1ee', '#b47dda', '#9966cc', '#e0c8f5', '#ede0fa', '#883fe8'] },
+      { name: 'ocean-light', bg: '#eef4f8', tone: 'light', colors: ['#adc3ce', '#91acb7', '#6a8fa0', '#c8d8e0', '#e0eaf0', '#355772'] },
+
+      // --- colored bg, mostly light shapes (image 2 style) ---
+      { name: 'cerulean', bg: '#4d9ec4', tone: 'light', colors: ['#c8e8f5', '#e8f5fc', '#a0d4eb', '#f5fbff', '#78bcd9', '#d8eefc'] },
+      { name: 'teal-wash', bg: '#3a9e8a', tone: 'light', colors: ['#c0ede4', '#e8f8f5', '#a8e4d8', '#f0faf8', '#70cabb', '#d4f2ec'] },
+      { name: 'cobalt', bg: '#2855a0', tone: 'light', colors: ['#b0c8f0', '#d8e5fa', '#90aee0', '#eef3fc', '#6088cc', '#c4d5f5'] },
+      { name: 'sage', bg: '#5e8c68', tone: 'light', colors: ['#c0dbc4', '#e0ede2', '#a8ccac', '#f0f6f1', '#80b088', '#d0e5d3'] },
+      { name: 'terracotta-wash', bg: '#c06848', tone: 'light', colors: ['#f5d8ca', '#fceee8', '#e8b89c', '#fff5f0', '#d8906e', '#f0c8b4'] },
+
+      // --- colored bg, mixed tones (image 3 style) ---
+      { name: 'periwinkle', bg: '#7b7fc4', tone: 'mix', colors: ['#f0effa', '#e0dff5', '#2c2e7a', '#1a1c5e', '#c8c7ec', '#4a4c9e'] },
+      { name: 'mauve', bg: '#9e6e8c', tone: 'mix', colors: ['#f5e8f0', '#e8c8dc', '#3a1a30', '#5e1e48', '#c890b0', '#2a0e22'] },
+      { name: 'slate', bg: '#6e7e8c', tone: 'mix', colors: ['#e8edf0', '#c8d4da', '#1c2c38', '#304050', '#98aebc', '#0e1e2a'] },
+      { name: 'moss', bg: '#6e8c5e', tone: 'mix', colors: ['#e8f0e4', '#c8dcc0', '#1c3010', '#304820', '#9ab888', '#0e2008'] },
+      { name: 'rust', bg: '#a05030', tone: 'mix', colors: ['#f5e8e0', '#e8c8b4', '#2a0c00', '#4a1c08', '#c88060', '#1a0400'] },
+      { name: 'violet', bg: '#6040a0', tone: 'mix', colors: ['#f0eafa', '#d8c8f0', '#180830', '#301050', '#9878d0', '#0c0418'] },
+
+      // --- colored bg, mostly dark shapes (image 4 style) ---
+      { name: 'arctic', bg: '#5aaccc', tone: 'dark', colors: ['#0a2030', '#0e3040', '#164060', '#1c5070', '#082838', '#0a1828'] },
+      { name: 'midnight', bg: '#3d5a80', tone: 'dark', colors: ['#08101c', '#0c1828', '#182840', '#203050', '#060e18', '#101e30'] },
+      { name: 'pine', bg: '#2e6b4f', tone: 'dark', colors: ['#081808', '#0c2010', '#182c18', '#0a2410', '#061008', '#142818'] },
+      { name: 'burgundy', bg: '#8c2840', tone: 'dark', colors: ['#1a0408', '#2c0810', '#40101c', '#200610', '#100204', '#340c18'] },
+      { name: 'charcoal', bg: '#607080', tone: 'dark', colors: ['#0c1018', '#101820', '#182430', '#0a0e14', '#141c24', '#1c2838'] },
+
+      // --- near black & white / monochrome (image 1 style) ---
+      { name: 'graphite', bg: '#f0ede8', tone: 'mix', colors: ['#1c1c1a', '#2e2e2c', '#585654', '#868482', '#b0aeac', '#d8d6d4'] },
+      { name: 'carbon', bg: '#e8e6e2', tone: 'mix', colors: ['#111110', '#222220', '#444440', '#666662', '#999996', '#ccccca'] },
+      { name: 'noir', bg: '#1a1a18', tone: 'dark', colors: ['#f0ede8', '#c8c6c2', '#a0a09e', '#707070', '#404040', '#282826'] },
+      { name: 'chalk', bg: '#f8f7f5', tone: 'light', colors: ['#e8e6e3', '#d0cec9', '#b0aeaa', '#888884', '#555552', '#222220'] },
+      { name: 'ash', bg: '#d0ccc6', tone: 'mix', colors: ['#1a1816', '#3c3a38', '#606060', '#909090', '#c0c0be', '#f0eee8'] },
     ];
 
     const SHAPES = {
@@ -608,11 +640,11 @@
     }
     function getStackShapeWeights(stackShapes) {
       const STRICT_WEIGHTS = {
-        'I-2-R90': 7,
         'O-4': 6,
-        'I-3-R0': 4,
+        'I-4-R0': 6,
+        'I-3-R0': 5,
+        'I-2-R90': 4,
         'I-2-R0': 3,
-        'I-4-R0': 2,
         'O-1': 1,
       };
       return new Map(stackShapes.map(shape => [shape.id, STRICT_WEIGHTS[shape.id] || 1]));
@@ -649,7 +681,16 @@
       const cellY = offsetY + ((heightUnits - 1 - gridY) * UNIT_STEP);
       return { x: cellX, y: cellY };
     }
-    function drawShapePlacement(svg, shape, placement, color, offsetX, offsetY, heightUnits) {
+    function getLuminance(hex) {
+      const c = hex.replace('#', '');
+      const r = parseInt(c.slice(0, 2), 16) / 255;
+      const g = parseInt(c.slice(2, 4), 16) / 255;
+      const b = parseInt(c.slice(4, 6), 16) / 255;
+      const toLinear = x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+      return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    }
+    function isLight(hex) { return getLuminance(hex) > 0.35; }
+    function drawShapePlacement(svg, shape, placement, color, offsetX, offsetY, heightUnits, gapColor) {
       const occupied = new Set(shape.cells.map(cell => `${cell.x},${cell.y}`));
       shape.cells.forEach(cell => {
         const { x, y } = getCellBounds(offsetX, offsetY, placement, cell, heightUnits);
@@ -661,7 +702,7 @@
         const insetRight = hasRight ? 0 : B;
         const insetTop = hasAbove ? 0 : B;
         const insetBottom = hasBelow ? 0 : B;
-        addRect(svg, x, y, UNIT_SIZE, UNIT_SIZE, BLACK);
+        addRect(svg, x, y, UNIT_SIZE, UNIT_SIZE, gapColor);
         addRect(
           svg,
           x + insetLeft,
@@ -827,6 +868,9 @@
 
       addRect(svg, 0, 0, CANVAS, CANVAS, pal.bg);
 
+      // gap color = bg (so blocks appear to float on bg, gaps match bg)
+      const gapColor = pal.bg;
+
       const orderedPlacements = placements
         .map(placement => ({ ...placement, shape: SHAPE_CATALOG[placement.id] }))
         .sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
@@ -834,8 +878,20 @@
       orderedPlacements.forEach(placement => {
         const color = randFrom(pal.colors, prevColor ? [prevColor] : []);
         prevColor = color;
-        drawShapePlacement(svg, placement.shape, placement, color, offsetX, offsetY, heightUnits);
+        drawShapePlacement(svg, placement.shape, placement, color, offsetX, offsetY, heightUnits, gapColor);
       });
+
+      // adapt overlay ink color to bg luminance
+      const inkColor = isLight(pal.bg) ? 'rgb(28, 28, 26)' : 'rgba(240, 238, 232, 0.9)';
+      const inkMuted = isLight(pal.bg) ? 'rgba(28, 28, 26, 0.5)' : 'rgba(240, 238, 232, 0.45)';
+      const ruleColor = isLight(pal.bg) ? 'rgba(28, 28, 26, 0.1)' : 'rgba(240, 238, 232, 0.15)';
+      document.documentElement.style.setProperty('--ink', inkColor);
+      document.documentElement.style.setProperty('--ink-muted', inkMuted);
+      document.documentElement.style.setProperty('--rule-color', ruleColor);
+      // update logo SVG fill
+      document.querySelectorAll('#logo-overlay rect').forEach(r => r.setAttribute('fill', inkColor));
+      // update control btn colors inline
+      document.querySelectorAll('.control-btn').forEach(b => b.style.color = inkColor);
 
       document.getElementById('shape-count').textContent = placements.length;
       document.getElementById('col-h').textContent = heightUnits;
