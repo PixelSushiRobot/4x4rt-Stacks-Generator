@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4x4rt Stacks Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --page-pad-x: 40px;
+      --page-pad-y: 40px;
+      --canvas-size: 80vmin;
+      --ink: rgb(28, 28, 26);
+      /* #1C1C1A */
+      --ink-muted: rgba(28, 28, 26, 0.5);
+      --rule-color: rgba(28, 28, 26, 0.1);
+      --rule-width: 1px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #1b1b1b;
+      font-family: 'Space Mono', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: var(--page-pad-y) var(--page-pad-x);
+      min-height: 100vh;
+    }
+
+    #app {
+      display: flex;
+      gap: 40px;
+      align-items: flex-start;
+      width: fit-content;
+      max-width: 100%;
+      justify-content: center;
+    }
+
+    #canvas-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: var(--canvas-size);
+    }
+
+    #debug-panel {
+      width: min(280px, 32vw);
+      max-height: var(--canvas-size);
+      overflow: auto;
+      padding: 16px;
+      background: #f1eee5;
+      color: var(--ink);
+      border: var(--rule-width) solid var(--rule-color);
+      border-radius: 12px;
+    }
+
+    .debug-title {
+      font-size: 14px;
+      text-transform: uppercase;
+      color: var(--ink);
+      margin-bottom: 12px;
+    }
+
+    .debug-copy {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--ink-muted);
+      margin-bottom: 12px;
+    }
+
+    .debug-section {
+      margin-bottom: 16px;
+    }
+
+    .debug-section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+
+    #shape-filter-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #height-filter-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+    }
+
+    #palette-filter-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .debug-mode-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .shape-filter-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .shape-filter-item input {
+      accent-color: var(--ink);
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+    }
+
+    .shape-filter-item.is-disabled {
+      color: var(--ink-muted);
+    }
+
+    .shape-filter-item code {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+    }
+
+    .debug-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .debug-link {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-box-trim: trim-both;
+      text-box-edge: cap alphabetic;
+    }
+
+    #svg-container {
+      position: relative;
+      width: var(--canvas-size);
+      height: var(--canvas-size);
+    }
+
+    #svg-out {
+      display: block;
+      width: var(--canvas-size);
+      height: var(--canvas-size);
+    }
+
+    svg,
+    path {
+      shape-rendering: crispEdges;
+    }
+
+    #info-panel {
+      position: absolute;
+      top: calc(var(--canvas-size) * 0.015);
+      left: calc(var(--canvas-size) * 0.015);
+      display: flex;
+      flex-direction: column;
+      gap: calc(var(--canvas-size) * 0.015);
+      color: var(--ink);
+      z-index: 2;
+      text-transform: uppercase;
+      width: calc(var(--canvas-size) * 0.375);
+    }
+
+    #logo-overlay {
+      position: absolute;
+      right: calc(var(--canvas-size) * 0.01);
+      bottom: calc(var(--canvas-size) * 0.01);
+      width: calc(var(--canvas-size) * 0.09);
+      height: calc(var(--canvas-size) * 0.03);
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    #controls-overlay {
+      position: absolute;
+      left: calc(var(--canvas-size) * 0.015);
+      bottom: calc(var(--canvas-size) * 0.015);
+      display: flex;
+      flex-direction: row;
+      gap: calc(var(--canvas-size) * 0.05);
+      z-index: 3;
+    }
+
+    .is-hidden {
+      display: none !important;
+    }
+
+    .control-btn {
+      font-family: 'Space Mono', monospace;
+      font-weight: 400;
+      font-size: calc(var(--canvas-size) * 0.029);
+      text-transform: uppercase;
+      color: var(--ink);
+      white-space: nowrap;
+      text-box-trim: trim-both;
+      text-box-edge: cap alphabetic;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .control-btn:hover {
+      background: none;
+    }
+
+    .control-btn:active {
+      /* opacity: 0.5; */
+      transform: none;
+    }
+
+    .arrow-symbol {
+      font-family: 'Space Grotesk', sans-serif;
+      display: inline-block;
+      margin-left: 0.3em;
+    }
+
+    .stat {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: baseline;
+      column-gap: calc(var(--canvas-size) * 0.016);
+      width: 100%;
+      font-size: calc(var(--canvas-size) * 0.024);
+      color: var(--ink-muted);
+    }
+
+    .stat-label,
+    .stat-value,
+    .stat-suffix {
+      text-box-trim: trim-both;
+      text-box-edge: cap alphabetic;
+    }
+
+    .stat+.stat {
+      padding-top: calc(var(--canvas-size) * 0.015);
+      border-top: var(--rule-width) solid var(--rule-color);
+    }
+
+    .stat-value {
+      color: var(--ink);
+      justify-self: end;
+    }
+
+    .stat-suffix {
+      color: var(--ink-muted);
+    }
+
+    #blocks-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    #blocks-list .stat {
+      color: var(--ink-muted);
+      padding-top: calc(var(--canvas-size) * 0.015);
+      padding-bottom: calc(var(--canvas-size) * 0.015);
+      border-top: none;
+    }
+
+    #blocks-list .stat:first-child {
+      border-top: var(--rule-width) solid var(--rule-color);
+    }
+
+    #blocks-list .stat+.stat {
+      border-top: var(--rule-width) solid var(--rule-color);
+    }
+
+    #blocks-list .stat:last-child {
+      border-bottom: var(--rule-width) solid var(--rule-color);
+    }
+
+    #palette-dots {
+      grid-column: 1 / -1;
+      display: flex;
+      width: 100%;
+      gap: 0;
+      flex-wrap: nowrap;
+      margin-top: calc(var(--canvas-size) * 0.008);
+      border: var(--rule-width) solid var(--rule-color);
+      border-radius: calc(var(--canvas-size) * 0.03);
+      overflow: hidden;
+    }
+
+    .dot {
+      flex: 1 1 0;
+      height: calc(var(--canvas-size) * 0.02);
+      flex-shrink: 1;
+    }
+
+    @media (max-width: 640px) {
+      #app {
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      #debug-panel {
+        width: 100%;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="canvas-wrap">
+      <div id="svg-container">
+        <svg id="svg-out" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="info-panel">
+          <div class="stat">
+            <span class="stat-label">palette</span>
+            <span class="stat-value" id="pal-name">—</span>
+            <div id="palette-dots"></div>
+          </div>
+
+          <div class="stat">
+            <span class="stat-label">height</span>
+            <span class="stat-value"><span id="col-h">—</span><span class="stat-suffix"> units</span></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">shapes</span>
+            <span class="stat-value" id="shape-count">—</span>
+          </div>
+          <div id="blocks-list"></div>
+        </div>
+        <div id="logo-overlay">
+          <svg width="100%" height="100%" viewBox="0 0 90 30" preserveAspectRatio="none"
+            xmlns="http://www.w3.org/2000/svg" style="display: block;">
+            <rect width="24" height="6" fill="rgb(28, 28, 26)" />
+            <rect y="16" width="24" height="6" fill="rgb(28, 28, 26)" />
+            <rect y="24" width="12" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="12" y="8" width="18" height="6" fill="rgb(28, 28, 26)" />
+
+            <rect x="30" y="8" width="24" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="30" y="24" width="24" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="36" width="24" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="36" y="16" width="24" height="6" fill="rgb(28, 28, 26)" />
+
+            <rect x="60" width="24" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="60" y="16" width="24" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="60" y="24" width="12" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="72" y="8" width="18" height="6" fill="rgb(28, 28, 26)" />
+            <rect x="78" y="24" width="12" height="6" fill="rgb(28, 28, 26)" />
+          </svg>
+        </div>
+        <div id="controls-overlay">
+          <button class="control-btn" id="regenerate-btn">regenerate<span class="arrow-symbol">↑</span></button>
+          <button class="control-btn" id="download-png-btn">PNG<span class="arrow-symbol">↓</span></button>
+          <button class="control-btn" id="download-svg-btn">SVG<span class="arrow-symbol">↓</span></button>
+        </div>
+      </div>
+    </div>
+    <aside id="debug-panel">
+      <div class="debug-title">Shape Filters</div>
+      <div class="debug-copy">Temporary control panel. Checked shapes must appear at least once in the generated stack.
+      </div>
+      <div class="debug-section">
+        <div class="debug-section-title">Height</div>
+        <div id="height-filter-list"></div>
+      </div>
+      <div class="debug-section">
+        <div class="debug-section-title">Shapes</div>
+        <div id="shape-filter-list"></div>
+      </div>
+      <div class="debug-section">
+        <div class="debug-section-title">Palettes</div>
+        <div id="palette-filter-list"></div>
+      </div>
+      <div class="debug-actions">
+        <button class="debug-link" id="select-none-btn" type="button">clear all</button>
+      </div>
+    </aside>
+  </div>
+  <script>
+    const B = 10;
+    const CANVAS = 1000;
+    const COL_W = 190;
+    const BLACK = 'rgb(28, 28, 26)'; // #1C1C1A
+
+    const PALETTES = [
+      { name: 'spice', bg: '#f1eee5', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
+      { name: 'vivid', bg: '#f1eee5', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
+      { name: 'earth', bg: '#eae3d5', colors: ['#b66b56', '#284571', '#f6b36f', '#da6305', '#6e4354', '#ac9575'] },
+      { name: 'blue', bg: '#f5f4f9', colors: ['#239de0', '#027fd3', '#5bbcf3', '#1470b8', '#7acdf5', '#0a5fa0'] },
+      { name: 'purple', bg: '#f6f1eb', colors: ['#a259ff', '#883fe8', '#661ed9', '#b47dda', '#cda1ee', '#7a30cc'] },
+      { name: 'spruce', bg: '#f2f2f2', colors: ['#57c7af', '#228e74', '#44aa94', '#008359', '#6dd4be', '#1a7060'] },
+      { name: 'sunset', bg: '#f1eee5', colors: ['#ee9340', '#133e71', '#e7bc6d', '#d8721e', '#c58583', '#7f9b9e'] },
+      { name: 'ember', bg: '#f1eee5', colors: ['#dd4a14', '#33644f', '#c00b04', '#4d7d87', '#e08a19', '#23172d'] },
+      { name: 'ocean', bg: '#f1eee5', colors: ['#0a2948', '#355772', '#64808e', '#adc3ce', '#91acb7', '#1e4060'] },
+      { name: 'storm', bg: '#f1eee5', colors: ['#1c1a14', '#413819', '#f9cf45', '#fbd78b', '#948572', '#2c2618'] },
+      { name: 'crimson', bg: '#f2ede7', colors: ['#b50e08', '#c94040', '#de7070', '#f0a0a0', '#a01010', '#801010'] },
+      { name: 'amber', bg: '#faf9f6', colors: ['#e08f0c', '#ecaf30', '#ffe399', '#ceae73', '#c07a00', '#f5c840'] },
+      { name: 'ivy', bg: '#f7f7f7', colors: ['#268e1b', '#469d3c', '#76c66d', '#1c1c1a', '#95c190', '#3a8a30'] },
+      { name: 'copper', bg: '#f1eee5', colors: ['#ed8836', '#362a40', '#53475f', '#cf5100', '#dba778', '#2a1e30'] },
+      { name: 'twilight', bg: '#e5e0d4', colors: ['#132a5e', '#cf445b', '#ef5a70', '#452c56', '#eba2a9', '#8a5370'] },
+      { name: 'plum', bg: '#f1eee5', colors: ['#e54c3c', '#343c7a', '#a90402', '#938cab', '#6d6789', '#b5aecd'] },
+      { name: 'blush', bg: '#f1eee5', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
+      { name: 'orchid', bg: '#f1eee5', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
+    ];
+
+    const SHAPES = {
+      'O-1': { piece: 'O', rotation: 0, blocks: 2, units: 1, width: 1, height: 1, area: 1, mask: ['1'] },
+      'O-4': { piece: 'O', rotation: 0, blocks: 2, units: 4, width: 2, height: 2, area: 4, mask: ['11', '11'] },
+      'I-2-R0': { piece: 'I', rotation: 0, blocks: 4, units: 2, width: 1, height: 2, area: 2, mask: ['1', '1'] },
+      'I-2-R90': { piece: 'I', rotation: 90, blocks: 4, units: 2, width: 2, height: 1, area: 2, mask: ['11'] },
+      'I-3-R0': { piece: 'I', rotation: 0, blocks: 4, units: 3, width: 1, height: 3, area: 3, mask: ['1', '1', '1'] },
+      'I-3-R90': { piece: 'I', rotation: 90, blocks: 4, units: 3, width: 3, height: 1, area: 3, mask: ['111'] },
+      'I-4-R0': { piece: 'I', rotation: 0, blocks: 4, units: 4, width: 1, height: 4, area: 4, mask: ['1', '1', '1', '1'] },
+      'I-4-R90': { piece: 'I', rotation: 90, blocks: 4, units: 4, width: 4, height: 1, area: 4, mask: ['1111'] },
+      'J-3-R0': { piece: 'J', rotation: 0, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['01', '11'] },
+      'J-3-R90': { piece: 'J', rotation: 90, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['10', '11'] },
+      'J-3-R180': { piece: 'J', rotation: 180, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['11', '10'] },
+      'J-3-R270': { piece: 'J', rotation: 270, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['11', '01'] },
+      'J-4-R0': { piece: 'J', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['01', '01', '11'] },
+      'J-4-R90': { piece: 'J', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['100', '111'] },
+      'J-4-R180': { piece: 'J', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['11', '10', '10'] },
+      'J-4-R270': { piece: 'J', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['111', '001'] },
+      'L-4-R0': { piece: 'L', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['10', '10', '11'] },
+      'L-4-R90': { piece: 'L', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['111', '100'] },
+      'L-4-R180': { piece: 'L', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['11', '01', '01'] },
+      'L-4-R270': { piece: 'L', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['001', '111'] },
+      'T-4-R0': { piece: 'T', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['111', '010'] },
+      'T-4-R90': { piece: 'T', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['01', '11', '01'] },
+      'T-4-R180': { piece: 'T', rotation: 180, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['010', '111'] },
+      'T-4-R270': { piece: 'T', rotation: 270, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['10', '11', '10'] },
+      'S-4-R0': { piece: 'S', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['011', '110'] },
+      'S-4-R90': { piece: 'S', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['10', '11', '01'] },
+      'Z-4-R0': { piece: 'Z', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['110', '011'] },
+      'Z-4-R90': { piece: 'Z', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['01', '11', '10'] },
+    };
+
+    const UNIT_SIZE = 100;
+    const UNIT_STEP = UNIT_SIZE - B;
+    const TARGET_BLOCKS = 16;
+    const STACK_EDGE_MARGIN = 15;
+    const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS - (STACK_EDGE_MARGIN * 2) - B) / UNIT_STEP);
+    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z'];
+    const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 };
+    const MAX_SOLUTIONS = 96;
+    const MAX_SOLUTIONS_PER_HEIGHT = 24;
+
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function shuffle(arr) {
+      const copy = arr.slice();
+      for (let index = copy.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+      }
+      return copy;
+    }
+    function randFrom(palette, exclude) {
+      const pool = palette.filter(c => !exclude || !exclude.includes(c));
+      return pick(pool.length ? pool : palette);
+    }
+    function getShapeCells(shape) {
+      const cells = [];
+      shape.mask.forEach((row, rowIndex) => {
+        [...row].forEach((cell, columnIndex) => {
+          if (cell === '1') {
+            cells.push({ x: columnIndex, y: shape.height - 1 - rowIndex });
+          }
+        });
+      });
+      return cells;
+    }
+    function createShapeCatalog() {
+      return Object.fromEntries(Object.entries(SHAPES).map(([id, shape]) => [id, { id, ...shape, cells: getShapeCells(shape) }]));
+    }
+    const SHAPE_CATALOG = createShapeCatalog();
+    const BASE_STACK_SHAPES = Object.values(SHAPE_CATALOG)
+      .filter(shape => shape.width <= 2)
+      .sort((a, b) => {
+        if (b.blocks !== a.blocks) return b.blocks - a.blocks;
+        if (b.units !== a.units) return b.units - a.units;
+        if (SHAPE_PRIORITY[a.piece] !== SHAPE_PRIORITY[b.piece]) return SHAPE_PRIORITY[a.piece] - SHAPE_PRIORITY[b.piece];
+        return a.id.localeCompare(b.id);
+      });
+    const POSSIBLE_HEIGHTS = Array.from({ length: MAX_STACK_HEIGHT_UNITS - 3 }, (_, index) => MAX_STACK_HEIGHT_UNITS - index);
+    const STRICT_SHAPE_IDS = new Set(['O-1', 'O-4', 'I-2-R0', 'I-2-R90', 'I-3-R0', 'I-4-R0']);
+    function addRect(svg, x, y, w, h, fill) {
+      const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('x', x); r.setAttribute('y', y);
+      r.setAttribute('width', w); r.setAttribute('height', h);
+      r.setAttribute('fill', fill);
+      svg.appendChild(r);
+    }
+    function createGrid(height) {
+      return Array.from({ length: height }, () => [false, false]);
+    }
+    function countEmptyCells(grid) {
+      return grid.reduce((total, row) => total + row.filter(cell => !cell).length, 0);
+    }
+    function findFirstEmptyCell(grid) {
+      for (let y = 0; y < grid.length; y += 1) {
+        for (let x = 0; x < 2; x += 1) {
+          if (!grid[y][x]) return { x, y };
+        }
+      }
+      return null;
+    }
+    function getAllowedOffsets(shape) {
+      return shape.width === 1 ? [0, 1] : [0];
+    }
+    function placementCoversCell(shape, x, y, targetX, targetY) {
+      return shape.cells.some(cell => cell.x + x === targetX && cell.y + y === targetY);
+    }
+    function canPlaceShape(grid, shape, x, y) {
+      return shape.cells.every(cell => {
+        const gridX = x + cell.x;
+        const gridY = y + cell.y;
+        return gridX >= 0 && gridX < 2 && gridY >= 0 && gridY < grid.length && !grid[gridY][gridX];
+      });
+    }
+    function applyShape(grid, shape, x, y, value) {
+      shape.cells.forEach(cell => {
+        grid[y + cell.y][x + cell.x] = value;
+      });
+    }
+    function buildPlacementOptions(grid, targetHeight, firstEmpty, stackShapes, stackShapeWeights) {
+      const placements = [];
+      stackShapes.forEach(shape => {
+        getAllowedOffsets(shape).forEach(x => {
+          const minY = Math.max(0, firstEmpty.y - (shape.height - 1));
+          const maxY = Math.min(firstEmpty.y, targetHeight - shape.height);
+          for (let y = minY; y <= maxY; y += 1) {
+            if (!placementCoversCell(shape, x, y, firstEmpty.x, firstEmpty.y)) continue;
+            if (!canPlaceShape(grid, shape, x, y)) continue;
+            const weight = stackShapeWeights.get(shape.id) || 1;
+            for (let count = 0; count < weight; count += 1) {
+              placements.push({ shape, x, y });
+            }
+          }
+        });
+      });
+      return shuffle(placements);
+    }
+    function includesRequiredShapes(placements, requiredShapeIds) {
+      if (!requiredShapeIds.length) return true;
+      const used = new Set(placements.map(placement => placement.id));
+      return requiredShapeIds.every(id => used.has(id));
+    }
+    function searchStack(grid, targetHeight, blocksUsed, placements, solutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
+      if (solutions.length >= MAX_SOLUTIONS) return;
+      if (blocksUsed > TARGET_BLOCKS) return;
+
+      const remainingUnits = countEmptyCells(grid);
+      if (blocksUsed + (remainingUnits * minBlocksPerUnit) > TARGET_BLOCKS) return;
+      if (blocksUsed + (remainingUnits * maxBlocksPerUnit) < TARGET_BLOCKS) return;
+
+      const firstEmpty = findFirstEmptyCell(grid);
+      if (!firstEmpty) {
+        if (blocksUsed === TARGET_BLOCKS && includesRequiredShapes(placements, requiredShapeIds)) {
+          solutions.push(placements.map(placement => ({ id: placement.id, x: placement.x, y: placement.y })));
+        }
+        return;
+      }
+
+      const options = buildPlacementOptions(grid, targetHeight, firstEmpty, stackShapes, stackShapeWeights);
+      for (const option of options) {
+        applyShape(grid, option.shape, option.x, option.y, true);
+        placements.push({ id: option.shape.id, x: option.x, y: option.y });
+        searchStack(grid, targetHeight, blocksUsed + option.shape.blocks, placements, solutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
+        placements.pop();
+        applyShape(grid, option.shape, option.x, option.y, false);
+        if (solutions.length >= MAX_SOLUTIONS) return;
+      }
+    }
+    function getAllowedHeights(selectedHeights = []) {
+      return selectedHeights.length ? selectedHeights : POSSIBLE_HEIGHTS;
+    }
+    function getActiveStackShapes() {
+      return BASE_STACK_SHAPES.filter(shape => STRICT_SHAPE_IDS.has(shape.id));
+    }
+    function getStackShapeWeights(stackShapes) {
+      const STRICT_WEIGHTS = {
+        'I-2-R90': 7,
+        'O-4': 6,
+        'I-3-R0': 4,
+        'I-2-R0': 3,
+        'I-4-R0': 2,
+        'O-1': 1,
+      };
+      return new Map(stackShapes.map(shape => [shape.id, STRICT_WEIGHTS[shape.id] || 1]));
+    }
+    function solveStack(requiredShapeIds = [], selectedHeights = []) {
+      const stackShapes = getActiveStackShapes();
+      const stackShapeWeights = getStackShapeWeights(stackShapes);
+      const minBlocksPerUnit = Math.min(...stackShapes.map(shape => shape.blocks / shape.units));
+      const maxBlocksPerUnit = Math.max(...stackShapes.map(shape => shape.blocks / shape.units));
+      const allSolutions = [];
+      for (const targetHeight of shuffle(getAllowedHeights(selectedHeights))) {
+        const grid = createGrid(targetHeight);
+        const solutions = [];
+        searchStack(grid, targetHeight, 0, [], solutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
+        if (solutions.length) {
+          const preferredSolutions = solutions.filter(isPreferredSolution);
+          const sampledSolutions = preferredSolutions.length ? preferredSolutions : solutions;
+          shuffle(sampledSolutions)
+            .slice(0, MAX_SOLUTIONS_PER_HEIGHT)
+            .forEach(placements => {
+              allSolutions.push({ placements, heightUnits: targetHeight });
+            });
+          if (allSolutions.length >= MAX_SOLUTIONS) break;
+        }
+      }
+      return allSolutions.length ? pick(allSolutions) : null;
+    }
+    function getStackHeightPx(heightUnits) {
+      return (heightUnits * UNIT_STEP) + B;
+    }
+    function getCellBounds(offsetX, offsetY, placement, cell, heightUnits) {
+      const cellX = offsetX + ((placement.x + cell.x) * UNIT_STEP);
+      const gridY = placement.y + cell.y;
+      const cellY = offsetY + ((heightUnits - 1 - gridY) * UNIT_STEP);
+      return { x: cellX, y: cellY };
+    }
+    function drawShapePlacement(svg, shape, placement, color, offsetX, offsetY, heightUnits) {
+      const occupied = new Set(shape.cells.map(cell => `${cell.x},${cell.y}`));
+      shape.cells.forEach(cell => {
+        const { x, y } = getCellBounds(offsetX, offsetY, placement, cell, heightUnits);
+        const hasLeft = occupied.has(`${cell.x - 1},${cell.y}`);
+        const hasRight = occupied.has(`${cell.x + 1},${cell.y}`);
+        const hasAbove = occupied.has(`${cell.x},${cell.y + 1}`);
+        const hasBelow = occupied.has(`${cell.x},${cell.y - 1}`);
+        const insetLeft = hasLeft ? 0 : B;
+        const insetRight = hasRight ? 0 : B;
+        const insetTop = hasAbove ? 0 : B;
+        const insetBottom = hasBelow ? 0 : B;
+        addRect(svg, x, y, UNIT_SIZE, UNIT_SIZE, BLACK);
+        addRect(
+          svg,
+          x + insetLeft,
+          y + insetTop,
+          UNIT_SIZE - insetLeft - insetRight,
+          UNIT_SIZE - insetTop - insetBottom,
+          color
+        );
+      });
+    }
+    function buildFamilyStats(placements) {
+      const counts = placements.reduce((acc, placement) => {
+        const piece = SHAPE_CATALOG[placement.id].piece;
+        acc[piece] = (acc[piece] || 0) + 1;
+        return acc;
+      }, {});
+      return FAMILY_ORDER.filter(piece => counts[piece]).map(piece => ({ label: piece, value: counts[piece] }));
+    }
+    function hasUniqueShapeIds(placements) {
+      return new Set(placements.map(placement => placement.id)).size === placements.length;
+    }
+    function hasUniqueFamilyRotations(placements) {
+      const seen = new Map();
+      return placements.every(placement => {
+        const shape = SHAPE_CATALOG[placement.id];
+        const usedRotations = seen.get(shape.piece) || new Set();
+        if (usedRotations.has(shape.rotation)) return false;
+        usedRotations.add(shape.rotation);
+        seen.set(shape.piece, usedRotations);
+        return true;
+      });
+    }
+    function isPreferredSolution(placements) {
+      return hasUniqueShapeIds(placements) && hasUniqueFamilyRotations(placements);
+    }
+    function getRequiredShapeIds() {
+      return [...document.querySelectorAll('#shape-filter-list input:checked')].map(input => input.value);
+    }
+    function getSelectedHeights() {
+      return [...document.querySelectorAll('#height-filter-list input:checked')].map(input => Number(input.value));
+    }
+    function getSelectedPaletteNames() {
+      return [...document.querySelectorAll('#palette-filter-list input:checked')].map(input => input.value);
+    }
+    function populateHeightFilterPanel() {
+      const list = document.getElementById('height-filter-list');
+      if (!list) return;
+      list.innerHTML = '';
+      POSSIBLE_HEIGHTS.slice().sort((a, b) => b - a).forEach(height => {
+        const label = document.createElement('label');
+        label.className = 'shape-filter-item';
+        label.innerHTML = `<input type="checkbox" value="${height}"><code>${height}</code>`;
+        list.appendChild(label);
+      });
+    }
+    function populatePaletteFilterPanel() {
+      const list = document.getElementById('palette-filter-list');
+      if (!list) return;
+      list.innerHTML = '';
+      PALETTES.forEach(palette => {
+        const label = document.createElement('label');
+        label.className = 'shape-filter-item';
+        label.innerHTML = `<input type="checkbox" value="${palette.name}"><code>${palette.name}</code>`;
+        list.appendChild(label);
+      });
+    }
+    function populateShapeFilterPanel() {
+      const list = document.getElementById('shape-filter-list');
+      if (!list) return;
+      const selectedIds = new Set(getRequiredShapeIds());
+      list.innerHTML = '';
+      getActiveStackShapes().forEach(shape => {
+        const label = document.createElement('label');
+        label.className = 'shape-filter-item';
+        label.innerHTML = `<input type="checkbox" value="${shape.id}" ${selectedIds.has(shape.id) ? 'checked' : ''}><code>${shape.id}</code>`;
+        list.appendChild(label);
+      });
+    }
+    function setAllShapeFilters(checked) {
+      document.querySelectorAll('#shape-filter-list input').forEach(input => {
+        if (!input.disabled) input.checked = checked;
+      });
+      refreshFilterAvailability();
+      generate();
+    }
+    function setShapeFilterDisabledState(input, disabled) {
+      input.disabled = disabled;
+      input.parentElement?.classList.toggle('is-disabled', disabled);
+    }
+    function refreshFilterAvailability() {
+      const shapeInputs = [...document.querySelectorAll('#shape-filter-list input')];
+      const heightInputs = [...document.querySelectorAll('#height-filter-list input')];
+      const selectedIds = shapeInputs.filter(input => input.checked).map(input => input.value);
+      const selectedHeights = heightInputs.filter(input => input.checked).map(input => Number(input.value));
+
+      heightInputs.forEach(input => {
+        if (input.checked) {
+          setShapeFilterDisabledState(input, false);
+          return;
+        }
+        const candidateHeights = [...selectedHeights, Number(input.value)];
+        setShapeFilterDisabledState(input, !solveStack(selectedIds, candidateHeights));
+      });
+
+      shapeInputs.forEach(input => {
+        if (input.checked) {
+          setShapeFilterDisabledState(input, false);
+          return;
+        }
+        const candidateIds = [...selectedIds, input.value];
+        setShapeFilterDisabledState(input, !solveStack(candidateIds, selectedHeights));
+      });
+    }
+    function bindDebugPanel() {
+      populateHeightFilterPanel();
+      populateShapeFilterPanel();
+      populatePaletteFilterPanel();
+      document.getElementById('height-filter-list')?.addEventListener('change', () => {
+        refreshFilterAvailability();
+        generate();
+      });
+      document.getElementById('shape-filter-list')?.addEventListener('change', () => {
+        refreshFilterAvailability();
+        generate();
+      });
+      document.getElementById('palette-filter-list')?.addEventListener('change', () => {
+        generate();
+      });
+      document.getElementById('select-none-btn')?.addEventListener('click', () => {
+        document.querySelectorAll('#height-filter-list input').forEach(input => {
+          input.checked = false;
+        });
+        document.querySelectorAll('#palette-filter-list input').forEach(input => {
+          input.checked = false;
+        });
+        setAllShapeFilters(false);
+      });
+      refreshFilterAvailability();
+    }
+
+    function generate() {
+      const svg = document.getElementById('svg-out');
+      svg.innerHTML = '';
+
+      const selectedPaletteNames = getSelectedPaletteNames();
+      const availablePalettes = selectedPaletteNames.length
+        ? PALETTES.filter(palette => selectedPaletteNames.includes(palette.name))
+        : PALETTES;
+      const pal = pick(availablePalettes);
+      const requiredShapeIds = getRequiredShapeIds();
+      const selectedHeights = getSelectedHeights();
+      const solution = solveStack(requiredShapeIds, selectedHeights);
+      if (!solution) return;
+
+      const { placements, heightUnits } = solution;
+      const stackHeightPx = getStackHeightPx(heightUnits);
+      const offsetX = Math.round((CANVAS - COL_W) / 2);
+      const offsetY = Math.round((CANVAS - stackHeightPx) / 2);
+
+      svg.setAttribute('viewBox', `0 0 ${CANVAS} ${CANVAS}`);
+      svg.setAttribute('width', CANVAS);
+      svg.setAttribute('height', CANVAS);
+
+      addRect(svg, 0, 0, CANVAS, CANVAS, pal.bg);
+
+      const orderedPlacements = placements
+        .map(placement => ({ ...placement, shape: SHAPE_CATALOG[placement.id] }))
+        .sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+      let prevColor = null;
+      orderedPlacements.forEach(placement => {
+        const color = randFrom(pal.colors, prevColor ? [prevColor] : []);
+        prevColor = color;
+        drawShapePlacement(svg, placement.shape, placement, color, offsetX, offsetY, heightUnits);
+      });
+
+      document.getElementById('shape-count').textContent = placements.length;
+      document.getElementById('col-h').textContent = heightUnits;
+      document.getElementById('pal-name').textContent = pal.name;
+
+      const dots = document.getElementById('palette-dots');
+      dots.innerHTML = '';
+      const bgDot = document.createElement('div');
+      bgDot.className = 'dot'; bgDot.style.background = pal.bg; bgDot.title = 'background';
+      dots.appendChild(bgDot);
+      pal.colors.forEach(c => {
+        const d = document.createElement('div');
+        d.className = 'dot'; d.style.background = c;
+        dots.appendChild(d);
+      });
+
+      const blocksList = document.getElementById('blocks-list');
+      blocksList.innerHTML = '';
+      buildFamilyStats(placements).forEach(item => {
+        const stat = document.createElement('div');
+        stat.className = 'stat';
+        stat.innerHTML = `<span class="stat-label">${item.label}</span><span class="stat-value">${item.value}</span>`;
+        blocksList.appendChild(stat);
+      });
+    }
+
+    function getSVGString() {
+      let str = new XMLSerializer().serializeToString(document.getElementById('svg-out'));
+      if (!str.includes('xmlns=')) str = str.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"'); return str;
+    }
+    function toggleOverlays() {
+      ['info-panel', 'logo-overlay', 'controls-overlay'].forEach(id => {
+        document.getElementById(id)?.classList.toggle('is-hidden');
+      });
+    }
+    function bindControls() {
+      document.getElementById('regenerate-btn')?.addEventListener('click', generate);
+      document.getElementById('download-png-btn')?.addEventListener('click', downloadPNG);
+      document.getElementById('download-svg-btn')?.addEventListener('click', downloadSVG);
+    }
+    function bindShortcuts() {
+      document.addEventListener('keydown', event => {
+        const target = event.target;
+        const tagName = target?.tagName;
+        const isTypingTarget = target?.isContentEditable || tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
+        if (isTypingTarget || event.metaKey || event.ctrlKey || event.altKey) return;
+
+        const key = event.key.toLowerCase();
+        if (key === 'i') {
+          event.preventDefault();
+          toggleOverlays();
+        } else if (key === 'r') {
+          event.preventDefault();
+          generate();
+        } else if (key === 'p') {
+          event.preventDefault();
+          downloadPNG();
+        } else if (key === 's') {
+          event.preventDefault();
+          downloadSVG();
+        }
+      });
+    }
+    function downloadSVG() {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([getSVGString()], {
+        type: 'image/svg+xml'
+      })); a.download = '4x4rt-stacks-preview.svg'; a.click();
+    } function downloadPNG() {
+      const img = new
+        Image(); const url = URL.createObjectURL(new Blob([getSVGString()], { type: 'image/svg+xml' })); img.onload = () => {
+          const c = document.createElement('canvas');
+          c.width = CANVAS * 2; c.height = CANVAS * 2;
+          const ctx = c.getContext('2d');
+          ctx.scale(2, 2); ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(url);
+          const a = document.createElement('a');
+          a.href = c.toDataURL('image/png');
+          a.download = '4x4rt-stacks-preview.png'; a.click();
+        };
+      img.src = url;
+    }
+
+    bindControls();
+    bindDebugPanel();
+    bindShortcuts();
+    generate();
+  </script>
+</body>
+
+</html>
