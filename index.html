@@ -1583,24 +1583,30 @@
       document.getElementById('seed-display')?.addEventListener('click', () => {
         if (!appState.seed) return;
         const url = appState.shareUrl || window.location.href;
-        const tempInput = document.createElement('input');
-        tempInput.value = url;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempInput);
-
         const display = document.getElementById('seed-display');
         const orig = display.textContent;
-        display.innerHTML = '<span style="color: var(--ui-ink-muted);">COPIED</span>';
-        setTimeout(() => {
-          // Double check the seed hasn't changed while waiting
-          if (appState.seed === orig) {
-            display.textContent = orig;
-          } else {
-            display.textContent = appState.seed;
-          }
-        }, 1500);
+
+        const showCopied = () => {
+          display.innerHTML = '<span style="color: var(--ui-ink-muted);">COPIED</span>';
+          setTimeout(() => {
+            display.textContent = appState.seed === orig ? orig : appState.seed;
+          }, 1500);
+        };
+
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(url).then(showCopied).catch(() => {
+            console.warn('Clipboard write failed.');
+          });
+        } else {
+          // Fallback for environments without Clipboard API
+          const tempInput = document.createElement('input');
+          tempInput.value = url;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+          document.execCommand('copy');
+          document.body.removeChild(tempInput);
+          showCopied();
+        }
       });
     }
 
@@ -1654,9 +1660,11 @@
 
     function downloadSVG() {
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([getSVGString()], { type: 'image/svg+xml' }));
+      const blobUrl = URL.createObjectURL(new Blob([getSVGString()], { type: 'image/svg+xml' }));
+      a.href = blobUrl;
       a.download = '4x4rt-stacks.svg';
       a.click();
+      URL.revokeObjectURL(blobUrl);
     }
 
     function downloadPNG() {
