@@ -525,7 +525,7 @@
             <span class="stat-value" id="profile-name">—</span>
             <div id="actual-palette-dots" class="palette-dots"></div>
           </div>
-          <div class="stat">
+          <div id="metadata-limit-stat" class="stat is-hidden">
             <span class="stat-label">Limit</span>
             <span class="stat-value"><span id="limit-display">—</span><span class="stat-suffix"> Blocks</span></span>
           </div>
@@ -619,7 +619,7 @@
           </label>
         </div>
       </div>
-      <div class="params-section">
+      <div id="params-limit-section" class="params-section is-hidden">
         <div class="params-section-title">Limit</div>
         <div id="limit-slider-container"></div>
       </div>
@@ -1053,6 +1053,7 @@
     const appState = {
       heightMode: 'multi',
       targetBlocks: 16,
+      isLimitVisible: false,
       selectedHeights: new Set(),
 
       rangeStart: null,
@@ -1457,8 +1458,10 @@
       if (params.has('limit')) {
         const val = parseInt(params.get('limit'), 10);
         if (!isNaN(val)) appState.targetBlocks = val;
+        appState.isLimitVisible = true;
       } else {
         appState.targetBlocks = 16;
+        appState.isLimitVisible = false;
       }
       // CRITICAL: Re-calculate valid heights immediately after state load, 
       // as the solver constraints may have changed.
@@ -1484,7 +1487,7 @@
           sp.set('heights', Array.from(appState.selectedHeights).sort((a, b) => a - b).join(','));
         }
       }
-      if (appState.targetBlocks !== 16) sp.set('limit', appState.targetBlocks);
+      if (appState.isLimitVisible) sp.set('limit', appState.targetBlocks);
 
       if (!appState.showOutline) sp.set('outline', 'false');
       if (!appState.showMetadata) sp.set('meta', 'false');
@@ -1680,6 +1683,9 @@
 
       const limitDisplayEl = document.getElementById('limit-display');
       if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
+
+      document.getElementById('metadata-limit-stat')?.classList.toggle('is-hidden', !appState.isLimitVisible);
+      document.getElementById('params-limit-section')?.classList.toggle('is-hidden', !appState.isLimitVisible);
 
       const usedColors = new Set(placements.map(p => p.color));
       const sortedUsedColors = palette.colors.filter(c => usedColors.has(c));
