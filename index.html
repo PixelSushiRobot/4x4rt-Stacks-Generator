@@ -1042,6 +1042,7 @@
     // This previously fixed 16-block constraint is now a user-controllable parameter.
     // The default 16 blocks limit is the reason for the name 4x4art, every artwork uses exactly 16 blocks. 
     const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2); // 2, 4, 6... 40
+    const DEFAULT_LIMIT = POSSIBLE_LIMITS.includes(16) ? 16 : POSSIBLE_LIMITS[0];
 
     const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
     const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
@@ -1052,7 +1053,7 @@
     // GLOBAL STATE LAYER
     const appState = {
       heightMode: 'multi',
-      targetBlocks: 16,
+      targetBlocks: DEFAULT_LIMIT,
       isLimitVisible: false,
       selectedHeights: new Set(),
 
@@ -1073,6 +1074,18 @@
 
     // --- HELPER FUNCTIONS ---
     function pick(arr) { return arr[Math.floor(nextRandom() * arr.length)]; }
+    function getSortedLimits() {
+      return POSSIBLE_LIMITS.slice().sort((a, b) => a - b);
+    }
+    function clampToAllowedLimit(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return DEFAULT_LIMIT;
+      const sortedLimits = getSortedLimits();
+      if (sortedLimits.includes(numeric)) return numeric;
+      return sortedLimits.reduce((closest, candidate) => {
+        return Math.abs(candidate - numeric) < Math.abs(closest - numeric) ? candidate : closest;
+      }, sortedLimits[0]);
+    }
     function shuffle(arr) {
       const copy = arr.slice();
       for (let index = copy.length - 1; index > 0; index -= 1) {
@@ -1457,12 +1470,10 @@
 
       if (params.has('limit')) {
         const val = parseInt(params.get('limit'), 10);
-        const isValid = !isNaN(val) && val >= 2 && val <= 40 && val % 2 === 0;
-        if (isValid) appState.targetBlocks = val;
-        else appState.targetBlocks = 16;
+        appState.targetBlocks = clampToAllowedLimit(val);
         appState.isLimitVisible = true;
       } else {
-        appState.targetBlocks = 16;
+        appState.targetBlocks = DEFAULT_LIMIT;
         appState.isLimitVisible = false;
       }
       // CRITICAL: Re-calculate valid heights immediately after state load, 
@@ -1741,18 +1752,17 @@
       slider.appendChild(thumb);
       container.appendChild(slider);
 
-      const min = 2;
-      const max = 40;
-      const step = 2;
-      
+      const sortedLimits = getSortedLimits();
       function updateThumbPos(val) {
-        const percent = (val - min) / (max - min);
+        const normalizedVal = clampToAllowedLimit(val);
+        const valueIndex = sortedLimits.indexOf(normalizedVal);
+        const percent = sortedLimits.length > 1 ? valueIndex / (sortedLimits.length - 1) : 0;
         const sliderWidth = slider.offsetWidth;
         const thumbWidth = thumb.offsetWidth;
         // The thumb slides from 0 to (sliderWidth - thumbWidth)
-        const maxScroll = sliderWidth - thumbWidth;
+        const maxScroll = Math.max(0, sliderWidth - thumbWidth);
         thumb.style.transform = `translateX(${percent * maxScroll}px)`;
-        thumb.querySelector('span').textContent = val;
+        thumb.querySelector('span').textContent = normalizedVal;
       }
 
       // Initial pos
@@ -1763,12 +1773,12 @@
       function valFromX(clientX) {
         const rect = slider.getBoundingClientRect();
         const thumbWidth = thumb.offsetWidth;
-        const maxScroll = rect.width - thumbWidth;
+        const maxScroll = Math.max(0, rect.width - thumbWidth);
+        if (maxScroll === 0) return appState.targetBlocks;
         const relativeX = Math.max(0, Math.min(maxScroll, clientX - rect.left - (thumbWidth / 2)));
         const percent = relativeX / maxScroll;
-        let rawVal = min + (percent * (max - min));
-        // Snap to step
-        return Math.round(rawVal / step) * step;
+        const index = Math.round(percent * (sortedLimits.length - 1));
+        return sortedLimits[Math.max(0, Math.min(sortedLimits.length - 1, index))];
       }
 
       function onPointerDown(e) {
@@ -1782,11 +1792,12 @@
           // Stepper behavior: jump to next/prev if clicking track
           const rect = thumb.getBoundingClientRect();
           const clickX = e.clientX;
+          const currentIndex = sortedLimits.indexOf(clampToAllowedLimit(appState.targetBlocks));
           let newVal = appState.targetBlocks;
           if (clickX < rect.left) {
-            newVal = Math.max(min, appState.targetBlocks - step);
+            newVal = sortedLimits[Math.max(0, currentIndex - 1)];
           } else if (clickX > rect.right) {
-            newVal = Math.min(max, appState.targetBlocks + step);
+            newVal = sortedLimits[Math.min(sortedLimits.length - 1, currentIndex + 1)];
           }
           if (newVal !== appState.targetBlocks) {
             updateLimit(newVal);
@@ -1810,9 +1821,9 @@
       }
 
       function updateLimit(val) {
-        appState.targetBlocks = val;
+        appState.targetBlocks = clampToAllowedLimit(val);
         appState.seed = null;
-        updateThumbPos(val);
+        updateThumbPos(appState.targetBlocks);
         
         // Dynamic height validation logic
         POSSIBLE_HEIGHTS = computeValidHeights();
