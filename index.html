@@ -1457,7 +1457,9 @@
 
       if (params.has('limit')) {
         const val = parseInt(params.get('limit'), 10);
-        if (!isNaN(val)) appState.targetBlocks = val;
+        const isValid = !isNaN(val) && val >= 2 && val <= 40 && val % 2 === 0;
+        if (isValid) appState.targetBlocks = val;
+        else appState.targetBlocks = 16;
         appState.isLimitVisible = true;
       } else {
         appState.targetBlocks = 16;
