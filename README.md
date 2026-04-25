@@ -27,7 +27,7 @@ The entire application ships as a single `index.html` with no build step, no dep
 
 ## Shape System
 
-Shapes are constrained to a **2-unit-wide column** and drawn from two families: squares (O) and bars (I). The solver uses a weighted backtracking search to find valid arrangements that fill the column to exactly 16 blocks.
+Shapes are constrained to a **2-unit-wide column** and drawn from two internal families: squares (`O`) and bars (`I`). In the public traits UI, these families are surfaced as **Mass** and **Line**. The solver uses a weighted backtracking search to find valid arrangements that fill the column to exactly 16 blocks.
 
 | Family | Pieces Used |
 |--------|-------------|
@@ -90,7 +90,7 @@ Displayed on the canvas itself (toggleable):
 - **Palette** — palette name with color swatch bar
 - **Profile** — active color profile with resolved color swatch
 - **Height** — stack height in grid units
-- **Shapes** — count and breakdown of shape types used
+- **Shapes** — count and breakdown of shape traits used (for example, **Mass** and **Line**)
 
 ---
 

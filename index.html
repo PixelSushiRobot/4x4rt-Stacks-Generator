@@ -795,7 +795,7 @@
 
     // --- SHAPE CATALOG ---
     // Shape fields:
-    //   piece    — family letter (O, I, J, L, T, S, Z)
+    //   piece    — internal family code (O, I, J, L, T, S, Z); mapped to UI-facing trait labels in PIECE_TRAIT_LABELS
     //   rotation — clockwise orientation in degrees
     //   blocks   — SVG rect count drawn per shape
     //   units    — number of grid cells this shape occupies
@@ -1049,6 +1049,7 @@
     const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
     const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
     const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z']; // Display order for the shapes breakdown in the metadata overlay.
+    const PIECE_TRAIT_LABELS = { O: 'Mass', I: 'Line', J: 'Turn', L: 'Bend', T: 'Split', S: 'Offset', Z: 'Counteroffset' };
     const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 }; // Solver search order within the backtracker (lower = tried first).
     const MAX_SOLUTIONS_PER_HEIGHT = 24; // Per-height solution cap — keeps the solver fast on complex heights.
 
@@ -1856,7 +1857,8 @@
         FAMILY_ORDER.filter(piece => counts[piece]).forEach(piece => {
           const stat = document.createElement('div');
           stat.className = 'stat';
-          stat.innerHTML = `<span class="stat-label">${piece}</span><span class="stat-value">${counts[piece]}</span>`;
+          const displayLabel = PIECE_TRAIT_LABELS[piece] || piece;
+          stat.innerHTML = `<span class="stat-label">${displayLabel}</span><span class="stat-value">${counts[piece]}</span>`;
           shapesList.appendChild(stat);
         });
       },
