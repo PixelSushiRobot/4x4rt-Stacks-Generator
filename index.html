@@ -725,6 +725,7 @@
       { name: 'ivory', bg: '#ece9df', category: 'mineral', colors: ['#f9f9f9', '#141414', '#222222', '#3a3a39', '#8a8986', '#c8c6c0'] },
       { name: 'flint', bg: '#f4f4f4', category: 'mineral', colors: ['#ffffff', '#050505', '#151515', '#2a2a2a', '#73777a', '#b5b8ba'] },
     ];
+    const VALID_PALETTE_NAMES = new Set(PALETTES.map(palette => palette.name));
     // Initialize UI colors from data, not hardcoded CSS
     // Runs synchronously before first paint so there's no flash
     (function initUIColors() {
@@ -1043,6 +1044,7 @@
     // The default 16 blocks limit is the reason for the name 4x4art, every artwork uses exactly 16 blocks. 
     const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2); // 2, 4, 6... 40
     const DEFAULT_LIMIT = POSSIBLE_LIMITS.includes(16) ? 16 : POSSIBLE_LIMITS[0];
+    const VALID_PROFILE_IDS = new Set(['isolate', 'drift', 'spectrum']);
 
     const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
     const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
@@ -1187,7 +1189,7 @@
 
     // --- CORE GENERATION ALGORITHMS ---
 
-    function searchStack(grid, targetHeight, blocksUsed, placements, solutions, fallbackSolutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
+    function searchStack(grid, targetHeight, blocksUsed, placements, solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
       if (solutions.length >= MAX_SOLUTIONS_PER_HEIGHT) return;
       if (fallbackSolutions.length >= MAX_SOLUTIONS_PER_HEIGHT * 4) return;
 
@@ -1213,7 +1215,7 @@
       for (const option of options) {
         applyShape(grid, option.shape, option.x, option.y, true);
         placements.push({ id: option.shape.id, x: option.x, y: option.y });
-        searchStack(grid, targetHeight, blocksUsed + option.shape.blocks, placements, solutions, fallbackSolutions, requiredShapeIds, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
+        searchStack(grid, targetHeight, blocksUsed + option.shape.blocks, placements, solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
         placements.pop();
         applyShape(grid, option.shape, option.x, option.y, false);
 
@@ -1255,7 +1257,7 @@
       const solutions = [];
       const fallbackSolutions = [];
 
-      searchStack(grid, targetHeight, 0, [], solutions, fallbackSolutions, [], stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
+      searchStack(grid, targetHeight, 0, [], solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
 
       const finalSolutions = solutions.length > 0 ? solutions : fallbackSolutions;
       if (finalSolutions.length) {
@@ -1424,40 +1426,82 @@
     }
 
     // --- URL STATE SYNCING ---
+    function normalizeSeed(value) {
+      if (typeof value !== 'string') return null;
+      const normalized = value.trim().toUpperCase();
+      return /^[A-Z0-9]{6}$/.test(normalized) ? normalized : null;
+    }
+
+    function parseCommaList(value) {
+      if (typeof value !== 'string') return [];
+      return value.split(',').map(item => item.trim()).filter(Boolean);
+    }
+
+    function parseHeightsParam(value) {
+      if (typeof value !== 'string' || value.trim() === '') {
+        return { heightMode: 'multi', selectedHeights: new Set(), rangeStart: null, rangeEnd: null };
+      }
+
+      if (value.includes('-')) {
+        const [startRaw, endRaw] = value.split('-', 2);
+        const start = Number.parseInt(startRaw, 10);
+        const end = Number.parseInt(endRaw, 10);
+        if (!Number.isFinite(start) || !Number.isFinite(end)) {
+          return { heightMode: 'multi', selectedHeights: new Set(), rangeStart: null, rangeEnd: null };
+        }
+        return { heightMode: 'range', selectedHeights: new Set(), rangeStart: start, rangeEnd: end };
+      }
+
+      const parsedHeights = parseCommaList(value)
+        .map(item => Number.parseInt(item, 10))
+        .filter(height => Number.isFinite(height));
+      return {
+        heightMode: 'multi',
+        selectedHeights: new Set(parsedHeights),
+        rangeStart: null,
+        rangeEnd: null
+      };
+    }
+
+    function sanitizeHeightState() {
+      const validHeightSet = new Set(POSSIBLE_HEIGHTS);
+      const sanitizedHeights = [...appState.selectedHeights].filter(height => validHeightSet.has(height));
+      let wasChanged = sanitizedHeights.length !== appState.selectedHeights.size;
+
+      if (appState.heightMode === 'range') {
+        const selectedRangeHeights = sanitizedHeights.slice().sort((a, b) => a - b);
+
+        if (selectedRangeHeights.length > 0) {
+          const nextStart = selectedRangeHeights[0];
+          const nextEnd = selectedRangeHeights[selectedRangeHeights.length - 1];
+          if (appState.rangeStart !== nextStart || appState.rangeEnd !== nextEnd) wasChanged = true;
+          appState.rangeStart = nextStart;
+          appState.rangeEnd = nextEnd === nextStart ? null : nextEnd;
+          appState.selectedHeights = new Set(selectedRangeHeights);
+        } else if (appState.rangeStart !== null || appState.rangeEnd !== null || appState.selectedHeights.size > 0) {
+          appState.rangeStart = null;
+          appState.rangeEnd = null;
+          appState.selectedHeights = new Set();
+          wasChanged = true;
+        } else {
+          appState.selectedHeights = new Set();
+        }
+      } else {
+        if (appState.rangeStart !== null || appState.rangeEnd !== null) wasChanged = true;
+        appState.rangeStart = null;
+        appState.rangeEnd = null;
+        appState.selectedHeights = new Set(sanitizedHeights.sort((a, b) => a - b));
+      }
+
+      return wasChanged;
+    }
+
     function parseURLToState() {
       const params = new URLSearchParams(window.location.search);
 
-      if (params.has('seed')) appState.seed = params.get('seed');
-      else appState.seed = null;
-
-      if (params.has('palettes')) appState.selectedPalettes = params.get('palettes').split(',').filter(Boolean);
-      else appState.selectedPalettes = [];
-
-      if (params.has('profiles')) appState.selectedProfiles = params.get('profiles').split(',').filter(Boolean);
-      else appState.selectedProfiles = [];
-
-      if (params.has('heights')) {
-        const val = params.get('heights');
-        if (val.includes('-')) {
-          appState.heightMode = 'range';
-          const parts = val.split('-').map(Number);
-          appState.rangeStart = parts[0];
-          appState.rangeEnd = parts[1];
-          const min = Math.min(appState.rangeStart, appState.rangeEnd);
-          const max = Math.max(appState.rangeStart, appState.rangeEnd);
-          appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max));
-        } else {
-          appState.heightMode = 'multi';
-          appState.selectedHeights = new Set(val.split(',').filter(Boolean).map(Number));
-          appState.rangeStart = null;
-          appState.rangeEnd = null;
-        }
-      } else {
-        appState.heightMode = 'multi';
-        appState.selectedHeights = new Set();
-        appState.rangeStart = null;
-        appState.rangeEnd = null;
-      }
+      appState.seed = normalizeSeed(params.get('seed'));
+      appState.selectedPalettes = parseCommaList(params.get('palettes')).filter(name => VALID_PALETTE_NAMES.has(name));
+      appState.selectedProfiles = parseCommaList(params.get('profiles')).filter(profile => VALID_PROFILE_IDS.has(profile));
 
       if (params.has('outline')) appState.showOutline = params.get('outline') !== 'false';
       else appState.showOutline = true;
@@ -1476,9 +1520,24 @@
         appState.targetBlocks = DEFAULT_LIMIT;
         appState.isLimitVisible = false;
       }
-      // CRITICAL: Re-calculate valid heights immediately after state load, 
-      // as the solver constraints may have changed.
+
+      // Recalculate valid heights before parsing heights so stale URL filters are
+      // normalized against the active block limit.
       POSSIBLE_HEIGHTS = computeValidHeights();
+
+      const parsedHeights = parseHeightsParam(params.get('heights'));
+      appState.heightMode = parsedHeights.heightMode;
+      appState.selectedHeights = parsedHeights.selectedHeights;
+      appState.rangeStart = parsedHeights.rangeStart;
+      appState.rangeEnd = parsedHeights.rangeEnd;
+
+      if (appState.heightMode === 'range' && appState.rangeStart !== null) {
+        const min = appState.rangeEnd === null ? appState.rangeStart : Math.min(appState.rangeStart, appState.rangeEnd);
+        const max = appState.rangeEnd === null ? appState.rangeStart : Math.max(appState.rangeStart, appState.rangeEnd);
+        appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(height => height >= min && height <= max));
+      }
+
+      sanitizeHeightState();
     }
 
     function syncStateToURL() {
@@ -1557,23 +1616,33 @@
 
     function triggerGeneration() {
       syncStateFromDOM();
+      let didMutateHeightState = sanitizeHeightState();
 
       let wasSeedForced = !!appState.seed;
-
-      const params = {
+      const buildParams = () => ({
         allowedPalettes: appState.selectedPalettes || [],
         allowedProfiles: appState.selectedProfiles || [],
         allowedHeights: getActiveHeights() || [],
         seed: appState.seed
-      };
+      });
 
+      let params = buildParams();
       let newArtwork = generateStack(params);
 
       // Automatic failsafe: if a shared seed was mathematically invalid somehow, regenerate cleanly
       if (!newArtwork && appState.seed) {
-        params.seed = null;
         appState.seed = null;
         wasSeedForced = false;
+        params = buildParams();
+        newArtwork = generateStack(params);
+      }
+
+      if (!newArtwork && appState.selectedHeights.size > 0) {
+        appState.selectedHeights.clear();
+        appState.rangeStart = null;
+        appState.rangeEnd = null;
+        didMutateHeightState = sanitizeHeightState() || didMutateHeightState;
+        params = buildParams();
         newArtwork = generateStack(params);
       }
 
@@ -1591,7 +1660,11 @@
         }
 
         appState.seed = newArtwork.seed;
+        if (didMutateHeightState) renderHeightList();
         renderUI();
+        syncStateToURL();
+      } else {
+        if (didMutateHeightState) renderHeightList();
         syncStateToURL();
       }
     }
@@ -1825,15 +1898,8 @@
         appState.seed = null;
         updateThumbPos(appState.targetBlocks);
         
-        // Dynamic height validation logic
         POSSIBLE_HEIGHTS = computeValidHeights();
-        const validSet = new Set(POSSIBLE_HEIGHTS);
-        [...appState.selectedHeights].forEach(h => {
-          if (!validSet.has(h)) appState.selectedHeights.delete(h);
-        });
-        if (appState.rangeStart && !validSet.has(appState.rangeStart)) appState.rangeStart = null;
-        if (appState.rangeEnd && !validSet.has(appState.rangeEnd)) appState.rangeEnd = null;
-
+        sanitizeHeightState();
         renderHeightList();
         triggerGeneration();
       }
@@ -1918,6 +1984,7 @@
             appState.rangeStart = null;
             appState.rangeEnd = null;
           }
+          sanitizeHeightState();
           appState.seed = null;
           renderHeightList();
           triggerGeneration();
