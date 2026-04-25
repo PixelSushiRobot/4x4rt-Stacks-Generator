@@ -1189,18 +1189,18 @@
 
     // --- CORE GENERATION ALGORITHMS ---
 
-    function searchStack(grid, targetHeight, blocksUsed, placements, solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
+    function searchStack(grid, targetHeight, targetBlocks, blocksUsed, placements, solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
       if (solutions.length >= MAX_SOLUTIONS_PER_HEIGHT) return;
       if (fallbackSolutions.length >= MAX_SOLUTIONS_PER_HEIGHT * 4) return;
 
-      if (blocksUsed > appState.targetBlocks) return;
+      if (blocksUsed > targetBlocks) return;
       const remainingUnits = countEmptyCells(grid);
-      if (blocksUsed + (remainingUnits * minBlocksPerUnit) > appState.targetBlocks) return;
-      if (blocksUsed + (remainingUnits * maxBlocksPerUnit) < appState.targetBlocks) return;
+      if (blocksUsed + (remainingUnits * minBlocksPerUnit) > targetBlocks) return;
+      if (blocksUsed + (remainingUnits * maxBlocksPerUnit) < targetBlocks) return;
 
       const firstEmpty = findFirstEmptyCell(grid);
       if (!firstEmpty) {
-        if (blocksUsed === appState.targetBlocks) {
+        if (blocksUsed === targetBlocks) {
           const snapshot = placements.map(placement => ({ id: placement.id, x: placement.x, y: placement.y }));
           if (isPreferredSolution(placements)) {
             solutions.push(snapshot);
@@ -1215,7 +1215,7 @@
       for (const option of options) {
         applyShape(grid, option.shape, option.x, option.y, true);
         placements.push({ id: option.shape.id, x: option.x, y: option.y });
-        searchStack(grid, targetHeight, blocksUsed + option.shape.blocks, placements, solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
+        searchStack(grid, targetHeight, targetBlocks, blocksUsed + option.shape.blocks, placements, solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
         placements.pop();
         applyShape(grid, option.shape, option.x, option.y, false);
 
@@ -1243,7 +1243,7 @@
       return shuffle(placements);
     }
 
-    function solveStackForHeight(targetHeight) {
+    function solveStackForHeight(targetHeight, targetBlocks) {
       const stackShapes = BASE_STACK_SHAPES.filter(shape => STRICT_SHAPE_IDS.has(shape.id));
       // Weights bias the solver toward taller, more structural shapes.
       // Higher weight = shape appears more times in the shuffled candidate list = chosen more often.
@@ -1257,7 +1257,7 @@
       const solutions = [];
       const fallbackSolutions = [];
 
-      searchStack(grid, targetHeight, 0, [], solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
+      searchStack(grid, targetHeight, targetBlocks, 0, [], solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit);
 
       const finalSolutions = solutions.length > 0 ? solutions : fallbackSolutions;
       if (finalSolutions.length) {
@@ -1270,14 +1270,14 @@
     // Only heights where the solver finds at least one valid solution are included.
     // This replaces the old hardcoded '- 3' floor with a proved-valid set, and correctly
     // handles any height that is geometrically impossible regardless of available area.
-    function computeValidHeights() {
+    function computeValidHeights(targetBlocks) {
       const validHeights = [];
       for (let h = MAX_STACK_HEIGHT_UNITS; h >= 1; h--) {
-        if (solveStackForHeight(h) !== null) validHeights.push(h);
+        if (solveStackForHeight(h, targetBlocks) !== null) validHeights.push(h);
       }
       return validHeights; // Descending order (tallest first), matching original POSSIBLE_HEIGHTS shape.
     }
-    let POSSIBLE_HEIGHTS = computeValidHeights();
+    let POSSIBLE_HEIGHTS = computeValidHeights(DEFAULT_LIMIT);
 
 
     function generateStack(params) {
@@ -1324,7 +1324,7 @@
         if (!isForcedSeed && allowedHeights.length > 0 && !allowedHeights.includes(heightUnits)) continue;
 
         // 4. Attempt to mathematically solve the structure with the current PRNG seed
-        const placements = solveStackForHeight(heightUnits);
+        const placements = solveStackForHeight(heightUnits, params.blockLimit);
         if (!placements) {
           if (isForcedSeed) return null; // If a shared URL seed is mathematically broken, abort cleanly
           continue;
@@ -1496,317 +1496,378 @@
       return wasChanged;
     }
 
-    function parseURLToState() {
-      const params = new URLSearchParams(window.location.search);
+    // --- STATE MODULE ---
+    const State = {
+      refreshValidHeights() {
+        POSSIBLE_HEIGHTS = computeValidHeights(appState.targetBlocks);
+        return POSSIBLE_HEIGHTS;
+      },
 
-      appState.seed = normalizeSeed(params.get('seed'));
-      appState.selectedPalettes = parseCommaList(params.get('palettes')).filter(name => VALID_PALETTE_NAMES.has(name));
-      appState.selectedProfiles = parseCommaList(params.get('profiles')).filter(profile => VALID_PROFILE_IDS.has(profile));
+      sanitizeHeights() {
+        return sanitizeHeightState();
+      },
 
-      if (params.has('outline')) appState.showOutline = params.get('outline') !== 'false';
-      else appState.showOutline = true;
-
-      if (params.has('meta')) appState.showMetadata = params.get('meta') !== 'false';
-      else appState.showMetadata = true;
-
-      if (params.has('export')) appState.showExport = params.get('export') !== 'false';
-      else appState.showExport = true;
-
-      if (params.has('limit')) {
-        const val = parseInt(params.get('limit'), 10);
-        appState.targetBlocks = clampToAllowedLimit(val);
-        appState.isLimitVisible = true;
-      } else {
-        appState.targetBlocks = DEFAULT_LIMIT;
-        appState.isLimitVisible = false;
-      }
-
-      // Recalculate valid heights before parsing heights so stale URL filters are
-      // normalized against the active block limit.
-      POSSIBLE_HEIGHTS = computeValidHeights();
-
-      const parsedHeights = parseHeightsParam(params.get('heights'));
-      appState.heightMode = parsedHeights.heightMode;
-      appState.selectedHeights = parsedHeights.selectedHeights;
-      appState.rangeStart = parsedHeights.rangeStart;
-      appState.rangeEnd = parsedHeights.rangeEnd;
-
-      if (appState.heightMode === 'range' && appState.rangeStart !== null) {
-        const min = appState.rangeEnd === null ? appState.rangeStart : Math.min(appState.rangeStart, appState.rangeEnd);
-        const max = appState.rangeEnd === null ? appState.rangeStart : Math.max(appState.rangeStart, appState.rangeEnd);
-        appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(height => height >= min && height <= max));
-      }
-
-      sanitizeHeightState();
-    }
-
-    function syncStateToURL() {
-      const url = new URL(window.location);
-      const sp = url.searchParams;
-      // Clean start
-      sp.delete('seed'); sp.delete('palettes'); sp.delete('profiles'); sp.delete('heights');
-      sp.delete('limit'); sp.delete('outline'); sp.delete('meta'); sp.delete('export');
-
-      if (appState.selectedPalettes.length) sp.set('palettes', appState.selectedPalettes.join(','));
-      if (appState.selectedProfiles.length) sp.set('profiles', appState.selectedProfiles.join(','));
-
-      if (appState.selectedHeights.size > 0) {
-        if (appState.heightMode === 'range' && appState.rangeStart !== null && appState.rangeEnd !== null) {
-          const min = Math.min(appState.rangeStart, appState.rangeEnd);
-          const max = Math.max(appState.rangeStart, appState.rangeEnd);
-          sp.set('heights', `${min}-${max}`);
-        } else {
-          sp.set('heights', Array.from(appState.selectedHeights).sort((a, b) => a - b).join(','));
-        }
-      }
-      if (appState.isLimitVisible) sp.set('limit', appState.targetBlocks);
-
-      if (!appState.showOutline) sp.set('outline', 'false');
-      if (!appState.showMetadata) sp.set('meta', 'false');
-      if (!appState.showExport) sp.set('export', 'false');
-      if (appState.seed) sp.set('seed', appState.seed);
-
-      // Pretty construct the final string with actual commas
-      const searchString = sp.toString().replace(/%2C/g, ',');
-      appState.shareUrl = url.origin + url.pathname + (searchString ? '?' + searchString : '');
-
-      try {
-        window.history.replaceState(null, '', appState.shareUrl);
-      } catch (e) {
-        console.warn("Could not update URL history state in this environment.", e);
-      }
-    }
-
-    function applyStateToDOM() {
-      document.querySelectorAll('#palette-filter-list input[type="checkbox"]').forEach(c => {
-        c.checked = appState.selectedPalettes.includes(c.value);
-      });
-      document.querySelectorAll('#profile-filter-list input[type="checkbox"]').forEach(c => {
-        c.checked = appState.selectedProfiles.includes(c.value);
-      });
-
-      const rangeToggleEl = document.getElementById('toggle-range-mode');
-      if (rangeToggleEl) rangeToggleEl.checked = (appState.heightMode === 'range');
-
-      const outlineEl = document.getElementById('toggle-outline');
-      if (outlineEl) outlineEl.checked = appState.showOutline;
-
-      const metadataEl = document.getElementById('toggle-metadata');
-      if (metadataEl) metadataEl.checked = appState.showMetadata;
-
-      const exportEl = document.getElementById('toggle-export');
-      if (exportEl) exportEl.checked = appState.showExport;
-
-      renderHeightList();
-    }
-
-    // --- CONTROLLER LAYER ---
-    function getActiveHeights() {
-      return Array.from(appState.selectedHeights);
-    }
-
-    function syncStateFromDOM() {
-      appState.selectedPalettes = [...document.querySelectorAll('#palette-filter-list input:checked')].map(i => i.value);
-      appState.selectedProfiles = [...document.querySelectorAll('#profile-filter-list input:checked')].map(i => i.value);
-
-      appState.showOutline = document.getElementById('toggle-outline')?.checked ?? true;
-      appState.showMetadata = document.getElementById('toggle-metadata')?.checked ?? true;
-      appState.showExport = document.getElementById('toggle-export')?.checked ?? true;
-    }
-
-    function triggerGeneration() {
-      syncStateFromDOM();
-      let didMutateHeightState = sanitizeHeightState();
-
-      let wasSeedForced = !!appState.seed;
-      const buildParams = () => ({
-        allowedPalettes: appState.selectedPalettes || [],
-        allowedProfiles: appState.selectedProfiles || [],
-        allowedHeights: getActiveHeights() || [],
-        seed: appState.seed
-      });
-
-      let params = buildParams();
-      let newArtwork = generateStack(params);
-
-      // Automatic failsafe: if a shared seed was mathematically invalid somehow, regenerate cleanly
-      if (!newArtwork && appState.seed) {
+      clearSeed() {
         appState.seed = null;
-        wasSeedForced = false;
-        params = buildParams();
-        newArtwork = generateStack(params);
-      }
+      },
 
-      if (!newArtwork && appState.selectedHeights.size > 0) {
+      setSeed(seed) {
+        appState.seed = seed;
+      },
+
+      setTargetBlocks(value) {
+        appState.targetBlocks = clampToAllowedLimit(value);
+        this.clearSeed();
+        this.refreshValidHeights();
+        this.sanitizeHeights();
+        return appState.targetBlocks;
+      },
+
+      setRenderFlag(flag, value) {
+        appState[flag] = value;
+      },
+
+      setHeightMode(mode) {
+        appState.heightMode = mode;
+        if (mode === 'range') {
+          const selectedHeights = Array.from(appState.selectedHeights).sort((a, b) => a - b);
+          if (selectedHeights.length > 0) {
+            appState.rangeStart = selectedHeights[0];
+            appState.rangeEnd = selectedHeights[selectedHeights.length - 1];
+            const min = Math.min(appState.rangeStart, appState.rangeEnd);
+            const max = Math.max(appState.rangeStart, appState.rangeEnd);
+            appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(height => height >= min && height <= max));
+          } else {
+            appState.rangeStart = null;
+            appState.rangeEnd = null;
+          }
+        } else {
+          appState.rangeStart = null;
+          appState.rangeEnd = null;
+        }
+        this.sanitizeHeights();
+      },
+
+      toggleHeightSelection(height) {
+        if (appState.heightMode === 'multi') {
+          if (appState.selectedHeights.has(height)) appState.selectedHeights.delete(height);
+          else appState.selectedHeights.add(height);
+          return;
+        }
+
+        if (appState.rangeStart === null || (appState.rangeStart !== null && appState.rangeEnd !== null)) {
+          appState.rangeStart = height;
+          appState.rangeEnd = null;
+          appState.selectedHeights = new Set([height]);
+          return;
+        }
+
+        appState.rangeEnd = height;
+        const min = Math.min(appState.rangeStart, appState.rangeEnd);
+        const max = Math.max(appState.rangeStart, appState.rangeEnd);
+        appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(value => value >= min && value <= max));
+      },
+
+      resetFiltersAndView() {
+        appState.heightMode = 'multi';
         appState.selectedHeights.clear();
         appState.rangeStart = null;
         appState.rangeEnd = null;
-        didMutateHeightState = sanitizeHeightState() || didMutateHeightState;
-        params = buildParams();
-        newArtwork = generateStack(params);
-      }
+        appState.showOutline = true;
+        appState.showMetadata = true;
+        appState.showExport = true;
+        this.clearSeed();
+      },
 
-      if (newArtwork) {
-        appState.artwork = newArtwork;
+      syncFromDOM() {
+        appState.selectedPalettes = [...document.querySelectorAll('#palette-filter-list input:checked')].map(input => input.value);
+        appState.selectedProfiles = [...document.querySelectorAll('#profile-filter-list input:checked')].map(input => input.value);
+        appState.showOutline = document.getElementById('toggle-outline')?.checked ?? true;
+        appState.showMetadata = document.getElementById('toggle-metadata')?.checked ?? true;
+        appState.showExport = document.getElementById('toggle-export')?.checked ?? true;
+      },
 
-        // Auto-toggle outline based on palette category for fresh generations
-        // only if no specific palettes (colors) are selected.
-        if (!wasSeedForced && appState.selectedPalettes.length === 0) {
-          appState.showOutline = !(newArtwork.palette.category === 'muted' || newArtwork.palette.category === 'void');
-          const toggleBorder = document.getElementById('toggle-outline');
-          if (toggleBorder) {
-            toggleBorder.checked = appState.showOutline;
+      applyToDOM() {
+        document.querySelectorAll('#palette-filter-list input[type="checkbox"]').forEach(checkbox => {
+          checkbox.checked = appState.selectedPalettes.includes(checkbox.value);
+        });
+        document.querySelectorAll('#profile-filter-list input[type="checkbox"]').forEach(checkbox => {
+          checkbox.checked = appState.selectedProfiles.includes(checkbox.value);
+        });
+
+        const rangeToggleEl = document.getElementById('toggle-range-mode');
+        if (rangeToggleEl) rangeToggleEl.checked = (appState.heightMode === 'range');
+
+        const outlineEl = document.getElementById('toggle-outline');
+        if (outlineEl) outlineEl.checked = appState.showOutline;
+
+        const metadataEl = document.getElementById('toggle-metadata');
+        if (metadataEl) metadataEl.checked = appState.showMetadata;
+
+        const exportEl = document.getElementById('toggle-export');
+        if (exportEl) exportEl.checked = appState.showExport;
+
+        Render.renderHeightFilter();
+      },
+
+      buildGenerationParams() {
+        return {
+          allowedPalettes: appState.selectedPalettes || [],
+          allowedProfiles: appState.selectedProfiles || [],
+          allowedHeights: Array.from(appState.selectedHeights),
+          seed: appState.seed,
+          blockLimit: appState.targetBlocks
+        };
+      },
+
+      parseURL() {
+        const params = new URLSearchParams(window.location.search);
+
+        appState.seed = normalizeSeed(params.get('seed'));
+        appState.selectedPalettes = parseCommaList(params.get('palettes')).filter(name => VALID_PALETTE_NAMES.has(name));
+        appState.selectedProfiles = parseCommaList(params.get('profiles')).filter(profile => VALID_PROFILE_IDS.has(profile));
+
+        appState.showOutline = params.has('outline') ? params.get('outline') !== 'false' : true;
+        appState.showMetadata = params.has('meta') ? params.get('meta') !== 'false' : true;
+        appState.showExport = params.has('export') ? params.get('export') !== 'false' : true;
+
+        if (params.has('limit')) {
+          appState.targetBlocks = clampToAllowedLimit(parseInt(params.get('limit'), 10));
+          appState.isLimitVisible = true;
+        } else {
+          appState.targetBlocks = DEFAULT_LIMIT;
+          appState.isLimitVisible = false;
+        }
+
+        this.refreshValidHeights();
+
+        const parsedHeights = parseHeightsParam(params.get('heights'));
+        appState.heightMode = parsedHeights.heightMode;
+        appState.selectedHeights = parsedHeights.selectedHeights;
+        appState.rangeStart = parsedHeights.rangeStart;
+        appState.rangeEnd = parsedHeights.rangeEnd;
+
+        if (appState.heightMode === 'range' && appState.rangeStart !== null) {
+          const min = appState.rangeEnd === null ? appState.rangeStart : Math.min(appState.rangeStart, appState.rangeEnd);
+          const max = appState.rangeEnd === null ? appState.rangeStart : Math.max(appState.rangeStart, appState.rangeEnd);
+          appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(height => height >= min && height <= max));
+        }
+
+        this.sanitizeHeights();
+      },
+
+      syncURL() {
+        const url = new URL(window.location);
+        const searchParams = url.searchParams;
+
+        searchParams.delete('seed');
+        searchParams.delete('palettes');
+        searchParams.delete('profiles');
+        searchParams.delete('heights');
+        searchParams.delete('limit');
+        searchParams.delete('outline');
+        searchParams.delete('meta');
+        searchParams.delete('export');
+
+        if (appState.selectedPalettes.length) searchParams.set('palettes', appState.selectedPalettes.join(','));
+        if (appState.selectedProfiles.length) searchParams.set('profiles', appState.selectedProfiles.join(','));
+
+        if (appState.selectedHeights.size > 0) {
+          if (appState.heightMode === 'range' && appState.rangeStart !== null && appState.rangeEnd !== null) {
+            const min = Math.min(appState.rangeStart, appState.rangeEnd);
+            const max = Math.max(appState.rangeStart, appState.rangeEnd);
+            searchParams.set('heights', `${min}-${max}`);
+          } else {
+            searchParams.set('heights', Array.from(appState.selectedHeights).sort((a, b) => a - b).join(','));
           }
         }
 
-        appState.seed = newArtwork.seed;
-        if (didMutateHeightState) renderHeightList();
-        renderUI();
-        syncStateToURL();
-      } else {
-        if (didMutateHeightState) renderHeightList();
-        syncStateToURL();
+        if (appState.isLimitVisible) searchParams.set('limit', appState.targetBlocks);
+        if (!appState.showOutline) searchParams.set('outline', 'false');
+        if (!appState.showMetadata) searchParams.set('meta', 'false');
+        if (!appState.showExport) searchParams.set('export', 'false');
+        if (appState.seed) searchParams.set('seed', appState.seed);
+
+        const searchString = searchParams.toString().replace(/%2C/g, ',');
+        appState.shareUrl = url.origin + url.pathname + (searchString ? `?${searchString}` : '');
+
+        try {
+          window.history.replaceState(null, '', appState.shareUrl);
+        } catch (error) {
+          console.warn('Could not update URL history state in this environment.', error);
+        }
+      },
+
+      triggerGeneration() {
+        this.syncFromDOM();
+        let didMutateHeightState = this.sanitizeHeights();
+        let wasSeedForced = !!appState.seed;
+
+        let params = this.buildGenerationParams();
+        let newArtwork = generateStack(params);
+
+        if (!newArtwork && appState.seed) {
+          this.clearSeed();
+          wasSeedForced = false;
+          params = this.buildGenerationParams();
+          newArtwork = generateStack(params);
+        }
+
+        if (!newArtwork && appState.selectedHeights.size > 0) {
+          appState.selectedHeights.clear();
+          appState.rangeStart = null;
+          appState.rangeEnd = null;
+          didMutateHeightState = this.sanitizeHeights() || didMutateHeightState;
+          params = this.buildGenerationParams();
+          newArtwork = generateStack(params);
+        }
+
+        if (newArtwork) {
+          appState.artwork = newArtwork;
+
+          if (!wasSeedForced && appState.selectedPalettes.length === 0) {
+            appState.showOutline = !(newArtwork.palette.category === 'muted' || newArtwork.palette.category === 'void');
+            const outlineEl = document.getElementById('toggle-outline');
+            if (outlineEl) outlineEl.checked = appState.showOutline;
+          }
+
+          appState.seed = newArtwork.seed;
+          if (didMutateHeightState) Render.renderHeightFilter();
+          Render.render();
+          this.syncURL();
+          return;
+        }
+
+        if (didMutateHeightState) Render.renderHeightFilter();
+        this.syncURL();
       }
-    }
+    };
 
-    // --- RENDER LAYER ---
-    function buildDotStrip(container, colors) {
-      if (!container) return;
-      container.innerHTML = '';
-      colors.forEach((c, i) => {
-        const d = document.createElement('div');
-        d.className = 'dot';
-        d.style.background = c;
-        if (i === 0) d.title = 'background';
-        container.appendChild(d);
-      });
-    }
-
-    function renderUI() {
-      if (!appState.artwork) return;
-      const { placements, heightUnits, palette, activeProfile } = appState.artwork;
-
-      const svg = document.getElementById('svg-out');
-      svg.innerHTML = '';
-
-      const stackHeightPx = (heightUnits * CELL_STEP) + BORDER_WIDTH;
-      const offsetX = Math.round((CANVAS_SIZE - COLUMN_WIDTH) / 2);
-      const offsetY = Math.round((CANVAS_SIZE - stackHeightPx) / 2);
-
-      // Lock dimensions explicitly for PNG export
-      svg.setAttribute('viewBox', `0 0 ${CANVAS_SIZE} ${CANVAS_SIZE}`);
-      svg.setAttribute('width', CANVAS_SIZE);
-      svg.setAttribute('height', CANVAS_SIZE);
-
-      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      bg.setAttribute('width', CANVAS_SIZE); bg.setAttribute('height', CANVAS_SIZE); bg.setAttribute('fill', palette.bg);
-      svg.appendChild(bg);
-
-      placements.forEach(placement => {
-        const shape = SHAPE_CATALOG[placement.id];
-        const color = placement.color;
-
-        // Fast adjacency lookup: check whether a neighboring cell belongs to the same shape.
-        const occupied = new Set(shape.cells.map(cell => `${cell.x},${cell.y}`));
-        shape.cells.forEach(cell => {
-          const cellX = offsetX + ((placement.x + cell.x) * CELL_STEP);
-          const gridY = placement.y + cell.y;
-          const cellY = offsetY + ((heightUnits - 1 - gridY) * CELL_STEP);
-
-          // Inset = 0 on edges shared with a same-shape neighbor (no gap needed).
-          // Inset = BORDER_WIDTH on exposed edges (gap/outline color shows through).
-          const insetLeft = occupied.has(`${cell.x - 1},${cell.y}`) ? 0 : BORDER_WIDTH;
-          const insetRight = occupied.has(`${cell.x + 1},${cell.y}`) ? 0 : BORDER_WIDTH;
-          const insetTop = occupied.has(`${cell.x},${cell.y + 1}`) ? 0 : BORDER_WIDTH;
-          const insetBottom = occupied.has(`${cell.x},${cell.y - 1}`) ? 0 : BORDER_WIDTH;
-
-          const effectiveGapColor = appState.showOutline ? INK_COLOR : palette.bg;
-
-          // Two-rect technique: draw a full-cell rect in the gap color first,
-          // then overlay an inset rect in the shape color on top.
-          // The gap color bleeds through the inset, creating the border without SVG strokes.
-          addRect(svg, cellX, cellY, CELL_SIZE, CELL_SIZE, effectiveGapColor);
-          addRect(
-            svg,
-            cellX + insetLeft,
-            cellY + insetTop,
-            CELL_SIZE - insetLeft - insetRight,
-            CELL_SIZE - insetTop - insetBottom,
-            color
-          );
+    // --- RENDER MODULE ---
+    const Render = {
+      buildDotStrip(container, colors) {
+        if (!container) return;
+        container.innerHTML = '';
+        colors.forEach((color, index) => {
+          const dot = document.createElement('div');
+          dot.className = 'dot';
+          dot.style.background = color;
+          if (index === 0) dot.title = 'background';
+          container.appendChild(dot);
         });
-      });
+      },
 
-      // ADAPT UI COLORS
-      const lightBg = isLight(palette.bg);
-      const baseRGB = lightBg ? '28, 28, 26' : '240, 238, 232';
+      renderArtwork() {
+        if (!appState.artwork) return;
+        const { placements, heightUnits, palette } = appState.artwork;
+        const svg = document.getElementById('svg-out');
+        svg.innerHTML = '';
 
-      const root = document.documentElement;
-      root.style.setProperty('--ui-bg', palette.bg);
-      root.style.setProperty('--ui-ink', `rgba(${baseRGB}, 0.9)`);
-      root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
-      root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
+        const stackHeightPx = (heightUnits * CELL_STEP) + BORDER_WIDTH;
+        const offsetX = Math.round((CANVAS_SIZE - COLUMN_WIDTH) / 2);
+        const offsetY = Math.round((CANVAS_SIZE - stackHeightPx) / 2);
 
-      // OVERLAY VISIBILITY
-      document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !appState.showMetadata);
-      document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
+        svg.setAttribute('viewBox', `0 0 ${CANVAS_SIZE} ${CANVAS_SIZE}`);
+        svg.setAttribute('width', CANVAS_SIZE);
+        svg.setAttribute('height', CANVAS_SIZE);
 
-      // METADATA TEXT & DOTS
-      const seedDisplayEl = document.getElementById('seed-display');
-      if (seedDisplayEl) seedDisplayEl.textContent = appState.seed;
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bg.setAttribute('width', CANVAS_SIZE);
+        bg.setAttribute('height', CANVAS_SIZE);
+        bg.setAttribute('fill', palette.bg);
+        svg.appendChild(bg);
 
-      const shapeCountEl = document.getElementById('shape-count');
-      if (shapeCountEl) shapeCountEl.textContent = placements.length;
+        placements.forEach(placement => {
+          const shape = SHAPE_CATALOG[placement.id];
+          const occupied = new Set(shape.cells.map(cell => `${cell.x},${cell.y}`));
 
-      const stackHeightEl = document.getElementById('stack-height');
-      if (stackHeightEl) stackHeightEl.textContent = heightUnits;
+          shape.cells.forEach(cell => {
+            const cellX = offsetX + ((placement.x + cell.x) * CELL_STEP);
+            const gridY = placement.y + cell.y;
+            const cellY = offsetY + ((heightUnits - 1 - gridY) * CELL_STEP);
+            const insetLeft = occupied.has(`${cell.x - 1},${cell.y}`) ? 0 : BORDER_WIDTH;
+            const insetRight = occupied.has(`${cell.x + 1},${cell.y}`) ? 0 : BORDER_WIDTH;
+            const insetTop = occupied.has(`${cell.x},${cell.y + 1}`) ? 0 : BORDER_WIDTH;
+            const insetBottom = occupied.has(`${cell.x},${cell.y - 1}`) ? 0 : BORDER_WIDTH;
+            const effectiveGapColor = appState.showOutline ? INK_COLOR : palette.bg;
 
-      const paletteNameEl = document.getElementById('palette-name');
-      if (paletteNameEl) paletteNameEl.textContent = palette.name;
+            addRect(svg, cellX, cellY, CELL_SIZE, CELL_SIZE, effectiveGapColor);
+            addRect(
+              svg,
+              cellX + insetLeft,
+              cellY + insetTop,
+              CELL_SIZE - insetLeft - insetRight,
+              CELL_SIZE - insetTop - insetBottom,
+              placement.color
+            );
+          });
+        });
+      },
 
-      const profileNameEl = document.getElementById('profile-name');
-      if (profileNameEl) profileNameEl.textContent = activeProfile;
+      renderMetadata() {
+        if (!appState.artwork) return;
+        const { placements, heightUnits, palette, activeProfile } = appState.artwork;
+        const lightBg = isLight(palette.bg);
+        const baseRGB = lightBg ? '28, 28, 26' : '240, 238, 232';
+        const root = document.documentElement;
+        root.style.setProperty('--ui-bg', palette.bg);
+        root.style.setProperty('--ui-ink', `rgba(${baseRGB}, 0.9)`);
+        root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
+        root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
 
-      const limitDisplayEl = document.getElementById('limit-display');
-      if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
+        document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !appState.showMetadata);
+        document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
+        document.getElementById('metadata-limit-stat')?.classList.toggle('is-hidden', !appState.isLimitVisible);
+        document.getElementById('params-limit-section')?.classList.toggle('is-hidden', !appState.isLimitVisible);
 
-      document.getElementById('metadata-limit-stat')?.classList.toggle('is-hidden', !appState.isLimitVisible);
-      document.getElementById('params-limit-section')?.classList.toggle('is-hidden', !appState.isLimitVisible);
+        const seedDisplayEl = document.getElementById('seed-display');
+        if (seedDisplayEl) seedDisplayEl.textContent = appState.seed;
 
-      const usedColors = new Set(placements.map(p => p.color));
-      const sortedUsedColors = palette.colors.filter(c => usedColors.has(c));
+        const shapeCountEl = document.getElementById('shape-count');
+        if (shapeCountEl) shapeCountEl.textContent = placements.length;
 
-      buildDotStrip(
-        document.getElementById('actual-palette-dots'),
-        [palette.bg, ...sortedUsedColors]
-      );
-      buildDotStrip(
-        document.getElementById('palette-dots'),
-        [palette.bg, ...palette.colors]
-      );
+        const stackHeightEl = document.getElementById('stack-height');
+        if (stackHeightEl) stackHeightEl.textContent = heightUnits;
 
-      const shapesList = document.getElementById('shapes-list');
-      if (shapesList) {
+        const paletteNameEl = document.getElementById('palette-name');
+        if (paletteNameEl) paletteNameEl.textContent = palette.name;
+
+        const profileNameEl = document.getElementById('profile-name');
+        if (profileNameEl) profileNameEl.textContent = activeProfile;
+
+        const limitDisplayEl = document.getElementById('limit-display');
+        if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
+
+        const usedColors = new Set(placements.map(placement => placement.color));
+        const sortedUsedColors = palette.colors.filter(color => usedColors.has(color));
+        this.buildDotStrip(document.getElementById('actual-palette-dots'), [palette.bg, ...sortedUsedColors]);
+        this.buildDotStrip(document.getElementById('palette-dots'), [palette.bg, ...palette.colors]);
+
+        const shapesList = document.getElementById('shapes-list');
+        if (!shapesList) return;
+
         shapesList.innerHTML = '';
-        const counts = placements.reduce((acc, p) => {
-          const piece = SHAPE_CATALOG[p.id].piece;
+        const counts = placements.reduce((acc, placement) => {
+          const piece = SHAPE_CATALOG[placement.id].piece;
           acc[piece] = (acc[piece] || 0) + 1;
           return acc;
         }, {});
+
         FAMILY_ORDER.filter(piece => counts[piece]).forEach(piece => {
           const stat = document.createElement('div');
           stat.className = 'stat';
           stat.innerHTML = `<span class="stat-label">${piece}</span><span class="stat-value">${counts[piece]}</span>`;
           shapesList.appendChild(stat);
         });
-      }
-    }
+      },
 
-    /**
-     * Renders and binds the interactive Limit slider.
-     * Replaces the static pills with a draggable 'pill thumb'.
-     */
-    function renderLimitSlider() {
+      render() {
+        if (!appState.artwork) return;
+        this.renderArtwork();
+        this.renderMetadata();
+      },
+
+      renderLimitSlider() {
       const container = document.getElementById('limit-slider-container');
       if (!container) return;
       container.innerHTML = '';
@@ -1894,22 +1955,18 @@
       }
 
       function updateLimit(val) {
-        appState.targetBlocks = clampToAllowedLimit(val);
-        appState.seed = null;
+        State.setTargetBlocks(val);
         updateThumbPos(appState.targetBlocks);
-        
-        POSSIBLE_HEIGHTS = computeValidHeights();
-        sanitizeHeightState();
-        renderHeightList();
-        triggerGeneration();
+        Render.renderHeightFilter();
+        State.triggerGeneration();
       }
 
       slider.addEventListener('pointerdown', onPointerDown);
       // Ensure layout changes don't break position
       window.addEventListener('resize', () => updateThumbPos(appState.targetBlocks));
-    }
+      },
 
-    function renderHeightList() {
+      renderHeightFilter() {
       const hList = document.getElementById('height-filter-container');
       if (!hList) return;
       hList.innerHTML = '';
@@ -1935,188 +1992,135 @@
 
         // Click logic modifies the single source of truth: selectedHeights
         cell.addEventListener('click', () => {
-          if (appState.heightMode === 'multi') {
-            if (appState.selectedHeights.has(h)) appState.selectedHeights.delete(h);
-            else appState.selectedHeights.add(h);
-          } else {
-            if (appState.rangeStart === null || (appState.rangeStart !== null && appState.rangeEnd !== null)) {
-              appState.rangeStart = h;
-              appState.rangeEnd = null;
-              appState.selectedHeights = new Set([h]); // Instantly translates UI action to engine data
-            } else {
-              appState.rangeEnd = h;
-              const min = Math.min(appState.rangeStart, appState.rangeEnd);
-              const max = Math.max(appState.rangeStart, appState.rangeEnd);
-              appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(val => val >= min && val <= max));
-            }
-          }
-          appState.seed = null;
-          renderHeightList();
-          triggerGeneration();
+          State.toggleHeightSelection(h);
+          State.clearSeed();
+          Render.renderHeightFilter();
+          State.triggerGeneration();
         });
 
         hList.appendChild(cell);
       });
-    }
-
-    // --- INITIALIZATION & BINDING ---
-    function bindParamsPanel() {
-      // 2. Height Logic
-      const rangeToggle = document.getElementById('toggle-range-mode');
-      if (rangeToggle) {
-        rangeToggle.addEventListener('change', (e) => {
-          appState.heightMode = e.target.checked ? 'range' : 'multi';
-
-          // When switching modes, calculate UI representation from the single source of truth
-          if (appState.heightMode === 'range') {
-            const arr = Array.from(appState.selectedHeights).sort((a, b) => a - b);
-            if (arr.length > 0) {
-              appState.rangeStart = arr[0];
-              appState.rangeEnd = arr[arr.length - 1];
-              const min = Math.min(appState.rangeStart, appState.rangeEnd);
-              const max = Math.max(appState.rangeStart, appState.rangeEnd);
-              appState.selectedHeights = new Set(POSSIBLE_HEIGHTS.filter(h => h >= min && h <= max));
-            } else {
-              appState.rangeStart = null;
-              appState.rangeEnd = null;
-            }
-          } else {
-            appState.rangeStart = null;
-            appState.rangeEnd = null;
-          }
-          sanitizeHeightState();
-          appState.seed = null;
-          renderHeightList();
-          triggerGeneration();
-        });
       }
-      renderLimitSlider();
-      renderHeightList();
+    };
 
-      // 3. Dynamic Palettes (Restored Checkboxes)
-      const pList = document.getElementById('palette-filter-list');
-      const groupedPalettes = {};
-      PALETTES.forEach(p => {
-        if (!groupedPalettes[p.category]) groupedPalettes[p.category] = [];
-        groupedPalettes[p.category].push(p);
-      });
+    // --- CONTROLS MODULE ---
+    const Controls = {
+      regenerateFromFilters() {
+        State.clearSeed();
+        State.triggerGeneration();
+      },
 
-      Object.keys(groupedPalettes).forEach(category => {
-        const header = document.createElement('div');
-        header.className = 'params-subsection-title';
-        header.textContent = category;
-        header.title = `Toggle all ${category} palettes`;
+      syncRenderFlag(flag, checked) {
+        State.setRenderFlag(flag, checked);
+        Render.render();
+        State.syncURL();
+      },
 
-        const categoryInputs = [];
-
-        header.addEventListener('click', () => {
-          const allChecked = categoryInputs.every(input => input.checked);
-          categoryInputs.forEach(input => input.checked = !allChecked);
-          appState.seed = null;
-          triggerGeneration();
-        });
-
-        pList.appendChild(header);
-
-        groupedPalettes[category].forEach(p => {
-          const l = document.createElement('label');
-          l.className = 'setting-item';
-          l.innerHTML = `<input type="checkbox" value="${p.name}"><code>${p.name}</code>`;
-          categoryInputs.push(l.querySelector('input'));
-          pList.appendChild(l);
-        });
-      });
-
-      // Listeners for UI Checkboxes
-      pList.addEventListener('change', () => {
-        appState.seed = null;
-        triggerGeneration();
-      });
-
-      document.getElementById('profile-filter-list')?.addEventListener('change', () => {
-        appState.seed = null;
-        triggerGeneration();
-      });
-
-      // 5. Render Mode Listeners (These do NOT clear the seed!)
-      document.getElementById('toggle-outline')?.addEventListener('change', (e) => {
-        appState.showOutline = e.target.checked;
-        renderUI();
-        syncStateToURL();
-      });
-
-      document.getElementById('toggle-metadata')?.addEventListener('change', (e) => {
-        appState.showMetadata = e.target.checked;
-        renderUI();
-        syncStateToURL();
-      });
-
-      document.getElementById('toggle-export')?.addEventListener('change', (e) => {
-        appState.showExport = e.target.checked;
-        renderUI();
-        syncStateToURL();
-      });
-
-      // 6. Clear All
-      document.getElementById('select-none-btn')?.addEventListener('click', () => {
-        document.querySelectorAll('#profile-filter-list input, #palette-filter-list input').forEach(c => c.checked = false);
-
-        const outlineEl = document.getElementById('toggle-outline');
-        if (outlineEl) outlineEl.checked = true;
-
-        const metadataEl = document.getElementById('toggle-metadata');
-        if (metadataEl) metadataEl.checked = true;
-
-        const exportEl = document.getElementById('toggle-export');
-        if (exportEl) exportEl.checked = true;
-
-        const rangeToggleEl = document.getElementById('toggle-range-mode');
-        if (rangeToggleEl) rangeToggleEl.checked = false;
-
-        // Reset state
-        appState.heightMode = 'multi';
-        appState.selectedHeights.clear(); // Clear single source of truth
-        appState.rangeStart = null;
-        appState.rangeEnd = null;
-        appState.showOutline = true;
-        appState.showMetadata = true;
-        appState.showExport = true;
-
-        appState.seed = null;
-        renderHeightList();
-        triggerGeneration();
-      });
-    }
-
-    function bindControls() {
-      // Manual shuffle explicitly requests a newly generated seed
-      document.getElementById('panel-shuffle-btn')?.addEventListener('click', () => {
-        appState.seed = null;
-        triggerGeneration();
-      });
-      document.getElementById('download-png-btn')?.addEventListener('click', downloadPNG);
-      document.getElementById('download-svg-btn')?.addEventListener('click', downloadSVG);
-
-      // Copy Link via Seed Display
-      document.getElementById('seed-display')?.addEventListener('click', () => {
-        if (!appState.seed) return;
-        const url = appState.shareUrl || window.location.href;
-        const display = document.getElementById('seed-display');
-        const orig = display.textContent;
-
-        const showCopied = () => {
-          display.innerHTML = '<span style="color: var(--ui-ink-muted);">COPIED</span>';
-          setTimeout(() => {
-            display.textContent = appState.seed === orig ? orig : appState.seed;
-          }, 1500);
-        };
-
-        if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(url).then(showCopied).catch(() => {
-            console.warn('Clipboard write failed.');
+      bindParamsPanel() {
+        const rangeToggle = document.getElementById('toggle-range-mode');
+        if (rangeToggle) {
+          rangeToggle.addEventListener('change', event => {
+            State.setHeightMode(event.target.checked ? 'range' : 'multi');
+            State.clearSeed();
+            Render.renderHeightFilter();
+            State.triggerGeneration();
           });
-        } else {
-          // Fallback for environments without Clipboard API
+        }
+
+        Render.renderLimitSlider();
+        Render.renderHeightFilter();
+
+        const paletteList = document.getElementById('palette-filter-list');
+        const groupedPalettes = {};
+        PALETTES.forEach(palette => {
+          if (!groupedPalettes[palette.category]) groupedPalettes[palette.category] = [];
+          groupedPalettes[palette.category].push(palette);
+        });
+
+        Object.keys(groupedPalettes).forEach(category => {
+          const header = document.createElement('div');
+          header.className = 'params-subsection-title';
+          header.textContent = category;
+          header.title = `Toggle all ${category} palettes`;
+
+          const categoryInputs = [];
+          header.addEventListener('click', () => {
+            const allChecked = categoryInputs.every(input => input.checked);
+            categoryInputs.forEach(input => { input.checked = !allChecked; });
+            this.regenerateFromFilters();
+          });
+
+          paletteList.appendChild(header);
+          groupedPalettes[category].forEach(palette => {
+            const label = document.createElement('label');
+            label.className = 'setting-item';
+            label.innerHTML = `<input type="checkbox" value="${palette.name}"><code>${palette.name}</code>`;
+            categoryInputs.push(label.querySelector('input'));
+            paletteList.appendChild(label);
+          });
+        });
+
+        paletteList.addEventListener('change', () => this.regenerateFromFilters());
+        document.getElementById('profile-filter-list')?.addEventListener('change', () => this.regenerateFromFilters());
+
+        document.getElementById('toggle-outline')?.addEventListener('change', event => {
+          this.syncRenderFlag('showOutline', event.target.checked);
+        });
+        document.getElementById('toggle-metadata')?.addEventListener('change', event => {
+          this.syncRenderFlag('showMetadata', event.target.checked);
+        });
+        document.getElementById('toggle-export')?.addEventListener('change', event => {
+          this.syncRenderFlag('showExport', event.target.checked);
+        });
+
+        document.getElementById('select-none-btn')?.addEventListener('click', () => {
+          document.querySelectorAll('#profile-filter-list input, #palette-filter-list input').forEach(input => {
+            input.checked = false;
+          });
+
+          const outlineEl = document.getElementById('toggle-outline');
+          if (outlineEl) outlineEl.checked = true;
+
+          const metadataEl = document.getElementById('toggle-metadata');
+          if (metadataEl) metadataEl.checked = true;
+
+          const exportEl = document.getElementById('toggle-export');
+          if (exportEl) exportEl.checked = true;
+
+          const rangeToggleEl = document.getElementById('toggle-range-mode');
+          if (rangeToggleEl) rangeToggleEl.checked = false;
+
+          State.resetFiltersAndView();
+          Render.renderHeightFilter();
+          State.triggerGeneration();
+        });
+      },
+
+      bindGlobalControls() {
+        document.getElementById('panel-shuffle-btn')?.addEventListener('click', () => this.regenerateFromFilters());
+        document.getElementById('download-png-btn')?.addEventListener('click', () => ExportActions.downloadPNG());
+        document.getElementById('download-svg-btn')?.addEventListener('click', () => ExportActions.downloadSVG());
+
+        document.getElementById('seed-display')?.addEventListener('click', () => {
+          if (!appState.seed) return;
+          const url = appState.shareUrl || window.location.href;
+          const display = document.getElementById('seed-display');
+          const original = display.textContent;
+
+          const showCopied = () => {
+            display.innerHTML = '<span style="color: var(--ui-ink-muted);">COPIED</span>';
+            setTimeout(() => {
+              display.textContent = appState.seed === original ? original : appState.seed;
+            }, 1500);
+          };
+
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(url).then(showCopied).catch(() => {
+              console.warn('Clipboard write failed.');
+            });
+            return;
+          }
+
           const tempInput = document.createElement('input');
           tempInput.value = url;
           document.body.appendChild(tempInput);
@@ -2124,118 +2128,94 @@
           document.execCommand('copy');
           document.body.removeChild(tempInput);
           showCopied();
-        }
-      });
-    }
-
-    function bindShortcuts() {
-      document.addEventListener('keydown', e => {
-        if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
-        const key = e.key.toLowerCase();
-
-        // Manual shuffle explicitly requests a newly generated seed
-        if (key === 'r') {
-          appState.seed = null;
-          triggerGeneration();
-        }
-
-        if (key === 'i') {
-          const paramsPanel = document.getElementById('params-panel');
-          const isHiding = !paramsPanel.classList.contains('is-hidden');
-
-          if (isHiding) {
-            ['metadata-overlay', 'logo-overlay', 'export-overlay', 'params-panel'].forEach(id => {
-              document.getElementById(id)?.classList.add('is-hidden');
-            });
-          } else {
-            paramsPanel.classList.remove('is-hidden');
-            document.getElementById('logo-overlay')?.classList.remove('is-hidden');
-
-            // UI elements sync back to true appState
-            document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !appState.showMetadata);
-            document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
-          }
-        }
-        if (key === 'p') downloadPNG();
-        if (key === 's') downloadSVG();
-      });
-    }
-
-    // --- EXPORT PIPELINE ---
-
-    function getSVGString() {
-      const svg = document.getElementById('svg-out');
-      const clone = svg.cloneNode(true);
-
-      clone.setAttribute('width', CANVAS_SIZE);
-      clone.setAttribute('height', CANVAS_SIZE);
-      if (!clone.getAttribute('xmlns')) {
-        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-      }
-
-      return new XMLSerializer().serializeToString(clone);
-    }
-
-    /**
-     * REUSABLE UTILITY
-     * Handles the actual browser download process.
-     * No DOM append needed — modern browsers don't require it.
-     * Blob URLs are revoked after a short delay to ensure the download
-     * has been initiated before the URL is invalidated.
-     */
-    function triggerDownload(dataUrl, fileName) {
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = fileName;
-      link.click();
-      if (dataUrl.startsWith('blob:')) {
-        setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
-      }
-    }
-
-    /**
-     * EXPORT 1: SVG
-     */
-    function downloadSVG() {
-      const blob = new Blob([getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
-      triggerDownload(URL.createObjectURL(blob), '4x4rt-stacks.svg');
-    }
-
-    /**
-     * EXPORT 2: PNG (Async)
-     */
-    async function downloadPNG() {
-      const scale = 2;
-      const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(getSVGString());
-
-      try {
-        const img = await new Promise((resolve, reject) => {
-          const i = new Image();
-          i.onload = () => resolve(i);
-          i.onerror = reject;
-          i.src = url;
         });
+      },
 
-        const canvas = document.createElement('canvas');
-        canvas.width = CANVAS_SIZE * scale;
-        canvas.height = CANVAS_SIZE * scale;
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      bindShortcuts() {
+        document.addEventListener('keydown', event => {
+          if (event.target.tagName === 'INPUT' || event.metaKey || event.ctrlKey) return;
+          const key = event.key.toLowerCase();
 
-        triggerDownload(canvas.toDataURL('image/png'), '4x4rt-stacks.png');
-      } catch (e) {
-        console.error('PNG download failed', e);
+          if (key === 'r') this.regenerateFromFilters();
+
+          if (key === 'i') {
+            const paramsPanel = document.getElementById('params-panel');
+            const isHiding = !paramsPanel.classList.contains('is-hidden');
+
+            if (isHiding) {
+              ['metadata-overlay', 'logo-overlay', 'export-overlay', 'params-panel'].forEach(id => {
+                document.getElementById(id)?.classList.add('is-hidden');
+              });
+            } else {
+              paramsPanel.classList.remove('is-hidden');
+              document.getElementById('logo-overlay')?.classList.remove('is-hidden');
+              document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !appState.showMetadata);
+              document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
+            }
+          }
+
+          if (key === 'p') ExportActions.downloadPNG();
+          if (key === 's') ExportActions.downloadSVG();
+        });
       }
-    }
+    };
+
+    // --- EXPORT MODULE ---
+    const ExportActions = {
+      getSVGString() {
+        const svg = document.getElementById('svg-out');
+        const clone = svg.cloneNode(true);
+        clone.setAttribute('width', CANVAS_SIZE);
+        clone.setAttribute('height', CANVAS_SIZE);
+        if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        return new XMLSerializer().serializeToString(clone);
+      },
+
+      triggerDownload(dataUrl, fileName) {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = fileName;
+        link.click();
+        if (dataUrl.startsWith('blob:')) {
+          setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
+        }
+      },
+
+      downloadSVG() {
+        const blob = new Blob([this.getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
+        this.triggerDownload(URL.createObjectURL(blob), '4x4rt-stacks.svg');
+      },
+
+      async downloadPNG() {
+        const scale = 2;
+        const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(this.getSVGString())}`;
+
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = url;
+          });
+
+          const canvas = document.createElement('canvas');
+          canvas.width = CANVAS_SIZE * scale;
+          canvas.height = CANVAS_SIZE * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          this.triggerDownload(canvas.toDataURL('image/png'), '4x4rt-stacks.png');
+        } catch (error) {
+          console.error('PNG download failed', error);
+        }
+      }
+    };
 
     // --- INIT SEQUENCE ---
-    bindControls();
-    parseURLToState();    // 1. Read URL configurations (updates POSSIBLE_HEIGHTS)
-    bindParamsPanel();    // 2. Build DOM structures (Palettes list, heights list)
-    bindShortcuts();
-    applyStateToDOM();    // 3. Tick checkboxes to match URL parameters
-
-    // 4. Boot engine
-    triggerGeneration(); 
+    Controls.bindGlobalControls();
+    State.parseURL();
+    Controls.bindParamsPanel();
+    Controls.bindShortcuts();
+    State.applyToDOM();
+    State.triggerGeneration();
   </script>
 </body>
 
