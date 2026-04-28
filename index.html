@@ -1048,8 +1048,7 @@
 
     const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
     const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
-    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z']; // Display order for the shapes breakdown in the metadata overlay.
-    const PIECE_TRAIT_LABELS = { O: 'Mass', I: 'Line', J: 'Turn', L: 'Bend', T: 'Split', S: 'Offset', Z: 'Counteroffset' };
+    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z']; // Display order for internal family operations.
     const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 }; // Solver search order within the backtracker (lower = tried first).
     const MAX_SOLUTIONS_PER_HEIGHT = 24; // Per-height solution cap — keeps the solver fast on complex heights.
 
@@ -1464,6 +1463,10 @@
       };
     }
 
+    function formatUnitLabel(units) {
+      return units > 0 ? '•'.repeat(units) : '';
+    }
+
     function sanitizeHeightState() {
       const validHeightSet = new Set(POSSIBLE_HEIGHTS);
       const sanitizedHeights = [...appState.selectedHeights].filter(height => validHeightSet.has(height));
@@ -1849,16 +1852,15 @@
 
         shapesList.innerHTML = '';
         const counts = placements.reduce((acc, placement) => {
-          const piece = SHAPE_CATALOG[placement.id].piece;
-          acc[piece] = (acc[piece] || 0) + 1;
+          const units = SHAPE_CATALOG[placement.id].units;
+          acc[units] = (acc[units] || 0) + 1;
           return acc;
         }, {});
 
-        FAMILY_ORDER.filter(piece => counts[piece]).forEach(piece => {
+        Object.keys(counts).map(Number).sort((a, b) => a - b).forEach(units => {
           const stat = document.createElement('div');
           stat.className = 'stat';
-          const displayLabel = PIECE_TRAIT_LABELS[piece] || piece;
-          stat.innerHTML = `<span class="stat-label">${displayLabel}</span><span class="stat-value">${counts[piece]}</span>`;
+          stat.innerHTML = `<span class="stat-label">${formatUnitLabel(units)}</span><span class="stat-value">${counts[units]}</span>`;
           shapesList.appendChild(stat);
         });
       },

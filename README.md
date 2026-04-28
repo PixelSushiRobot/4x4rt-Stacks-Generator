@@ -90,7 +90,7 @@ Displayed on the canvas itself (toggleable):
 - **Palette** — palette name with color swatch bar
 - **Profile** — active color profile with resolved color swatch
 - **Height** — stack height in grid units
-- **Shapes** — count and breakdown of shape traits used (for example, **Mass** and **Line**)
+- **Shapes** — count and breakdown of piece sizes by unit count, shown as repeated bullets (for example, `•`, `••`, `•••`)
 
 ---
 
