@@ -402,6 +402,10 @@
       cursor: default;
     }
 
+    .sidebar-row.sidebar-row--no-icon {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
     .sidebar-row.is-clickable {
       cursor: pointer;
     }
@@ -770,7 +774,7 @@
           </button>
           <div id="height-options-panel" class="sidebar-panel" data-panel="height">Height options panel placeholder.
           </div>
-          <div class="sidebar-row" id="shapes-heading">
+          <div class="sidebar-row sidebar-row--no-icon" id="shapes-heading">
             <span class="sidebar-row-label">Shapes</span>
             <span id="shape-count" class="sidebar-row-value">—</span>
           </div>
@@ -2052,9 +2056,9 @@
 
         Object.keys(counts).map(Number).sort((a, b) => a - b).forEach(units => {
           const row = document.createElement('div');
-          row.className = 'sidebar-row';
+          row.className = 'sidebar-row sidebar-row--no-icon';
           row.setAttribute('role', 'listitem');
-          row.innerHTML = `<span class="sidebar-row-label">${formatUnitLabel(units)}</span><span class="sidebar-row-value">${counts[units]}</span><span class="icon-placeholder" data-icon="" data-icon-label="" aria-hidden="true"></span>`;
+          row.innerHTML = `<span class="sidebar-row-label">${formatUnitLabel(units)}</span><span class="sidebar-row-value">${counts[units]}</span>`;
           shapesList.appendChild(row);
         });
       },
