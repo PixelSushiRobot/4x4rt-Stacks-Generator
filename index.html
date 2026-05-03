@@ -264,14 +264,14 @@
       user-select: none;
       touch-action: none;
     }
- 
+
     .limit-slider-track {
       position: absolute;
       inset: 0;
       background: var(--ui-rule);
       border-radius: 999px;
     }
- 
+
     .limit-slider-thumb {
       position: absolute;
       height: 100%;
@@ -290,7 +290,7 @@
       transition: transform 0.1s ease-out;
       will-change: transform;
     }
- 
+
     .limit-slider-thumb.is-dragging {
       transition: none;
     }
@@ -644,9 +644,9 @@
     <aside id="params-panel" class="params-panel">
 
       <div class="sidebar-content">
-        <div class="sidebar-brand" aria-label="Pixelsushirobot 4x4rt Stacks">
-          <div class="brand-kicker">PIXELSUSHIROBOT</div>
-          <div class="brand-title">4X4RT STACKS</div>
+        <div class="sidebar-brand" aria-label="PSR 4x4rt Stacks">
+          <div class="brand-kicker">PSR</div>
+          <div class="brand-title">4x4rt Stacks</div>
         </div>
 
         <p class="sidebar-copy">MINIMALIST GEOMETRIC STACKS CONSTRAINED TO EXACTLY 16 BORDERLESS BLOCKS.</p>
@@ -677,13 +677,15 @@
             <span id="palette-name" class="sidebar-row-value">—</span>
             <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
           </button>
-          <div id="palette-options-panel" class="sidebar-panel" data-panel="palette">Palette options panel placeholder.</div>
+          <div id="palette-options-panel" class="sidebar-panel" data-panel="palette">Palette options panel placeholder.
+          </div>
           <button class="sidebar-row is-clickable" type="button" data-options-panel="profile">
             <span class="sidebar-row-label">Profile</span>
             <span id="profile-name" class="sidebar-row-value">—</span>
             <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
           </button>
-          <div id="profile-options-panel" class="sidebar-panel" data-panel="profile">Profile options panel placeholder.</div>
+          <div id="profile-options-panel" class="sidebar-panel" data-panel="profile">Profile options panel placeholder.
+          </div>
           <button class="sidebar-row is-clickable" type="button" data-options-panel="form">
             <span class="sidebar-row-label">Form</span>
             <span id="form-name" class="sidebar-row-value">Bound</span>
@@ -692,15 +694,18 @@
           <div id="form-options-panel" class="sidebar-panel" data-panel="form">Form options panel placeholder.</div>
           <div id="limit-row" class="sidebar-row">
             <span class="sidebar-row-label">Limit</span>
-            <span class="sidebar-row-value"><span id="limit-display">—</span> <span class="sidebar-row-suffix">Blocks</span></span>
+            <span class="sidebar-row-value"><span id="limit-display">—</span> <span
+                class="sidebar-row-suffix">Blocks</span></span>
             <span class="icon-placeholder" data-icon="lock" data-icon-label="" aria-hidden="true"></span>
           </div>
           <button class="sidebar-row is-clickable" type="button" data-options-panel="height">
             <span class="sidebar-row-label">Height</span>
-            <span class="sidebar-row-value"><span id="stack-height">—</span> <span class="sidebar-row-suffix">Units</span></span>
+            <span class="sidebar-row-value"><span id="stack-height">—</span> <span
+                class="sidebar-row-suffix">Units</span></span>
             <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
           </button>
-          <div id="height-options-panel" class="sidebar-panel" data-panel="height">Height options panel placeholder.</div>
+          <div id="height-options-panel" class="sidebar-panel" data-panel="height">Height options panel placeholder.
+          </div>
           <div class="sidebar-row" id="shapes-heading">
             <span class="sidebar-row-label">Shapes</span>
             <span id="shape-count" class="sidebar-row-value">—</span>
@@ -1988,138 +1993,138 @@
       },
 
       renderLimitSlider() {
-      const container = document.getElementById('limit-slider-container');
-      if (!container) return;
-      container.innerHTML = '';
+        const container = document.getElementById('limit-slider-container');
+        if (!container) return;
+        container.innerHTML = '';
 
-      const slider = document.createElement('div');
-      slider.className = 'limit-slider';
-      
-      const track = document.createElement('div');
-      track.className = 'limit-slider-track';
-      
-      const thumb = document.createElement('div');
-      thumb.className = 'limit-slider-thumb';
-      thumb.innerHTML = `<span>${appState.targetBlocks}</span>`;
-      
-      slider.appendChild(track);
-      slider.appendChild(thumb);
-      container.appendChild(slider);
+        const slider = document.createElement('div');
+        slider.className = 'limit-slider';
 
-      const sortedLimits = getSortedLimits();
-      function updateThumbPos(val) {
-        const normalizedVal = clampToAllowedLimit(val);
-        const valueIndex = sortedLimits.indexOf(normalizedVal);
-        const percent = sortedLimits.length > 1 ? valueIndex / (sortedLimits.length - 1) : 0;
-        const sliderWidth = slider.offsetWidth;
-        const thumbWidth = thumb.offsetWidth;
-        // The thumb slides from 0 to (sliderWidth - thumbWidth)
-        const maxScroll = Math.max(0, sliderWidth - thumbWidth);
-        thumb.style.transform = `translateX(${percent * maxScroll}px)`;
-        thumb.querySelector('span').textContent = normalizedVal;
-      }
+        const track = document.createElement('div');
+        track.className = 'limit-slider-track';
 
-      // Initial pos
-      requestAnimationFrame(() => updateThumbPos(appState.targetBlocks));
+        const thumb = document.createElement('div');
+        thumb.className = 'limit-slider-thumb';
+        thumb.innerHTML = `<span>${appState.targetBlocks}</span>`;
 
-      let isDragging = false;
+        slider.appendChild(track);
+        slider.appendChild(thumb);
+        container.appendChild(slider);
 
-      function valFromX(clientX) {
-        const rect = slider.getBoundingClientRect();
-        const thumbWidth = thumb.offsetWidth;
-        const maxScroll = Math.max(0, rect.width - thumbWidth);
-        if (maxScroll === 0) return appState.targetBlocks;
-        const relativeX = Math.max(0, Math.min(maxScroll, clientX - rect.left - (thumbWidth / 2)));
-        const percent = relativeX / maxScroll;
-        const index = Math.round(percent * (sortedLimits.length - 1));
-        return sortedLimits[Math.max(0, Math.min(sortedLimits.length - 1, index))];
-      }
+        const sortedLimits = getSortedLimits();
+        function updateThumbPos(val) {
+          const normalizedVal = clampToAllowedLimit(val);
+          const valueIndex = sortedLimits.indexOf(normalizedVal);
+          const percent = sortedLimits.length > 1 ? valueIndex / (sortedLimits.length - 1) : 0;
+          const sliderWidth = slider.offsetWidth;
+          const thumbWidth = thumb.offsetWidth;
+          // The thumb slides from 0 to (sliderWidth - thumbWidth)
+          const maxScroll = Math.max(0, sliderWidth - thumbWidth);
+          thumb.style.transform = `translateX(${percent * maxScroll}px)`;
+          thumb.querySelector('span').textContent = normalizedVal;
+        }
 
-      function onPointerDown(e) {
-        const isThumb = e.target.closest('.limit-slider-thumb');
-        if (isThumb) {
-          isDragging = true;
-          thumb.classList.add('is-dragging');
-          window.addEventListener('pointermove', onPointerMove);
-          window.addEventListener('pointerup', onPointerUp);
-        } else {
-          // Stepper behavior: jump to next/prev if clicking track
-          const rect = thumb.getBoundingClientRect();
-          const clickX = e.clientX;
-          const currentIndex = sortedLimits.indexOf(clampToAllowedLimit(appState.targetBlocks));
-          let newVal = appState.targetBlocks;
-          if (clickX < rect.left) {
-            newVal = sortedLimits[Math.max(0, currentIndex - 1)];
-          } else if (clickX > rect.right) {
-            newVal = sortedLimits[Math.min(sortedLimits.length - 1, currentIndex + 1)];
+        // Initial pos
+        requestAnimationFrame(() => updateThumbPos(appState.targetBlocks));
+
+        let isDragging = false;
+
+        function valFromX(clientX) {
+          const rect = slider.getBoundingClientRect();
+          const thumbWidth = thumb.offsetWidth;
+          const maxScroll = Math.max(0, rect.width - thumbWidth);
+          if (maxScroll === 0) return appState.targetBlocks;
+          const relativeX = Math.max(0, Math.min(maxScroll, clientX - rect.left - (thumbWidth / 2)));
+          const percent = relativeX / maxScroll;
+          const index = Math.round(percent * (sortedLimits.length - 1));
+          return sortedLimits[Math.max(0, Math.min(sortedLimits.length - 1, index))];
+        }
+
+        function onPointerDown(e) {
+          const isThumb = e.target.closest('.limit-slider-thumb');
+          if (isThumb) {
+            isDragging = true;
+            thumb.classList.add('is-dragging');
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+          } else {
+            // Stepper behavior: jump to next/prev if clicking track
+            const rect = thumb.getBoundingClientRect();
+            const clickX = e.clientX;
+            const currentIndex = sortedLimits.indexOf(clampToAllowedLimit(appState.targetBlocks));
+            let newVal = appState.targetBlocks;
+            if (clickX < rect.left) {
+              newVal = sortedLimits[Math.max(0, currentIndex - 1)];
+            } else if (clickX > rect.right) {
+              newVal = sortedLimits[Math.min(sortedLimits.length - 1, currentIndex + 1)];
+            }
+            if (newVal !== appState.targetBlocks) {
+              updateLimit(newVal);
+            }
           }
+        }
+
+        function onPointerMove(e) {
+          if (!isDragging) return;
+          const newVal = valFromX(e.clientX);
           if (newVal !== appState.targetBlocks) {
             updateLimit(newVal);
           }
         }
-      }
 
-      function onPointerMove(e) {
-        if (!isDragging) return;
-        const newVal = valFromX(e.clientX);
-        if (newVal !== appState.targetBlocks) {
-          updateLimit(newVal);
+        function onPointerUp() {
+          isDragging = false;
+          thumb.classList.remove('is-dragging');
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
         }
-      }
 
-      function onPointerUp() {
-        isDragging = false;
-        thumb.classList.remove('is-dragging');
-        window.removeEventListener('pointermove', onPointerMove);
-        window.removeEventListener('pointerup', onPointerUp);
-      }
+        function updateLimit(val) {
+          State.setTargetBlocks(val);
+          updateThumbPos(appState.targetBlocks);
+          Render.renderHeightFilter();
+          State.triggerGeneration();
+        }
 
-      function updateLimit(val) {
-        State.setTargetBlocks(val);
-        updateThumbPos(appState.targetBlocks);
-        Render.renderHeightFilter();
-        State.triggerGeneration();
-      }
-
-      slider.addEventListener('pointerdown', onPointerDown);
-      // Ensure layout changes don't break position
-      window.addEventListener('resize', () => updateThumbPos(appState.targetBlocks));
+        slider.addEventListener('pointerdown', onPointerDown);
+        // Ensure layout changes don't break position
+        window.addEventListener('resize', () => updateThumbPos(appState.targetBlocks));
       },
 
       renderHeightFilter() {
-      const hList = document.getElementById('height-filter-container');
-      if (!hList) return;
-      hList.innerHTML = '';
+        const hList = document.getElementById('height-filter-container');
+        if (!hList) return;
+        hList.innerHTML = '';
 
-      POSSIBLE_HEIGHTS.slice().sort((a, b) => a - b).forEach(h => {
-        const cell = document.createElement('div');
-        cell.className = 'height-cell';
+        POSSIBLE_HEIGHTS.slice().sort((a, b) => a - b).forEach(h => {
+          const cell = document.createElement('div');
+          cell.className = 'height-cell';
 
-        // Styling purely references the single source of truth: selectedHeights
-        if (appState.heightMode === 'multi') {
-          if (appState.selectedHeights.has(h)) cell.classList.add('is-selected');
-        } else {
-          if (appState.selectedHeights.has(h)) {
-            cell.classList.add('in-range');
-            const min = appState.rangeEnd !== null ? Math.min(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
-            const max = appState.rangeEnd !== null ? Math.max(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
-            if (h === min) cell.classList.add('range-start');
-            if (h === max) cell.classList.add('range-end');
+          // Styling purely references the single source of truth: selectedHeights
+          if (appState.heightMode === 'multi') {
+            if (appState.selectedHeights.has(h)) cell.classList.add('is-selected');
+          } else {
+            if (appState.selectedHeights.has(h)) {
+              cell.classList.add('in-range');
+              const min = appState.rangeEnd !== null ? Math.min(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
+              const max = appState.rangeEnd !== null ? Math.max(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
+              if (h === min) cell.classList.add('range-start');
+              if (h === max) cell.classList.add('range-end');
+            }
           }
-        }
 
-        cell.innerHTML = `<span>${h}</span>`;
+          cell.innerHTML = `<span>${h}</span>`;
 
-        // Click logic modifies the single source of truth: selectedHeights
-        cell.addEventListener('click', () => {
-          State.toggleHeightSelection(h);
-          State.clearSeed();
-          Render.renderHeightFilter();
-          State.triggerGeneration();
+          // Click logic modifies the single source of truth: selectedHeights
+          cell.addEventListener('click', () => {
+            State.toggleHeightSelection(h);
+            State.clearSeed();
+            Render.renderHeightFilter();
+            State.triggerGeneration();
+          });
+
+          hList.appendChild(cell);
         });
-
-        hList.appendChild(cell);
-      });
       }
     };
 
