@@ -12,10 +12,18 @@
     rel="stylesheet">
   <style>
     :root {
-      --page-pad-x: 40px;
-      --page-pad-y: 40px;
-      --canvas-size: 80vmin;
+      --page-pad-x: 20px;
+      --page-pad-y: 20px;
+      --canvas-size: calc(100vh - (var(--page-pad-y) * 2));
       --rule-width: 1px;
+      --ui-bg: #f4f1ea;
+      --ui-ink: rgba(28, 28, 26, 0.9);
+      --ui-ink-solid: rgb(28, 28, 26);
+      --ui-ink-muted: rgba(28, 28, 26, 0.5);
+      --ui-rule: rgba(28, 28, 26, 0.1);
+      --ui-border-width: calc(var(--canvas-size) * 0.002);
+      --ui-text-size: calc(var(--canvas-size) * 0.015);
+      --ui-brand-size: calc(var(--canvas-size) * 0.03);
     }
 
     * {
@@ -25,7 +33,7 @@
     }
 
     body {
-      background: #1b1b1b;
+      background: var(--ui-bg);
       font-family: 'Space Mono', monospace;
       display: flex;
       justify-content: center;
@@ -36,7 +44,7 @@
 
     .app {
       display: flex;
-      gap: calc(var(--canvas-size) * 0.015);
+      gap: 0;
       align-items: flex-start;
       width: fit-content;
       max-width: 100%;
@@ -53,14 +61,15 @@
 
     .params-panel {
       position: relative;
-      width: calc(var(--canvas-size) * 0.33);
+      width: calc(var(--canvas-size) * 0.365);
       min-height: var(--canvas-size);
       max-height: var(--canvas-size);
       overflow: auto;
       padding: calc(var(--canvas-size) * 0.015);
+      margin-left: calc(var(--ui-border-width) * -1);
       background: var(--ui-bg);
       color: var(--ui-ink);
-      border-left: 2px solid var(--ui-ink);
+      border: var(--ui-border-width) solid var(--ui-ink-solid);
       text-transform: uppercase;
       transition: width 0.2s ease, padding 0.2s ease;
     }
@@ -86,7 +95,7 @@
       background: none;
       border: none;
       font-family: 'Space Mono', monospace;
-      font-size: 16px;
+      font-size: var(--ui-text-size);
       line-height: 1;
       cursor: pointer;
       z-index: 4;
@@ -98,7 +107,7 @@
 
     .sidebar-brand {
       margin-bottom: 24px;
-      font-size: 24px;
+      font-size: var(--ui-brand-size);
       line-height: 0.95;
       letter-spacing: 0;
     }
@@ -115,7 +124,7 @@
       max-width: calc(var(--canvas-size) * 0.24);
       margin-bottom: 42px;
       color: var(--ui-ink);
-      font-size: 14px;
+      font-size: var(--ui-text-size);
       line-height: 1.45;
     }
 
@@ -132,8 +141,7 @@
     }
 
     .params-section-title {
-      font-size: calc(var(--canvas-size) * 0.02);
-      font-size: 18px;
+      font-size: var(--ui-text-size);
       text-transform: uppercase;
       color: var(--ui-ink);
       margin-bottom: 16px;
@@ -377,7 +385,7 @@
       border-right: 0;
       border-top: 0;
       font-family: 'Space Mono', monospace;
-      font-size: 14px;
+      font-size: var(--ui-text-size);
       text-align: left;
       text-transform: uppercase;
       cursor: default;
@@ -406,14 +414,14 @@
     }
 
     .icon-placeholder {
-      width: 16px;
-      min-width: 16px;
-      height: 16px;
+      width: var(--ui-text-size);
+      min-width: var(--ui-text-size);
+      height: var(--ui-text-size);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       color: var(--ui-ink-muted);
-      font-size: 12px;
+      font-size: var(--ui-text-size);
       line-height: 1;
     }
 
@@ -426,7 +434,7 @@
       padding: calc(var(--canvas-size) * 0.016) 0 calc(var(--canvas-size) * 0.02);
       border-bottom: var(--rule-width) solid var(--ui-rule);
       color: var(--ui-ink-muted);
-      font-size: 12px;
+      font-size: var(--ui-text-size);
       line-height: 1.45;
     }
 
@@ -443,6 +451,7 @@
       width: var(--canvas-size);
       height: var(--canvas-size);
       background: var(--ui-bg);
+      border: var(--ui-border-width) solid var(--ui-ink-solid);
     }
 
     .svg-out {
@@ -487,7 +496,7 @@
     .download-btn {
       font-family: 'Space Mono', monospace;
       font-weight: 400;
-      font-size: calc(var(--canvas-size) * 0.029);
+      font-size: var(--ui-text-size);
       text-transform: uppercase;
       color: var(--ui-ink);
       white-space: nowrap;
@@ -569,21 +578,22 @@
 
     @media (max-width: 640px) {
       :root {
-        --page-pad-x: 16px;
-        --page-pad-y: 16px;
+        --page-pad-x: 20px;
+        --page-pad-y: 20px;
       }
 
       .app {
         flex-direction: column;
-        gap: 24px;
+        gap: 0;
       }
 
       .params-panel {
         width: 100%;
         min-height: auto;
         max-height: none;
-        border-left: 0;
-        border-top: 2px solid var(--ui-ink);
+        margin-top: calc(var(--ui-border-width) * -1);
+        margin-left: 0;
+        border: var(--ui-border-width) solid var(--ui-ink-solid);
       }
 
       .params-panel.is-collapsed {
@@ -786,6 +796,7 @@
       const root = document.documentElement;
       root.style.setProperty('--ui-bg', p.bg);
       root.style.setProperty('--ui-ink', 'rgba(28, 28, 26, 0.9)');
+      root.style.setProperty('--ui-ink-solid', 'rgb(28, 28, 26)');
       root.style.setProperty('--ui-ink-muted', 'rgba(28, 28, 26, 0.5)');
       root.style.setProperty('--ui-rule', 'rgba(28, 28, 26, 0.1)');
     })();
@@ -1932,6 +1943,7 @@
         const root = document.documentElement;
         root.style.setProperty('--ui-bg', palette.bg);
         root.style.setProperty('--ui-ink', `rgba(${baseRGB}, 0.9)`);
+        root.style.setProperty('--ui-ink-solid', `rgb(${baseRGB})`);
         root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
         root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
 
