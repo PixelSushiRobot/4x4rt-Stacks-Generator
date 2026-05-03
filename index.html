@@ -52,50 +52,75 @@
     }
 
     .params-panel {
-      width: calc(var(--canvas-size) * 0.3);
+      position: relative;
+      width: calc(var(--canvas-size) * 0.33);
+      min-height: var(--canvas-size);
       max-height: var(--canvas-size);
       overflow: auto;
       padding: calc(var(--canvas-size) * 0.015);
       background: var(--ui-bg);
       color: var(--ui-ink);
-    }
-
-    .params-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: calc(var(--canvas-size) * 0.024);
-      line-height: 1;
+      border-left: 2px solid var(--ui-ink);
       text-transform: uppercase;
-      color: var(--ui-ink);
-      margin-bottom: calc(var(--canvas-size) * 0.015);
+      transition: width 0.2s ease, padding 0.2s ease;
     }
 
-    .shuffle-btn {
-      background: none;
-      border: none;
-      color: var(--ui-ink);
-      cursor: pointer;
-      padding: 0;
+    .params-panel.is-collapsed {
+      width: calc(var(--canvas-size) * 0.045);
+      min-width: calc(var(--canvas-size) * 0.045);
+      padding: calc(var(--canvas-size) * 0.015) calc(var(--canvas-size) * 0.008);
+      overflow: hidden;
+    }
+
+    .sidebar-toggle {
+      position: sticky;
+      top: 0;
+      margin-left: auto;
+      margin-bottom: calc(var(--canvas-size) * 0.01);
       display: flex;
       align-items: center;
       justify-content: center;
+      width: calc(var(--canvas-size) * 0.03);
+      height: calc(var(--canvas-size) * 0.03);
+      color: var(--ui-ink);
+      background: none;
+      border: none;
+      font-family: 'Space Mono', monospace;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 4;
     }
 
-    .shuffle-btn svg {
-      width: calc(var(--canvas-size) * 0.032);
-      height: calc(var(--canvas-size) * 0.032);
+    .params-panel.is-collapsed .sidebar-content {
+      display: none;
     }
 
-    .params-copy {
-      font-size: calc(var(--canvas-size) * 0.018);
-      line-height: 1.5;
+    .sidebar-brand {
+      margin-bottom: 24px;
+      font-size: 24px;
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .brand-kicker {
       color: var(--ui-ink-muted);
-      margin-bottom: calc(var(--canvas-size) * 0.015);
+    }
+
+    .brand-title {
+      color: var(--ui-ink);
+    }
+
+    .sidebar-copy {
+      max-width: calc(var(--canvas-size) * 0.24);
+      margin-bottom: 42px;
+      color: var(--ui-ink);
+      font-size: 14px;
+      line-height: 1.45;
     }
 
     .params-section {
-      margin-bottom: calc(var(--canvas-size) * 0.02);
+      margin-bottom: 28px;
     }
 
     .params-section-header {
@@ -108,9 +133,10 @@
 
     .params-section-title {
       font-size: calc(var(--canvas-size) * 0.02);
+      font-size: 18px;
       text-transform: uppercase;
       color: var(--ui-ink);
-      margin-bottom: calc(var(--canvas-size) * 0.01);
+      margin-bottom: 16px;
     }
 
     .params-section-header .params-section-title {
@@ -336,6 +362,82 @@
       opacity: 0.7;
     }
 
+    .sidebar-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: calc(var(--canvas-size) * 0.012);
+      width: 100%;
+      min-height: 36px;
+      padding: 8px 0;
+      border-bottom: var(--rule-width) solid var(--ui-rule);
+      color: var(--ui-ink);
+      background: none;
+      border-left: 0;
+      border-right: 0;
+      border-top: 0;
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      text-align: left;
+      text-transform: uppercase;
+      cursor: default;
+    }
+
+    .sidebar-row.is-clickable {
+      cursor: pointer;
+    }
+
+    .sidebar-row.is-clickable:hover {
+      color: var(--ui-ink-muted);
+    }
+
+    .sidebar-row-label {
+      color: var(--ui-ink-muted);
+    }
+
+    .sidebar-row-value {
+      justify-self: end;
+      color: var(--ui-ink);
+      white-space: nowrap;
+    }
+
+    .sidebar-row-suffix {
+      color: var(--ui-ink-muted);
+    }
+
+    .icon-placeholder {
+      width: 16px;
+      min-width: 16px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ui-ink-muted);
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .icon-placeholder::before {
+      content: attr(data-icon-label);
+    }
+
+    .sidebar-panel {
+      display: none;
+      padding: calc(var(--canvas-size) * 0.016) 0 calc(var(--canvas-size) * 0.02);
+      border-bottom: var(--rule-width) solid var(--ui-rule);
+      color: var(--ui-ink-muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .sidebar-panel.is-open {
+      display: block;
+    }
+
+    #seed-display {
+      cursor: pointer;
+    }
+
     .svg-container {
       position: relative;
       width: var(--canvas-size);
@@ -352,19 +454,6 @@
     svg,
     path {
       shape-rendering: crispEdges;
-    }
-
-    .metadata-overlay {
-      position: absolute;
-      top: calc(var(--canvas-size) * 0.015);
-      left: calc(var(--canvas-size) * 0.015);
-      display: flex;
-      flex-direction: column;
-      gap: calc(var(--canvas-size) * 0.015);
-      color: var(--ui-ink);
-      z-index: 2;
-      text-transform: uppercase;
-      width: calc(var(--canvas-size) * 0.375);
     }
 
     .logo-overlay {
@@ -441,10 +530,6 @@
       color: var(--ui-ink-muted);
     }
 
-    #seed-display {
-      cursor: pointer;
-    }
-
     .shapes-list .stat {
       color: var(--ui-ink-muted);
       padding-top: calc(var(--canvas-size) * 0.015);
@@ -495,7 +580,24 @@
 
       .params-panel {
         width: 100%;
+        min-height: auto;
         max-height: none;
+        border-left: 0;
+        border-top: 2px solid var(--ui-ink);
+      }
+
+      .params-panel.is-collapsed {
+        width: 100%;
+        min-width: 100%;
+        min-height: calc(var(--canvas-size) * 0.06);
+      }
+
+      .sidebar-copy {
+        max-width: none;
+      }
+
+      .sidebar-row {
+        min-height: 46px;
       }
     }
   </style>
@@ -506,40 +608,6 @@
     <div id="canvas-wrap" class="canvas-wrap">
       <div id="svg-container" class="svg-container">
         <svg id="svg-out" class="svg-out" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
-
-        <div id="metadata-overlay" class="metadata-overlay">
-          <!-- Deterministic Seed Display -->
-          <div class="stat">
-            <span class="stat-label">Seed</span>
-            <span class="stat-value" id="seed-display">—</span>
-          </div>
-
-          <div class="stat">
-            <span class="stat-label">Palette</span>
-            <span class="stat-value" id="palette-name">—</span>
-            <div id="palette-dots" class="palette-dots"></div>
-          </div>
-
-          <div class="stat">
-            <span class="stat-label">Profile</span>
-            <span class="stat-value" id="profile-name">—</span>
-            <div id="actual-palette-dots" class="palette-dots"></div>
-          </div>
-          <div id="metadata-limit-stat" class="stat is-hidden">
-            <span class="stat-label">Limit</span>
-            <span class="stat-value"><span id="limit-display">—</span><span class="stat-suffix"> Blocks</span></span>
-          </div>
-
-          <div class="stat">
-            <span class="stat-label">Height</span>
-            <span class="stat-value"><span id="stack-height">—</span><span class="stat-suffix"> units</span></span>
-          </div>
-          <div class="stat" id="shapes-heading">
-            <span class="stat-label">Shapes</span>
-            <span class="stat-value" id="shape-count">—</span>
-          </div>
-          <div id="shapes-list" class="shapes-list" role="list" aria-labelledby="shapes-heading"></div>
-        </div>
 
         <div id="logo-overlay" class="logo-overlay">
           <svg viewBox="0 0 90 30" preserveAspectRatio="xMaxYMax meet" xmlns="http://www.w3.org/2000/svg">
@@ -570,88 +638,73 @@
       </div>
     </div>
     <aside id="params-panel" class="params-panel">
-      <div class="params-title">
-        <span>Parameters</span>
-        <button class="shuffle-btn" id="panel-shuffle-btn" title="Regenerate">
-          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2"
-            stroke-miterlimit="10" stroke-linecap="square">
-            <path d="M15.625 11.875L17.5 13.75L15.625 15.625" />
-            <path d="M15.625 4.375L17.5 6.25L15.625 8.125" />
-            <path d="M2.5 13.75H7.5L9.84375 10.1562" />
-            <path d="M2.5 6.25H7.5L12.5 13.75H16.25" />
-            <path d="M16.25 6.25H12.5L11.25 8.125" />
-          </svg>
-        </button>
-      </div>
+      <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">&lt;&lt;</button>
 
-      <div class="params-section">
-        <div class="params-section-title">Render Mode</div>
-        <div class="settings-list">
-          <label class="setting-item">
-            <input type="checkbox" id="toggle-outline" checked>
-            <code>Outline</code>
-          </label>
-          <label class="setting-item">
-            <input type="checkbox" id="toggle-metadata" checked>
-            <code>Metadata</code>
-          </label>
-          <label class="setting-item">
-            <input type="checkbox" id="toggle-export" checked>
-            <code>Export</code>
-          </label>
+      <div class="sidebar-content">
+        <div class="sidebar-brand" aria-label="Pixelsushirobot 4x4rt Stacks">
+          <div class="brand-kicker">PIXELSUSHIROBOT</div>
+          <div class="brand-title">4X4RT STACKS</div>
         </div>
-      </div>
 
-      <div class="params-section">
-        <div class="params-section-title">Color Profile</div>
-        <div id="profile-filter-list" class="settings-list">
-          <label class="setting-item">
-            <input type="checkbox" value="isolate">
-            <code>Isolate</code>
-          </label>
-          <label class="setting-item">
-            <input type="checkbox" value="drift">
-            <code>Drift</code>
-          </label>
-          <label class="setting-item">
-            <input type="checkbox" value="spectrum">
-            <code>Spectrum</code>
-          </label>
+        <p class="sidebar-copy">MINIMALIST GEOMETRIC STACKS CONSTRAINED TO EXACTLY 16 BORDERLESS BLOCKS.</p>
+
+        <div class="params-section" aria-labelledby="display-section-title">
+          <div id="display-section-title" class="params-section-title">Display</div>
+          <button id="layout-row" class="sidebar-row is-clickable" type="button">
+            <span class="sidebar-row-label">Layout</span>
+            <span id="layout-value" class="sidebar-row-value">Art</span>
+            <span class="icon-placeholder" data-icon="layout" data-icon-label="" aria-hidden="true"></span>
+          </button>
+          <button id="aspect-ratio-row" class="sidebar-row is-clickable" type="button">
+            <span class="sidebar-row-label">Aspect Ratio</span>
+            <span id="aspect-ratio-value" class="sidebar-row-value">1:1</span>
+            <span class="icon-placeholder" data-icon="aspect" data-icon-label="" aria-hidden="true"></span>
+          </button>
         </div>
-      </div>
-      <div id="params-limit-section" class="params-section is-hidden">
-        <div class="params-section-title">Limit</div>
-        <div id="limit-slider-container"></div>
-      </div>
 
-      <div class="params-section">
-        <div class="params-section-header">
-          <div class="params-section-title">Height</div>
-          <label class="mode-toggle" title="Toggle Range Mode">
-            <input type="checkbox" id="toggle-range-mode">
-            <svg class="icon-multi" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="6" cy="8" r="4" fill="currentColor" />
-              <circle cx="18" cy="8" r="4" fill="currentColor" />
-              <circle cx="30" cy="8" r="4" fill="currentColor" />
-            </svg>
-            <svg class="icon-range" viewBox="0 0 36 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <line x1="6" y1="8" x2="30" y2="8" stroke="currentColor" stroke-width="2"
-                vector-effect="non-scaling-stroke" />
-              <circle cx="6" cy="8" r="4" fill="currentColor" />
-              <circle cx="30" cy="8" r="4" fill="currentColor" />
-            </svg>
-          </label>
+        <div class="params-section" aria-labelledby="details-section-title">
+          <div id="details-section-title" class="params-section-title">Details</div>
+          <div id="seed-row" class="sidebar-row is-clickable" role="button" tabindex="0">
+            <span class="sidebar-row-label">Seed</span>
+            <span id="seed-display" class="sidebar-row-value" role="button" tabindex="0">—</span>
+            <span class="icon-placeholder" data-icon="shuffle" data-icon-label="" aria-hidden="true"></span>
+          </div>
+          <button class="sidebar-row is-clickable" type="button" data-options-panel="palette">
+            <span class="sidebar-row-label">Palette</span>
+            <span id="palette-name" class="sidebar-row-value">—</span>
+            <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
+          </button>
+          <div id="palette-options-panel" class="sidebar-panel" data-panel="palette">Palette options panel placeholder.</div>
+          <button class="sidebar-row is-clickable" type="button" data-options-panel="profile">
+            <span class="sidebar-row-label">Profile</span>
+            <span id="profile-name" class="sidebar-row-value">—</span>
+            <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
+          </button>
+          <div id="profile-options-panel" class="sidebar-panel" data-panel="profile">Profile options panel placeholder.</div>
+          <button class="sidebar-row is-clickable" type="button" data-options-panel="form">
+            <span class="sidebar-row-label">Form</span>
+            <span id="form-name" class="sidebar-row-value">Bound</span>
+            <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
+          </button>
+          <div id="form-options-panel" class="sidebar-panel" data-panel="form">Form options panel placeholder.</div>
+          <div id="limit-row" class="sidebar-row">
+            <span class="sidebar-row-label">Limit</span>
+            <span class="sidebar-row-value"><span id="limit-display">—</span> <span class="sidebar-row-suffix">Blocks</span></span>
+            <span class="icon-placeholder" data-icon="lock" data-icon-label="" aria-hidden="true"></span>
+          </div>
+          <button class="sidebar-row is-clickable" type="button" data-options-panel="height">
+            <span class="sidebar-row-label">Height</span>
+            <span class="sidebar-row-value"><span id="stack-height">—</span> <span class="sidebar-row-suffix">Units</span></span>
+            <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
+          </button>
+          <div id="height-options-panel" class="sidebar-panel" data-panel="height">Height options panel placeholder.</div>
+          <div class="sidebar-row" id="shapes-heading">
+            <span class="sidebar-row-label">Shapes</span>
+            <span id="shape-count" class="sidebar-row-value">—</span>
+            <span class="icon-placeholder" data-icon="" data-icon-label="" aria-hidden="true"></span>
+          </div>
+          <div id="shapes-list" role="list" aria-labelledby="shapes-heading"></div>
         </div>
-        <div id="height-filter-container" class="height-filter-list"></div>
-      </div>
-
-      <div class="params-section">
-        <div class="params-section-title">Palettes</div>
-        <div id="palette-filter-list" class="palette-filter-list"></div>
-      </div>
-
-      <div class="params-actions">
-        <button class="params-link" id="select-none-btn" type="button">clear all</button>
       </div>
     </aside>
   </div>
@@ -1068,6 +1121,10 @@
       showOutline: true,
       showMetadata: true,
       showExport: true,
+      displayLayout: 'art',
+      aspectRatio: '1:1',
+      isSidebarOpen: true,
+      activeOptionsPanel: null,
 
       seed: null, // The string guaranteeing exact reproduction
       artwork: null, // Holds the output of the generation engine
@@ -1531,6 +1588,23 @@
         appState[flag] = value;
       },
 
+      toggleDisplayLayout() {
+        appState.displayLayout = appState.displayLayout === 'art' ? 'poster' : 'art';
+      },
+
+      toggleAspectRatio() {
+        appState.aspectRatio = appState.aspectRatio === '1:1' ? '9:16' : '1:1';
+      },
+
+      toggleSidebar() {
+        appState.isSidebarOpen = !appState.isSidebarOpen;
+        if (!appState.isSidebarOpen) appState.activeOptionsPanel = null;
+      },
+
+      toggleOptionsPanel(panelName) {
+        appState.activeOptionsPanel = appState.activeOptionsPanel === panelName ? null : panelName;
+      },
+
       setHeightMode(mode) {
         appState.heightMode = mode;
         if (mode === 'range') {
@@ -1580,15 +1654,27 @@
         appState.showOutline = true;
         appState.showMetadata = true;
         appState.showExport = true;
+        appState.displayLayout = 'art';
+        appState.aspectRatio = '1:1';
+        appState.activeOptionsPanel = null;
         this.clearSeed();
       },
 
       syncFromDOM() {
-        appState.selectedPalettes = [...document.querySelectorAll('#palette-filter-list input:checked')].map(input => input.value);
-        appState.selectedProfiles = [...document.querySelectorAll('#profile-filter-list input:checked')].map(input => input.value);
-        appState.showOutline = document.getElementById('toggle-outline')?.checked ?? true;
-        appState.showMetadata = document.getElementById('toggle-metadata')?.checked ?? true;
-        appState.showExport = document.getElementById('toggle-export')?.checked ?? true;
+        const paletteInputs = document.querySelectorAll('#palette-filter-list input:checked');
+        if (paletteInputs.length) appState.selectedPalettes = [...paletteInputs].map(input => input.value);
+
+        const profileInputs = document.querySelectorAll('#profile-filter-list input:checked');
+        if (profileInputs.length) appState.selectedProfiles = [...profileInputs].map(input => input.value);
+
+        const outlineEl = document.getElementById('toggle-outline');
+        if (outlineEl) appState.showOutline = outlineEl.checked;
+
+        const metadataEl = document.getElementById('toggle-metadata');
+        if (metadataEl) appState.showMetadata = metadataEl.checked;
+
+        const exportEl = document.getElementById('toggle-export');
+        if (exportEl) appState.showExport = exportEl.checked;
       },
 
       applyToDOM() {
@@ -1612,6 +1698,8 @@
         if (exportEl) exportEl.checked = appState.showExport;
 
         Render.renderHeightFilter();
+        Render.renderDisplayOptions();
+        Render.renderSidebarState();
       },
 
       buildGenerationParams() {
@@ -1634,6 +1722,8 @@
         appState.showOutline = params.has('outline') ? params.get('outline') !== 'false' : true;
         appState.showMetadata = params.has('meta') ? params.get('meta') !== 'false' : true;
         appState.showExport = params.has('export') ? params.get('export') !== 'false' : true;
+        appState.displayLayout = params.get('layout') === 'poster' ? 'poster' : 'art';
+        appState.aspectRatio = params.get('ratio') === '9:16' ? '9:16' : '1:1';
 
         if (params.has('limit')) {
           appState.targetBlocks = clampToAllowedLimit(parseInt(params.get('limit'), 10));
@@ -1672,6 +1762,8 @@
         searchParams.delete('outline');
         searchParams.delete('meta');
         searchParams.delete('export');
+        searchParams.delete('layout');
+        searchParams.delete('ratio');
 
         if (appState.selectedPalettes.length) searchParams.set('palettes', appState.selectedPalettes.join(','));
         if (appState.selectedProfiles.length) searchParams.set('profiles', appState.selectedProfiles.join(','));
@@ -1690,6 +1782,8 @@
         if (!appState.showOutline) searchParams.set('outline', 'false');
         if (!appState.showMetadata) searchParams.set('meta', 'false');
         if (!appState.showExport) searchParams.set('export', 'false');
+        if (appState.displayLayout !== 'art') searchParams.set('layout', appState.displayLayout);
+        if (appState.aspectRatio !== '1:1') searchParams.set('ratio', appState.aspectRatio);
         if (appState.seed) searchParams.set('seed', appState.seed);
 
         const searchString = searchParams.toString().replace(/%2C/g, ',');
@@ -1749,6 +1843,28 @@
 
     // --- RENDER MODULE ---
     const Render = {
+      renderDisplayOptions() {
+        const layoutValue = document.getElementById('layout-value');
+        if (layoutValue) layoutValue.textContent = appState.displayLayout === 'art' ? 'Art' : 'Poster';
+
+        const aspectRatioValue = document.getElementById('aspect-ratio-value');
+        if (aspectRatioValue) aspectRatioValue.textContent = appState.aspectRatio;
+      },
+
+      renderSidebarState() {
+        const panel = document.getElementById('params-panel');
+        const toggle = document.getElementById('sidebar-toggle');
+        if (panel) panel.classList.toggle('is-collapsed', !appState.isSidebarOpen);
+        if (toggle) {
+          toggle.textContent = appState.isSidebarOpen ? '<<' : '>>';
+          toggle.setAttribute('aria-label', appState.isSidebarOpen ? 'Close sidebar' : 'Open sidebar');
+        }
+
+        document.querySelectorAll('.sidebar-panel').forEach(panelEl => {
+          panelEl.classList.toggle('is-open', panelEl.dataset.panel === appState.activeOptionsPanel);
+        });
+      },
+
       buildDotStrip(container, colors) {
         if (!container) return;
         container.innerHTML = '';
@@ -1819,10 +1935,7 @@
         root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
         root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
 
-        document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !appState.showMetadata);
         document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
-        document.getElementById('metadata-limit-stat')?.classList.toggle('is-hidden', !appState.isLimitVisible);
-        document.getElementById('params-limit-section')?.classList.toggle('is-hidden', !appState.isLimitVisible);
 
         const seedDisplayEl = document.getElementById('seed-display');
         if (seedDisplayEl) seedDisplayEl.textContent = appState.seed;
@@ -1842,11 +1955,6 @@
         const limitDisplayEl = document.getElementById('limit-display');
         if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
 
-        const usedColors = new Set(placements.map(placement => placement.color));
-        const sortedUsedColors = palette.colors.filter(color => usedColors.has(color));
-        this.buildDotStrip(document.getElementById('actual-palette-dots'), [palette.bg, ...sortedUsedColors]);
-        this.buildDotStrip(document.getElementById('palette-dots'), [palette.bg, ...palette.colors]);
-
         const shapesList = document.getElementById('shapes-list');
         if (!shapesList) return;
 
@@ -1858,16 +1966,19 @@
         }, {});
 
         Object.keys(counts).map(Number).sort((a, b) => a - b).forEach(units => {
-          const stat = document.createElement('div');
-          stat.className = 'stat';
-          stat.innerHTML = `<span class="stat-label">${formatUnitLabel(units)}</span><span class="stat-value">${counts[units]}</span>`;
-          shapesList.appendChild(stat);
+          const row = document.createElement('div');
+          row.className = 'sidebar-row';
+          row.setAttribute('role', 'listitem');
+          row.innerHTML = `<span class="sidebar-row-label">${formatUnitLabel(units)}</span><span class="sidebar-row-value">${counts[units]}</span><span class="icon-placeholder" data-icon="" data-icon-label="" aria-hidden="true"></span>`;
+          shapesList.appendChild(row);
         });
       },
 
       render() {
         if (!appState.artwork) return;
         this.renderArtwork();
+        this.renderDisplayOptions();
+        this.renderSidebarState();
         this.renderMetadata();
       },
 
@@ -2021,91 +2132,43 @@
       },
 
       bindParamsPanel() {
-        const rangeToggle = document.getElementById('toggle-range-mode');
-        if (rangeToggle) {
-          rangeToggle.addEventListener('change', event => {
-            State.setHeightMode(event.target.checked ? 'range' : 'multi');
-            State.clearSeed();
-            Render.renderHeightFilter();
-            State.triggerGeneration();
-          });
-        }
-
-        Render.renderLimitSlider();
-        Render.renderHeightFilter();
-
-        const paletteList = document.getElementById('palette-filter-list');
-        const groupedPalettes = {};
-        PALETTES.forEach(palette => {
-          if (!groupedPalettes[palette.category]) groupedPalettes[palette.category] = [];
-          groupedPalettes[palette.category].push(palette);
+        document.getElementById('layout-row')?.addEventListener('click', () => {
+          State.toggleDisplayLayout();
+          Render.renderDisplayOptions();
+          State.syncURL();
         });
 
-        Object.keys(groupedPalettes).forEach(category => {
-          const header = document.createElement('div');
-          header.className = 'params-subsection-title';
-          header.textContent = category;
-          header.title = `Toggle all ${category} palettes`;
+        document.getElementById('aspect-ratio-row')?.addEventListener('click', () => {
+          State.toggleAspectRatio();
+          Render.renderDisplayOptions();
+          State.syncURL();
+        });
 
-          const categoryInputs = [];
-          header.addEventListener('click', () => {
-            const allChecked = categoryInputs.every(input => input.checked);
-            categoryInputs.forEach(input => { input.checked = !allChecked; });
-            this.regenerateFromFilters();
-          });
-
-          paletteList.appendChild(header);
-          groupedPalettes[category].forEach(palette => {
-            const label = document.createElement('label');
-            label.className = 'setting-item';
-            label.innerHTML = `<input type="checkbox" value="${palette.name}"><code>${palette.name}</code>`;
-            categoryInputs.push(label.querySelector('input'));
-            paletteList.appendChild(label);
+        document.querySelectorAll('[data-options-panel]').forEach(row => {
+          row.addEventListener('click', () => {
+            State.toggleOptionsPanel(row.dataset.optionsPanel);
+            Render.renderSidebarState();
           });
         });
 
-        paletteList.addEventListener('change', () => this.regenerateFromFilters());
-        document.getElementById('profile-filter-list')?.addEventListener('change', () => this.regenerateFromFilters());
-
-        document.getElementById('toggle-outline')?.addEventListener('change', event => {
-          this.syncRenderFlag('showOutline', event.target.checked);
-        });
-        document.getElementById('toggle-metadata')?.addEventListener('change', event => {
-          this.syncRenderFlag('showMetadata', event.target.checked);
-        });
-        document.getElementById('toggle-export')?.addEventListener('change', event => {
-          this.syncRenderFlag('showExport', event.target.checked);
-        });
-
-        document.getElementById('select-none-btn')?.addEventListener('click', () => {
-          document.querySelectorAll('#profile-filter-list input, #palette-filter-list input').forEach(input => {
-            input.checked = false;
-          });
-
-          const outlineEl = document.getElementById('toggle-outline');
-          if (outlineEl) outlineEl.checked = true;
-
-          const metadataEl = document.getElementById('toggle-metadata');
-          if (metadataEl) metadataEl.checked = true;
-
-          const exportEl = document.getElementById('toggle-export');
-          if (exportEl) exportEl.checked = true;
-
-          const rangeToggleEl = document.getElementById('toggle-range-mode');
-          if (rangeToggleEl) rangeToggleEl.checked = false;
-
-          State.resetFiltersAndView();
-          Render.renderHeightFilter();
-          State.triggerGeneration();
+        document.getElementById('seed-row')?.addEventListener('click', () => this.regenerateFromFilters());
+        document.getElementById('seed-row')?.addEventListener('keydown', event => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          this.regenerateFromFilters();
         });
       },
 
       bindGlobalControls() {
-        document.getElementById('panel-shuffle-btn')?.addEventListener('click', () => this.regenerateFromFilters());
+        document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+          State.toggleSidebar();
+          Render.renderSidebarState();
+        });
         document.getElementById('download-png-btn')?.addEventListener('click', () => ExportActions.downloadPNG());
         document.getElementById('download-svg-btn')?.addEventListener('click', () => ExportActions.downloadSVG());
 
-        document.getElementById('seed-display')?.addEventListener('click', () => {
+        document.getElementById('seed-display')?.addEventListener('click', event => {
+          event.stopPropagation();
           if (!appState.seed) return;
           const url = appState.shareUrl || window.location.href;
           const display = document.getElementById('seed-display');
@@ -2118,20 +2181,29 @@
             }, 1500);
           };
 
+          const fallbackCopy = () => {
+            const tempInput = document.createElement('input');
+            tempInput.value = url;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showCopied();
+          };
+
           if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(url).then(showCopied).catch(() => {
-              console.warn('Clipboard write failed.');
-            });
+            navigator.clipboard.writeText(url).then(showCopied).catch(fallbackCopy);
             return;
           }
 
-          const tempInput = document.createElement('input');
-          tempInput.value = url;
-          document.body.appendChild(tempInput);
-          tempInput.select();
-          document.execCommand('copy');
-          document.body.removeChild(tempInput);
-          showCopied();
+          fallbackCopy();
+        });
+
+        document.getElementById('seed-display')?.addEventListener('keydown', event => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          document.getElementById('seed-display')?.click();
         });
       },
 
@@ -2143,19 +2215,8 @@
           if (key === 'r') this.regenerateFromFilters();
 
           if (key === 'i') {
-            const paramsPanel = document.getElementById('params-panel');
-            const isHiding = !paramsPanel.classList.contains('is-hidden');
-
-            if (isHiding) {
-              ['metadata-overlay', 'logo-overlay', 'export-overlay', 'params-panel'].forEach(id => {
-                document.getElementById(id)?.classList.add('is-hidden');
-              });
-            } else {
-              paramsPanel.classList.remove('is-hidden');
-              document.getElementById('logo-overlay')?.classList.remove('is-hidden');
-              document.getElementById('metadata-overlay')?.classList.toggle('is-hidden', !appState.showMetadata);
-              document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
-            }
+            State.toggleSidebar();
+            Render.renderSidebarState();
           }
 
           if (key === 'p') ExportActions.downloadPNG();
