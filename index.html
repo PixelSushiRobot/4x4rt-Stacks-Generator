@@ -75,17 +75,13 @@
     }
 
     .params-panel.is-collapsed {
-      width: calc(var(--canvas-size) * 0.045);
-      min-width: calc(var(--canvas-size) * 0.045);
-      padding: calc(var(--canvas-size) * 0.015) calc(var(--canvas-size) * 0.008);
-      overflow: hidden;
+      display: none !important;
     }
 
     .sidebar-toggle {
-      position: sticky;
-      top: 0;
-      margin-left: auto;
-      margin-bottom: calc(var(--canvas-size) * 0.01);
+      position: absolute;
+      top: calc(var(--canvas-size) * 0.015);
+      right: calc(var(--canvas-size) * 0.015);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -98,7 +94,7 @@
       font-size: var(--ui-text-size);
       line-height: 1;
       cursor: pointer;
-      z-index: 4;
+      z-index: 10;
     }
 
     .params-panel.is-collapsed .sidebar-content {
@@ -121,7 +117,6 @@
     }
 
     .sidebar-copy {
-      max-width: calc(var(--canvas-size) * 0.24);
       margin-bottom: 42px;
       color: var(--ui-ink);
       font-size: var(--ui-text-size);
@@ -483,7 +478,7 @@
       position: absolute;
       left: calc(var(--canvas-size) * 0.015);
       bottom: calc(var(--canvas-size) * 0.015);
-      display: flex;
+      display: none;
       flex-direction: row;
       gap: calc(var(--canvas-size) * 0.015);
       z-index: 10;
@@ -597,9 +592,7 @@
       }
 
       .params-panel.is-collapsed {
-        width: 100%;
-        min-width: 100%;
-        min-height: calc(var(--canvas-size) * 0.06);
+        display: none !important;
       }
 
       .sidebar-copy {
@@ -617,6 +610,7 @@
   <div id="app" class="app">
     <div id="canvas-wrap" class="canvas-wrap">
       <div id="svg-container" class="svg-container">
+        <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">&lt;&lt;</button>
         <svg id="svg-out" class="svg-out" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
 
         <div id="logo-overlay" class="logo-overlay">
@@ -648,7 +642,6 @@
       </div>
     </div>
     <aside id="params-panel" class="params-panel">
-      <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">&lt;&lt;</button>
 
       <div class="sidebar-content">
         <div class="sidebar-brand" aria-label="Pixelsushirobot 4x4rt Stacks">
