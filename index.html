@@ -46,7 +46,7 @@
       display: flex;
       gap: 0;
       align-items: flex-start;
-      width: fit-content;
+      width: 100%;
       max-width: 100%;
       justify-content: center;
     }
@@ -61,7 +61,9 @@
 
     .params-panel {
       position: relative;
-      width: calc(var(--canvas-size) * 0.365);
+      flex: 1;
+      min-width: calc(var(--canvas-size) * 0.365);
+      max-width: calc(var(--canvas-size) * 0.587);
       min-height: var(--canvas-size);
       max-height: var(--canvas-size);
       overflow: auto;
@@ -595,6 +597,8 @@
 
       .params-panel {
         width: 100%;
+        min-width: 0;
+        max-width: none;
         min-height: auto;
         max-height: none;
         margin-top: calc(var(--ui-border-width) * -1);
