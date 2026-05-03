@@ -99,6 +99,10 @@
       z-index: 10;
     }
 
+    .sidebar-toggle.is-closed .icon {
+      transform: rotate(180deg);
+    }
+
     .params-panel.is-collapsed .sidebar-content {
       display: none;
     }
@@ -382,7 +386,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
-      gap: calc(var(--canvas-size) * 0.012);
+      gap: calc(var(--canvas-size) * 0.01);
       width: 100%;
       min-height: calc(var(--canvas-size) * 0.056);
       padding: calc(var(--canvas-size) * 0.02) 0;
@@ -420,20 +424,19 @@
       color: var(--ui-ink-muted);
     }
 
-    .icon-placeholder {
-      width: var(--ui-text-size);
-      min-width: var(--ui-text-size);
-      height: var(--ui-text-size);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    .icon {
+      width: calc(var(--canvas-size) * 0.016);
+      height: calc(var(--canvas-size) * 0.016);
+      fill: currentColor;
       color: var(--ui-ink-muted);
-      font-size: var(--ui-text-size);
-      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
     }
-
-    .icon-placeholder::before {
-      content: attr(data-icon-label);
+    
+    .icon-mobile {
+      display: none;
     }
 
     .sidebar-panel {
@@ -590,6 +593,13 @@
         --canvas-size: calc(100vw - (var(--page-pad-x) * 2));
       }
 
+      .icon-desktop {
+        display: none;
+      }
+      .icon-mobile {
+        display: inline-block;
+      }
+
       .app {
         flex-direction: column;
         gap: 0;
@@ -614,10 +624,57 @@
 </head>
 
 <body>
+  <!-- SVG Icon Library -->
+  <svg style="display: none;" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="icon-custom-right-panel" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M14.4 1.066a1.6 1.6 0 0 1 1.6 1.6v10.667a1.6 1.6 0 0 1-1.6 1.6H1.6a1.6 1.6 0 0 1-1.6-1.6V2.666a1.6 1.6 0 0 1 1.6-1.6zm-3.4 12.8h3.4a.533.533 0 0 0 .534-.533V2.666a.534.534 0 0 0-.534-.533H11zM1.6 2.133a.534.534 0 0 0-.534.533v10.667c0 .294.24.533.534.533H10V2.133z" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-custom-bottom-panel" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M14.933 14.4a1.6 1.6 0 0 1-1.6 1.6H2.666a1.6 1.6 0 0 1-1.6-1.6V1.6a1.6 1.6 0 0 1 1.6-1.6h10.667a1.6 1.6 0 0 1 1.6 1.6zM2.133 11v3.4c0 .295.239.534.533.534h10.667a.534.534 0 0 0 .533-.534V11zm11.733-9.4a.534.534 0 0 0-.533-.534H2.666a.533.533 0 0 0-.533.534V10h11.733z" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-custom-art-layout" viewBox="0 0 16 16">
+      <path fill="currentColor" d="M10.627 6.563a.533.533 0 1 1 .875.61A4.26 4.26 0 0 1 8 9a4.26 4.26 0 0 1-3.502-1.828.534.534 0 0 1 .875-.61c.58.83 1.54 1.37 2.627 1.37s2.048-.54 2.627-1.37M6 3.596a1 1 0 1 1 0 2 1 1 0 0 1 0-2m4 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+      <path fill="currentColor" fill-rule="evenodd" d="M13.333 1.066a1.6 1.6 0 0 1 1.6 1.6v10.667a1.6 1.6 0 0 1-1.6 1.6H2.666a1.6 1.6 0 0 1-1.6-1.6V2.666a1.6 1.6 0 0 1 1.6-1.6zM2.666 2.133a.534.534 0 0 0-.533.533v10.667c0 .294.239.533.533.533h10.667a.533.533 0 0 0 .533-.533V2.666a.533.533 0 0 0-.533-.533z" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-custom-poster-layout" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M13.333 2.133H2.666a.533.533 0 0 0-.533.533v10.667c0 .295.239.533.533.533h10.667a.533.533 0 0 0 .533-.533V2.666a.533.533 0 0 0-.533-.533M2.666 1.066a1.6 1.6 0 0 0-1.6 1.6v10.667a1.6 1.6 0 0 0 1.6 1.6h10.667a1.6 1.6 0 0 0 1.6-1.6V2.666a1.6 1.6 0 0 0-1.6-1.6z" clip-rule="evenodd"/>
+      <path fill="currentColor" d="M3 10.47c0-.295.238-.533.532-.533h8.936a.532.532 0 1 1 0 1.065H3.531A.53.53 0 0 1 3 10.469m3-4.874a1 1 0 1 0 0-2 1 1 0 0 0 0 2m4 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-7 6.877c0-.294.238-.532.532-.532h8.936a.532.532 0 1 1 0 1.064H3.531A.53.53 0 0 1 3 12.472m1.63-6.043a.533.533 0 0 1 .743.132c.58.83 1.54 1.372 2.627 1.372a3.2 3.2 0 0 0 2.626-1.372.533.533 0 1 1 .875.61A4.26 4.26 0 0 1 8 9a4.26 4.26 0 0 1-3.502-1.828.533.533 0 0 1 .132-.743"/>
+    </symbol>
+    <symbol id="icon-custom-1-1-ratio" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M13.333 2.133H2.666a.533.533 0 0 0-.533.533v10.667c0 .295.239.533.533.533h10.667a.533.533 0 0 0 .533-.533V2.666a.533.533 0 0 0-.533-.533M2.666 1.066a1.6 1.6 0 0 0-1.6 1.6v10.667a1.6 1.6 0 0 0 1.6 1.6h10.667a1.6 1.6 0 0 0 1.6-1.6V2.666a1.6 1.6 0 0 0-1.6-1.6z" clip-rule="evenodd"/>
+      <path fill="currentColor" fill-rule="evenodd" d="M3.043 3.494a.45.45 0 0 1 .451-.45h1.637a.45.45 0 0 1 0 .9H3.945v1.187a.45.45 0 0 1-.902 0zm9.462 6.924a.45.45 0 0 1 .451.45v1.637a.45.45 0 0 1-.45.451h-1.637a.45.45 0 0 1 0-.901h1.186v-1.186a.45.45 0 0 1 .45-.45" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-custom-9-16-ratio" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M4.266 2.666c0-.294.239-.533.533-.533h6.4c.295 0 .534.239.534.533v10.667a.533.533 0 0 1-.534.533H4.8a.533.533 0 0 1-.533-.533zm.533-1.6a1.6 1.6 0 0 0-1.6 1.6v10.667a1.6 1.6 0 0 0 1.6 1.6h6.4a1.6 1.6 0 0 0 1.6-1.6V2.666a1.6 1.6 0 0 0-1.6-1.6z" clip-rule="evenodd"/>
+      <path fill="currentColor" fill-rule="evenodd" d="M5.176 3.494a.45.45 0 0 1 .45-.45h1.638a.45.45 0 0 1 0 .9H6.077v1.187a.45.45 0 0 1-.9 0zm5.196 6.924a.45.45 0 0 1 .45.45v1.637a.45.45 0 0 1-.45.451H8.735a.45.45 0 0 1 0-.901H9.92v-1.186a.45.45 0 0 1 .45-.45" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M2.03 7.782c0 3.247 2.354 5.46 4.998 5.917a.556.556 0 0 1-.19 1.095C3.732 14.257.918 11.64.918 7.783c0-1.64.746-2.927 1.617-3.907.623-.702 1.337-1.272 1.911-1.709H2.701a.533.533 0 0 1 0-1.066h3.2c.294 0 .533.238.533.533v3.2a.533.533 0 0 1-1.067 0v-1.97l-.001.002c-.61.46-1.355 1.021-2 1.747-.763.858-1.336 1.894-1.336 3.169m11.848.434c0-3.213-2.304-5.412-4.914-5.902a.556.556 0 1 1 .205-1.093c3.066.576 5.82 3.179 5.82 6.995 0 1.639-.745 2.927-1.616 3.907-.624.702-1.337 1.272-1.911 1.708h1.745a.533.533 0 0 1 0 1.067h-3.2a.533.533 0 0 1-.533-.533v-3.2a.533.533 0 1 1 1.067 0v1.968l.001-.001c.61-.46 1.355-1.022 2-1.748.762-.857 1.336-1.894 1.336-3.168" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-config" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M5.866 3.2a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2M3.2 5.332l.053-.003a2.668 2.668 0 0 0 5.227 0l.053.003H14.4a.533.533 0 0 0 0-1.067H8.533l-.053.003a2.668 2.668 0 0 0-5.227 0L3.2 4.266H1.6a.533.533 0 0 0 0 1.067zm9.547 6.397a2.667 2.667 0 0 1-5.228 0l-.053.003H1.6a.533.533 0 0 1 0-1.067h5.866q.027 0 .053.003a2.668 2.668 0 0 1 5.228 0l.053-.003h1.6a.534.534 0 0 1 0 1.067h-1.6q-.027 0-.053-.003m-4.214-.53a1.6 1.6 0 1 1 3.2 0 1.6 1.6 0 0 1-3.2 0" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-lock" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M5.333 4.945c0-.935.258-1.633.686-2.094C6.44 2.396 7.089 2.11 8 2.11c.913 0 1.56.286 1.98.74.427.46.685 1.157.685 2.092v1.457H5.333zM4.266 6.399V4.945c0-1.125.313-2.11.971-2.82.664-.714 1.618-1.082 2.764-1.082s2.1.367 2.762 1.08c.658.709.97 1.694.97 2.819v1.457h1.066c.59 0 1.067.478 1.067 1.067v6.4c0 .59-.477 1.067-1.066 1.067H3.2c-.59 0-1.067-.478-1.067-1.067v-6.4c0-.589.477-1.067 1.066-1.067zM3.2 7.466h9.6v6.4H3.2z" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-unlock" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M7.998 0c-1.251 0-2.28.415-2.945 1.273-.534.688-.787 1.588-.787 2.602h1.067c0-.842.21-1.493.563-1.948.414-.534 1.092-.86 2.102-.86.915 0 1.562.282 1.984.732.426.454.684 1.145.684 2.08V6.4H3.2c-.589 0-1.066.478-1.066 1.067v6.4c0 .589.477 1.066 1.066 1.066h9.6c.59 0 1.067-.477 1.067-1.066v-6.4c0-.59-.477-1.067-1.066-1.067h-1.067V3.878c0-1.125-.313-2.106-.973-2.81C10.095.36 9.14 0 7.998 0M3.199 7.467h9.6v6.4H3.2z" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-down-arrow" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M8 2.133c.294 0 .533.239.533.533v9.38l3.356-3.357a.533.533 0 0 1 .754.754L8.376 13.71a.534.534 0 0 1-.754 0L3.355 9.443a.533.533 0 1 1 .755-.754l3.356 3.356V2.666c0-.294.239-.533.533-.533" clip-rule="evenodd"/>
+    </symbol>
+    <symbol id="icon-custom-keyboard" viewBox="0 0 16 16">
+      <path fill="currentColor" fill-rule="evenodd" d="M1.6 1.068a1.6 1.6 0 0 0-1.6 1.6v10.667a1.6 1.6 0 0 0 1.6 1.6h12.8a1.6 1.6 0 0 0 1.6-1.6V2.668a1.6 1.6 0 0 0-1.6-1.6zm13.333 1.6a.533.533 0 0 0-.533-.533H1.6a.533.533 0 0 0-.533.533v10.667c0 .294.238.533.533.533h12.8a.533.533 0 0 0 .533-.533z" clip-rule="evenodd"/>
+      <path fill="currentColor" d="M4.821 10.535h6.358a.533.533 0 0 1 0 1.066H4.82a.533.533 0 0 1 0-1.066m-.75-5.6a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0M4.07 8.001a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m0 3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m3.067-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0"/>
+    </symbol>
+  </svg>
   <div id="app" class="app">
     <div id="canvas-wrap" class="canvas-wrap">
       <div id="svg-container" class="svg-container">
-        <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">&lt;&lt;</button>
+        <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
+          <svg class="icon icon-desktop"><use href="#icon-custom-right-panel"></use></svg>
+          <svg class="icon icon-mobile"><use href="#icon-custom-bottom-panel"></use></svg>
+        </button>
         <svg id="svg-out" class="svg-out" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
 
         <div id="logo-overlay" class="logo-overlay">
@@ -663,12 +720,12 @@
           <button id="layout-row" class="sidebar-row is-clickable" type="button">
             <span class="sidebar-row-label">Layout</span>
             <span id="layout-value" class="sidebar-row-value">Art</span>
-            <span class="icon-placeholder" data-icon="layout" data-icon-label="" aria-hidden="true"></span>
+            <svg class="icon" id="layout-icon"><use href="#icon-custom-art-layout"></use></svg>
           </button>
           <button id="aspect-ratio-row" class="sidebar-row is-clickable" type="button">
             <span class="sidebar-row-label">Aspect Ratio</span>
             <span id="aspect-ratio-value" class="sidebar-row-value">1:1</span>
-            <span class="icon-placeholder" data-icon="aspect" data-icon-label="" aria-hidden="true"></span>
+            <svg class="icon" id="aspect-ratio-icon"><use href="#icon-custom-1-1-ratio"></use></svg>
           </button>
         </div>
 
@@ -677,46 +734,45 @@
           <div id="seed-row" class="sidebar-row is-clickable" role="button" tabindex="0">
             <span class="sidebar-row-label">Seed</span>
             <span id="seed-display" class="sidebar-row-value" role="button" tabindex="0">—</span>
-            <span class="icon-placeholder" data-icon="shuffle" data-icon-label="" aria-hidden="true"></span>
+            <svg class="icon"><use href="#icon-refresh"></use></svg>
           </div>
           <button class="sidebar-row is-clickable" type="button" data-options-panel="palette">
             <span class="sidebar-row-label">Palette</span>
             <span id="palette-name" class="sidebar-row-value">—</span>
-            <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
+            <svg class="icon"><use href="#icon-config"></use></svg>
           </button>
           <div id="palette-options-panel" class="sidebar-panel" data-panel="palette">Palette options panel placeholder.
           </div>
           <button class="sidebar-row is-clickable" type="button" data-options-panel="profile">
             <span class="sidebar-row-label">Profile</span>
             <span id="profile-name" class="sidebar-row-value">—</span>
-            <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
+            <svg class="icon"><use href="#icon-config"></use></svg>
           </button>
           <div id="profile-options-panel" class="sidebar-panel" data-panel="profile">Profile options panel placeholder.
           </div>
           <button class="sidebar-row is-clickable" type="button" data-options-panel="form">
             <span class="sidebar-row-label">Form</span>
             <span id="form-name" class="sidebar-row-value">Bound</span>
-            <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
+            <svg class="icon"><use href="#icon-config"></use></svg>
           </button>
           <div id="form-options-panel" class="sidebar-panel" data-panel="form">Form options panel placeholder.</div>
           <div id="limit-row" class="sidebar-row">
             <span class="sidebar-row-label">Limit</span>
             <span class="sidebar-row-value"><span id="limit-display">—</span> <span
                 class="sidebar-row-suffix">Blocks</span></span>
-            <span class="icon-placeholder" data-icon="lock" data-icon-label="" aria-hidden="true"></span>
+            <svg class="icon"><use href="#icon-lock"></use></svg>
           </div>
           <button class="sidebar-row is-clickable" type="button" data-options-panel="height">
             <span class="sidebar-row-label">Height</span>
             <span class="sidebar-row-value"><span id="stack-height">—</span> <span
                 class="sidebar-row-suffix">Units</span></span>
-            <span class="icon-placeholder" data-icon="settings" data-icon-label="" aria-hidden="true"></span>
+            <svg class="icon"><use href="#icon-config"></use></svg>
           </button>
           <div id="height-options-panel" class="sidebar-panel" data-panel="height">Height options panel placeholder.
           </div>
           <div class="sidebar-row" id="shapes-heading">
             <span class="sidebar-row-label">Shapes</span>
             <span id="shape-count" class="sidebar-row-value">—</span>
-            <span class="icon-placeholder" data-icon="" data-icon-label="" aria-hidden="true"></span>
           </div>
           <div id="shapes-list" role="list" aria-labelledby="shapes-heading"></div>
         </div>
@@ -1861,10 +1917,22 @@
     const Render = {
       renderDisplayOptions() {
         const layoutValue = document.getElementById('layout-value');
-        if (layoutValue) layoutValue.textContent = appState.displayLayout === 'art' ? 'Art' : 'Poster';
+        const layoutIcon = document.getElementById('layout-icon');
+        if (layoutValue) {
+          layoutValue.textContent = appState.displayLayout === 'art' ? 'Art' : 'Poster';
+          if (layoutIcon) {
+            layoutIcon.querySelector('use').setAttribute('href', appState.displayLayout === 'art' ? '#icon-custom-art-layout' : '#icon-custom-poster-layout');
+          }
+        }
 
         const aspectRatioValue = document.getElementById('aspect-ratio-value');
-        if (aspectRatioValue) aspectRatioValue.textContent = appState.aspectRatio;
+        const aspectIcon = document.getElementById('aspect-ratio-icon');
+        if (aspectRatioValue) {
+          aspectRatioValue.textContent = appState.aspectRatio;
+          if (aspectIcon) {
+            aspectIcon.querySelector('use').setAttribute('href', appState.aspectRatio === '1:1' ? '#icon-custom-1-1-ratio' : '#icon-custom-9-16-ratio');
+          }
+        }
       },
 
       renderSidebarState() {
@@ -1872,7 +1940,7 @@
         const toggle = document.getElementById('sidebar-toggle');
         if (panel) panel.classList.toggle('is-collapsed', !appState.isSidebarOpen);
         if (toggle) {
-          toggle.textContent = appState.isSidebarOpen ? '<<' : '>>';
+          toggle.classList.toggle('is-closed', !appState.isSidebarOpen);
           toggle.setAttribute('aria-label', appState.isSidebarOpen ? 'Close sidebar' : 'Open sidebar');
         }
 
