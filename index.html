@@ -483,6 +483,11 @@
       height: var(--canvas-size);
       background: var(--ui-bg);
       border: var(--ui-border-width) solid var(--ui-ink-solid);
+      transition: width 0.2s ease;
+    }
+
+    .svg-container.is-aspect-9-16 {
+      width: calc(var(--canvas-size) * 0.5625);
     }
 
     .svg-out {
@@ -2043,10 +2048,14 @@
 
         const aspectRatioValue = document.getElementById('aspect-ratio-value');
         const aspectIcon = document.getElementById('aspect-ratio-icon');
+        const svgContainer = document.getElementById('svg-container');
         if (aspectRatioValue) {
           aspectRatioValue.textContent = appState.aspectRatio;
           if (aspectIcon) {
             aspectIcon.querySelector('use').setAttribute('href', appState.aspectRatio === '1:1' ? '#icon-custom-1-1-ratio' : '#icon-custom-9-16-ratio');
+          }
+          if (svgContainer) {
+            svgContainer.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
           }
         }
       },
@@ -2083,17 +2092,20 @@
         const svg = document.getElementById('svg-out');
         svg.innerHTML = '';
 
-        const stackHeightPx = (heightUnits * CELL_STEP) + BORDER_WIDTH;
-        const offsetX = Math.round((CANVAS_SIZE - COLUMN_WIDTH) / 2);
-        const offsetY = Math.round((CANVAS_SIZE - stackHeightPx) / 2);
+        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE; // Always 1000
 
-        svg.setAttribute('viewBox', `0 0 ${CANVAS_SIZE} ${CANVAS_SIZE}`);
-        svg.setAttribute('width', CANVAS_SIZE);
-        svg.setAttribute('height', CANVAS_SIZE);
+        const stackHeightPx = (heightUnits * CELL_STEP) + BORDER_WIDTH;
+        const offsetX = Math.round((canvasW - COLUMN_WIDTH) / 2);
+        const offsetY = Math.round((canvasH - stackHeightPx) / 2);
+
+        svg.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
+        svg.setAttribute('width', canvasW);
+        svg.setAttribute('height', canvasH);
 
         const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        bg.setAttribute('width', CANVAS_SIZE);
-        bg.setAttribute('height', CANVAS_SIZE);
+        bg.setAttribute('width', canvasW);
+        bg.setAttribute('height', canvasH);
         bg.setAttribute('fill', palette.bg);
         svg.appendChild(bg);
 
@@ -2454,6 +2466,8 @@
 
       async downloadPNG() {
         const scale = 2;
+        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE; // Always 1000
         const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(this.getSVGString())}`;
 
         try {
@@ -2465,8 +2479,8 @@
           });
 
           const canvas = document.createElement('canvas');
-          canvas.width = CANVAS_SIZE * scale;
-          canvas.height = CANVAS_SIZE * scale;
+          canvas.width = canvasW * scale;
+          canvas.height = canvasH * scale;
           canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
           this.triggerDownload(canvas.toDataURL('image/png'), '4x4rt-stacks.png');
         } catch (error) {
