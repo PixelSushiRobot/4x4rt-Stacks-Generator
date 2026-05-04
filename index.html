@@ -57,6 +57,11 @@
       align-items: center;
       gap: calc(var(--canvas-size) * 0.02);
       width: var(--canvas-size);
+      transition: width 0.2s ease;
+    }
+
+    .canvas-wrap.is-aspect-9-16 {
+      width: calc((var(--canvas-size) - var(--ui-border-width) * 2) * 0.5625 + var(--ui-border-width) * 2);
     }
 
     .canvas-wrap:hover .sidebar-toggle {
@@ -479,15 +484,10 @@
 
     .svg-container {
       position: relative;
-      width: var(--canvas-size);
+      width: 100%;
       height: var(--canvas-size);
       background: var(--ui-bg);
       border: var(--ui-border-width) solid var(--ui-ink-solid);
-      transition: width 0.2s ease;
-    }
-
-    .svg-container.is-aspect-9-16 {
-      width: calc(var(--canvas-size) * 0.5625);
     }
 
     .svg-out {
@@ -2048,14 +2048,14 @@
 
         const aspectRatioValue = document.getElementById('aspect-ratio-value');
         const aspectIcon = document.getElementById('aspect-ratio-icon');
-        const svgContainer = document.getElementById('svg-container');
+        const canvasWrap = document.getElementById('canvas-wrap');
         if (aspectRatioValue) {
           aspectRatioValue.textContent = appState.aspectRatio;
           if (aspectIcon) {
             aspectIcon.querySelector('use').setAttribute('href', appState.aspectRatio === '1:1' ? '#icon-custom-1-1-ratio' : '#icon-custom-9-16-ratio');
           }
-          if (svgContainer) {
-            svgContainer.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
+          if (canvasWrap) {
+            canvasWrap.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
           }
         }
       },
