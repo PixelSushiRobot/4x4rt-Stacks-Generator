@@ -2371,6 +2371,7 @@
         document.getElementById('aspect-ratio-row')?.addEventListener('click', () => {
           State.toggleAspectRatio();
           Render.renderDisplayOptions();
+          Render.renderArtwork();
           State.syncURL();
         });
 
