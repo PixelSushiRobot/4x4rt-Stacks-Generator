@@ -43,15 +43,15 @@
       min-height: 100vh;
     }
 
-    body.is-sidebar-hidden {
+    :root.is-sidebar-hidden {
       --app-width-ratio: 1;
     }
 
-    body.is-aspect-9-16 {
+    :root.is-aspect-9-16 {
       --app-width-ratio: 0.9275;
     }
 
-    body.is-sidebar-hidden.is-aspect-9-16 {
+    :root.is-sidebar-hidden.is-aspect-9-16 {
       --app-width-ratio: 0.5625;
     }
 
@@ -2071,7 +2071,7 @@
           if (canvasWrap) {
             canvasWrap.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
           }
-          document.body.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
+          document.documentElement.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
         }
       },
 
@@ -2084,7 +2084,7 @@
           toggle.setAttribute('aria-label', appState.isSidebarOpen ? 'Close sidebar' : 'Open sidebar');
         }
 
-        document.body.classList.toggle('is-sidebar-hidden', !appState.isSidebarOpen);
+        document.documentElement.classList.toggle('is-sidebar-hidden', !appState.isSidebarOpen);
 
         document.querySelectorAll('.sidebar-panel').forEach(panelEl => {
           panelEl.classList.toggle('is-open', panelEl.dataset.panel === appState.activeOptionsPanel);
