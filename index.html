@@ -14,7 +14,8 @@
     :root {
       --page-pad-x: 20px;
       --page-pad-y: 20px;
-      --canvas-size: min(100vh - (var(--page-pad-y) * 2), (100vw - (var(--page-pad-x) * 2)) / 1.365);
+      --app-width-ratio: 1.365;
+      --canvas-size: min(100vh - (var(--page-pad-y) * 2), (100vw - (var(--page-pad-x) * 2)) / var(--app-width-ratio));
       --rule-width: max(1px, calc(var(--canvas-size) * 0.001));
       --ui-bg: #f4f1ea;
       --ui-ink: rgba(28, 28, 26, 0.9);
@@ -42,6 +43,18 @@
       min-height: 100vh;
     }
 
+    body.is-sidebar-hidden {
+      --app-width-ratio: 1;
+    }
+
+    body.is-aspect-9-16 {
+      --app-width-ratio: 0.9275;
+    }
+
+    body.is-sidebar-hidden.is-aspect-9-16 {
+      --app-width-ratio: 0.5625;
+    }
+
     .app {
       display: flex;
       gap: 0;
@@ -57,7 +70,6 @@
       align-items: center;
       gap: calc(var(--canvas-size) * 0.02);
       width: var(--canvas-size);
-      transition: width 0.2s ease;
     }
 
     .canvas-wrap.is-aspect-9-16 {
@@ -70,9 +82,8 @@
 
     .params-panel {
       position: relative;
-      flex: 1;
-      min-width: calc(var(--canvas-size) * 0.365);
-      max-width: calc(var(--canvas-size) * 0.587);
+      flex: none;
+      width: calc(var(--canvas-size) * 0.365);
       min-height: var(--canvas-size);
       max-height: var(--canvas-size);
       padding: 0;
@@ -81,7 +92,6 @@
       color: var(--ui-ink);
       border: var(--ui-border-width) solid var(--ui-ink-solid);
       text-transform: uppercase;
-      transition: width 0.2s ease, padding 0.2s ease;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -668,6 +678,10 @@
         margin-top: calc(var(--ui-border-width) * -1);
         margin-left: 0;
         border: var(--ui-border-width) solid var(--ui-ink-solid);
+      }
+
+      .canvas-wrap.is-aspect-9-16~.params-panel {
+        width: calc((var(--canvas-size) - var(--ui-border-width) * 2) * 0.5625 + var(--ui-border-width) * 2);
       }
 
       .params-panel.is-collapsed {
@@ -2057,6 +2071,7 @@
           if (canvasWrap) {
             canvasWrap.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
           }
+          document.body.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
         }
       },
 
@@ -2068,6 +2083,8 @@
           toggle.classList.toggle('is-closed', !appState.isSidebarOpen);
           toggle.setAttribute('aria-label', appState.isSidebarOpen ? 'Close sidebar' : 'Open sidebar');
         }
+
+        document.body.classList.toggle('is-sidebar-hidden', !appState.isSidebarOpen);
 
         document.querySelectorAll('.sidebar-panel').forEach(panelEl => {
           panelEl.classList.toggle('is-open', panelEl.dataset.panel === appState.activeOptionsPanel);
