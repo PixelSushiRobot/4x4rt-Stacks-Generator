@@ -73,9 +73,23 @@
       padding: 0;
     }
 
+    button, input, select, textarea {
+      font-family: inherit;
+      color: inherit;
+      font-size: inherit;
+      line-height: 1;
+    }
+
+    button {
+      background: transparent;
+      border: none;
+    }
+
     body {
       background: var(--ui-bg);
+      color: var(--ui-ink);
       font-family: 'Space Mono', monospace;
+      line-height: 1.45;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -120,7 +134,6 @@
       padding: 0;
       margin-left: calc(var(--ui-border-width) * -1);
       background: var(--ui-bg);
-      color: var(--ui-ink);
       border: var(--ui-border-width) solid var(--ui-ink-solid);
       text-transform: uppercase;
       display: flex;
@@ -196,12 +209,9 @@
       color: var(--ui-ink-muted);
     }
 
-    .project-name {
-      color: var(--ui-ink);
-    }
+
 
     .project-description {
-      color: var(--ui-ink);
       font-size: var(--ui-text-size);
       line-height: 1.45;
     }
@@ -220,11 +230,7 @@
       padding: var(--sz-20) 0;
       border: none;
       border-bottom: var(--rule-width) solid var(--ui-rule);
-      color: var(--ui-ink);
-      background: transparent;
-      font-family: 'Space Mono', monospace;
       font-size: var(--ui-text-size);
-      line-height: 1;
       text-align: left;
       text-transform: uppercase;
       cursor: default;
@@ -257,7 +263,6 @@
 
     .control-value {
       justify-self: end;
-      color: var(--ui-ink);
       white-space: nowrap;
     }
 
@@ -296,12 +301,7 @@
       justify-content: center;
       width: var(--sz-16);
       height: var(--sz-16);
-      color: var(--ui-ink);
-      background: none;
-      border: none;
-      font-family: 'Space Mono', monospace;
       font-size: var(--ui-text-size);
-      line-height: 1;
       cursor: pointer;
       z-index: 10;
       display: none;
@@ -337,13 +337,9 @@
       padding: var(--sz-05) var(--sz-07) var(--sz-05) var(--sz-10);
       border: var(--ui-border-width) solid var(--ui-ink);
       border-radius: var(--sz-30);
-      background: transparent;
-      color: var(--ui-ink);
-      font-family: 'Space Mono', monospace;
       font-size: var(--ui-text-size);
       text-transform: uppercase;
       cursor: pointer;
-      line-height: 1;
       transition: background 0.1s ease, color 0.1s ease;
     }
 
@@ -367,10 +363,7 @@
 
     .icon-button {
       margin-left: auto;
-      background: transparent;
-      border: none;
       cursor: pointer;
-      color: var(--ui-ink);
       padding: 0;
       display: flex;
       align-items: center;
@@ -419,7 +412,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'Space Mono', monospace;
       font-size: var(--sz-18);
       transform: translateX(0);
       z-index: 2;
@@ -444,8 +436,6 @@
       height: var(--sz-30);
       min-width: var(--sz-64);
       padding: 0 var(--sz-25) 0 var(--sz-15);
-      color: var(--ui-ink);
-      font-family: 'Space Mono', monospace;
       font-size: var(--sz-18);
       cursor: pointer;
     }
