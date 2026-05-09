@@ -30,15 +30,15 @@
       --ui-brand-size: calc(var(--canvas-size) * 0.03);
     }
 
-    :root.is-sidebar-hidden {
+    :root[data-sidebar-state="hidden"] {
       --app-width-ratio: 1;
     }
 
-    :root.is-aspect-9-16 {
+    :root[data-aspect-ratio="9:16"] {
       --app-width-ratio: 0.9275;
     }
 
-    :root.is-sidebar-hidden.is-aspect-9-16 {
+    :root[data-sidebar-state="hidden"][data-aspect-ratio="9:16"] {
       --app-width-ratio: 0.5625;
     }
 
@@ -64,7 +64,7 @@
     /* ==========================================================================
        3. CORE LAYOUT
        ========================================================================== */
-    .app {
+    .l-app {
       display: flex;
       gap: 0;
       align-items: flex-start;
@@ -73,7 +73,7 @@
       justify-content: center;
     }
 
-    .canvas-wrap {
+    .l-canvas {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -81,15 +81,15 @@
       width: var(--canvas-size);
     }
 
-    .canvas-wrap.is-aspect-9-16 {
+    .l-canvas[data-aspect-ratio="9:16"] {
       width: calc((var(--canvas-size) - var(--ui-border-width) * 2) * 0.5625 + var(--ui-border-width) * 2);
     }
 
-    .canvas-wrap:hover .sidebar-toggle {
+    .l-canvas:hover .sidebar-toggle {
       display: flex;
     }
 
-    .params-panel {
+    .l-sidebar {
       position: relative;
       flex: none;
       width: calc(var(--canvas-size) * 0.365);
@@ -106,7 +106,7 @@
       overflow: hidden;
     }
 
-    .params-panel.is-collapsed {
+    .l-sidebar[data-state="collapsed"] {
       display: none !important;
     }
 
@@ -117,14 +117,14 @@
       overflow-y: auto;
     }
 
-    .params-panel.is-collapsed .sidebar-content {
+    .l-sidebar[data-state="collapsed"] .sidebar-content {
       display: none;
     }
 
     /* ==========================================================================
        4. SVG & CANVAS UTILITIES
        ========================================================================== */
-    .svg-container {
+    .artwork-container {
       position: relative;
       width: 100%;
       height: var(--canvas-size);
@@ -132,7 +132,7 @@
       border: var(--ui-border-width) solid var(--ui-ink-solid);
     }
 
-    .svg-out {
+    .artwork-svg {
       display: block;
       width: 100%;
       height: 100%;
@@ -143,7 +143,7 @@
       shape-rendering: crispEdges;
     }
 
-    .logo-overlay {
+    .watermark {
       position: absolute;
       right: calc(var(--canvas-size) * 0.02);
       bottom: calc(var(--canvas-size) * 0.02);
@@ -153,14 +153,14 @@
       pointer-events: none;
     }
 
-    .logo-overlay svg {
+    .watermark svg {
       display: block;
     }
 
     /* ==========================================================================
        5. SIDEBAR UI COMPONENTS
        ========================================================================== */
-    .sidebar-brand {
+    .project-header {
       display: flex;
       flex-direction: column;
       gap: calc(var(--canvas-size) * 0.008);
@@ -170,15 +170,15 @@
       letter-spacing: 0;
     }
 
-    .brand-kicker {
+    .artist-name {
       color: var(--ui-ink-muted);
     }
 
-    .brand-title {
+    .project-name {
       color: var(--ui-ink);
     }
 
-    .sidebar-copy {
+    .project-description {
       color: var(--ui-ink);
       font-size: var(--ui-text-size);
       line-height: 1.45;
@@ -188,7 +188,7 @@
       padding-top: calc(var(--canvas-size) * 0.04);
     }
 
-    .sidebar-row {
+    .control-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
@@ -208,42 +208,42 @@
       cursor: default;
     }
 
-    .sidebar-row:hover .icon {
+    .control-row:hover .icon {
       color: var(--ui-ink);
     }
 
-    .sidebar-row.sidebar-row--no-icon {
+    .control-row.u-hide-icon {
       grid-template-columns: minmax(0, 1fr) auto;
     }
 
-    .sidebar-row.is-clickable {
+    .control-row[data-interactive="true"] {
       cursor: pointer;
     }
 
-    .sidebar-row.is-clickable:hover {
+    .control-row[data-interactive="true"]:hover {
       color: var(--ui-ink-muted);
     }
 
-    .sidebar-row.is-clickable:focus-visible {
+    .control-row[data-interactive="true"]:focus-visible {
       outline: none;
       border-bottom-color: var(--ui-ink-muted);
     }
 
-    .sidebar-row-label {
+    .control-label {
       color: var(--ui-ink-muted);
     }
 
-    .sidebar-row-value {
+    .control-value {
       justify-self: end;
       color: var(--ui-ink);
       white-space: nowrap;
     }
 
-    .sidebar-row-suffix {
+    .control-suffix {
       color: var(--ui-ink-muted);
     }
 
-    .sidebar-panel {
+    .options-panel {
       display: none;
       padding: calc(var(--canvas-size) * 0.016) 0 calc(var(--canvas-size) * 0.02);
       border-bottom: var(--rule-width) solid var(--ui-rule);
@@ -252,7 +252,7 @@
       line-height: 1.45;
     }
 
-    .sidebar-panel.is-open {
+    .options-panel[data-state="open"] {
       display: block;
     }
 
@@ -295,7 +295,7 @@
       border-radius: calc(var(--canvas-size) * 0.002);
     }
 
-    .export-bar {
+    .action-bar {
       position: absolute;
       bottom: 0;
       left: 0;
@@ -308,7 +308,7 @@
       z-index: 10;
     }
 
-    .export-btn {
+    .button {
       display: flex;
       align-items: center;
       gap: calc(var(--canvas-size) * 0.002);
@@ -325,25 +325,25 @@
       transition: background 0.1s ease, color 0.1s ease;
     }
 
-    .export-btn .icon {
+    .button .icon {
       color: var(--ui-ink);
     }
 
-    .export-btn:active {
+    .button:active {
       background: var(--ui-ink);
       color: var(--ui-bg);
     }
 
-    .export-btn:active .icon {
+    .button:active .icon {
       color: var(--ui-bg);
     }
 
-    .export-btn:focus-visible {
+    .button:focus-visible {
       outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
       outline-offset: calc(var(--canvas-size) * 0.002);
     }
 
-    .keyboard-btn {
+    .icon-button {
       margin-left: auto;
       background: transparent;
       border: none;
@@ -355,21 +355,21 @@
       justify-content: center;
     }
 
-    .keyboard-btn:hover {
+    .icon-button:hover {
       color: var(--ui-ink-muted);
     }
 
-    .keyboard-btn:hover .icon {
+    .icon-button:hover .icon {
       color: var(--ui-ink);
     }
 
-    .keyboard-btn:focus-visible {
+    .icon-button:focus-visible {
       outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
       outline-offset: calc(var(--canvas-size) * 0.002);
       border-radius: calc(var(--canvas-size) * 0.002);
     }
 
-    .limit-slider {
+    .slider {
       position: relative;
       width: 100%;
       height: calc(var(--canvas-size) * 0.03);
@@ -379,14 +379,14 @@
       touch-action: none;
     }
 
-    .limit-slider-track {
+    .slider-track {
       position: absolute;
       inset: 0;
       background: var(--ui-rule);
       border-radius: 999px;
     }
 
-    .limit-slider-thumb {
+    .slider-thumb {
       position: absolute;
       height: 100%;
       min-width: calc(var(--canvas-size) * 0.054);
@@ -405,16 +405,16 @@
       will-change: transform;
     }
 
-    .limit-slider-thumb.is-dragging {
+    .slider-thumb[data-dragging="true"] {
       transition: none;
     }
 
-    .limit-slider-thumb:focus-visible {
+    .slider-thumb:focus-visible {
       outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
       outline-offset: calc(var(--canvas-size) * 0.002);
     }
 
-    .height-cell {
+    .toggle-cell {
       position: relative;
       display: flex;
       align-items: center;
@@ -428,7 +428,7 @@
       cursor: pointer;
     }
 
-    .height-cell::before {
+    .toggle-cell::before {
       content: '';
       position: absolute;
       inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
@@ -437,43 +437,43 @@
       z-index: 0;
     }
 
-    .height-cell span {
+    .toggle-cell span {
       position: relative;
       z-index: 1;
     }
 
-    .height-cell.is-selected,
-    .height-cell.in-range {
+    .toggle-cell[data-state="selected"],
+    .toggle-cell[data-state="in-range"] {
       color: var(--ui-bg);
     }
 
-    .height-cell.is-selected::before,
-    .height-cell.in-range::before {
+    .toggle-cell[data-state="selected"]::before,
+    .toggle-cell[data-state="in-range"]::before {
       background-color: var(--ui-ink);
       border-color: transparent;
     }
 
-    .height-cell.in-range::before {
+    .toggle-cell[data-state="in-range"]::before {
       inset: 0;
       border-radius: 0;
     }
 
-    .height-cell.range-start::before {
+    .toggle-cell[data-range-edge="start"]::before {
       inset: 0;
       border-radius: 999px 0 0 999px;
     }
 
-    .height-cell.range-end::before {
+    .toggle-cell[data-range-edge="end"]::before {
       inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
       border-radius: 0 999px 999px 0;
     }
 
-    .height-cell.range-start.range-end::before {
+    .toggle-cell[data-range-edge="start"].range-end::before {
       inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
       border-radius: 999px;
     }
 
-    .height-cell:focus-visible {
+    .toggle-cell:focus-visible {
       outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
       outline-offset: calc(var(--canvas-size) * 0.002);
       border-radius: 999px;
@@ -518,12 +518,12 @@
         display: inline-block;
       }
 
-      .app {
+      .l-app {
         flex-direction: column;
         gap: 0;
       }
 
-      .params-panel {
+      .l-sidebar {
         width: 100%;
         min-width: 0;
         max-width: none;
@@ -534,11 +534,11 @@
         border: var(--ui-border-width) solid var(--ui-ink-solid);
       }
 
-      .canvas-wrap.is-aspect-9-16~.params-panel {
+      .l-canvas[data-aspect-ratio="9:16"]~.l-sidebar {
         width: calc((var(--canvas-size) - var(--ui-border-width) * 2) * 0.5625 + var(--ui-border-width) * 2);
       }
 
-      .params-panel.is-collapsed {
+      .l-sidebar[data-state="collapsed"] {
         display: none !important;
       }
     }
@@ -621,9 +621,9 @@
         d="M4.821 10.535h6.358a.533.533 0 0 1 0 1.066H4.82a.533.533 0 0 1 0-1.066m-.75-5.6a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0M4.07 8.001a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m0 3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m3.067-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0" />
     </symbol>
   </svg>
-  <div id="app" class="app">
-    <div id="canvas-wrap" class="canvas-wrap">
-      <div id="svg-container" class="svg-container">
+  <div id="app" class="l-app">
+    <main id="canvas" class="l-canvas">
+      <div id="artwork-container" class="artwork-container">
         <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
           <svg class="icon icon-desktop">
             <use href="#icon-custom-right-panel"></use>
@@ -632,9 +632,9 @@
             <use href="#icon-custom-bottom-panel"></use>
           </svg>
         </button>
-        <svg id="svg-out" class="svg-out" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
+        <svg id="artwork-svg" class="artwork-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
 
-        <div id="logo-overlay" class="logo-overlay">
+        <div id="watermark" class="watermark">
           <svg viewBox="0 0 90 30" preserveAspectRatio="xMaxYMax meet" xmlns="http://www.w3.org/2000/svg">
             <g fill="var(--ui-ink-muted)">
               <rect width="24" height="6" />
@@ -658,109 +658,109 @@
 
 
       </div>
-    </div>
-    <aside id="params-panel" class="params-panel">
+    </main>
+    <aside id="sidebar" class="l-sidebar">
 
       <div class="sidebar-content">
-        <div class="sidebar-brand" aria-label="PSR 4x4rt Stacks">
-          <div class="brand-kicker">PSR</div>
-          <div class="brand-title">4x4rt Stacks</div>
+        <div class="project-header" aria-label="PSR 4x4rt Stacks">
+          <div class="artist-name">PSR</div>
+          <div class="project-name">4x4rt Stacks</div>
         </div>
 
-        <p class="sidebar-copy">MINIMALIST GEOMETRIC STACKS CONSTRAINED TO EXACTLY 16 BORDERLESS BLOCKS.</p>
+        <p class="project-description">MINIMALIST GEOMETRIC STACKS CONSTRAINED TO EXACTLY 16 BORDERLESS BLOCKS.</p>
 
-        <div class="params-section" aria-labelledby="display-section-title">
+        <section class="params-section" aria-labelledby="display-section-title">
           <div id="display-section-title" class="params-section-title">Display</div>
-          <button id="layout-row" class="sidebar-row is-clickable" type="button">
-            <span class="sidebar-row-label">Layout</span>
-            <span id="layout-value" class="sidebar-row-value">Art</span>
+          <button id="layout-row" class="control-row" data-interactive="true" type="button">
+            <span class="control-label">Layout</span>
+            <span id="layout-value" class="control-value">Art</span>
             <svg class="icon" id="layout-icon">
               <use href="#icon-custom-art-layout"></use>
             </svg>
           </button>
-          <button id="aspect-ratio-row" class="sidebar-row is-clickable" type="button">
-            <span class="sidebar-row-label">Aspect Ratio</span>
-            <span id="aspect-ratio-value" class="sidebar-row-value">1:1</span>
+          <button id="aspect-ratio-row" class="control-row" data-interactive="true" type="button">
+            <span class="control-label">Aspect Ratio</span>
+            <span id="aspect-ratio-value" class="control-value">1:1</span>
             <svg class="icon" id="aspect-ratio-icon">
               <use href="#icon-custom-1-1-ratio"></use>
             </svg>
           </button>
-        </div>
+        </section>
 
-        <div class="params-section" aria-labelledby="details-section-title">
+        <section class="params-section" aria-labelledby="details-section-title">
           <div id="details-section-title" class="params-section-title">Details</div>
-          <div id="seed-row" class="sidebar-row is-clickable" role="button" tabindex="0">
-            <span class="sidebar-row-label">Seed</span>
-            <span id="seed-display" class="sidebar-row-value" role="button" tabindex="0">—</span>
+          <button id="seed-row" class="control-row" data-interactive="true" type="button">
+            <span class="control-label">Seed</span>
+            <span id="seed-display" class="control-value" role="button" tabindex="0">—</span>
             <svg class="icon">
               <use href="#icon-refresh"></use>
             </svg>
-          </div>
-          <button class="sidebar-row is-clickable" type="button" data-options-panel="palette">
-            <span class="sidebar-row-label">Palette</span>
-            <span id="palette-name" class="sidebar-row-value">—</span>
+          </button>
+          <button class="control-row" data-interactive="true" type="button" data-options-panel="palette">
+            <span class="control-label">Palette</span>
+            <span id="palette-name" class="control-value">—</span>
             <svg class="icon">
               <use href="#icon-config"></use>
             </svg>
           </button>
-          <div id="palette-options-panel" class="sidebar-panel" data-panel="palette">Palette options panel placeholder.
+          <div id="palette-options-panel" class="options-panel" data-panel="palette">Palette options panel placeholder.
           </div>
-          <button class="sidebar-row is-clickable" type="button" data-options-panel="profile">
-            <span class="sidebar-row-label">Profile</span>
-            <span id="profile-name" class="sidebar-row-value">—</span>
+          <button class="control-row" data-interactive="true" type="button" data-options-panel="profile">
+            <span class="control-label">Profile</span>
+            <span id="profile-name" class="control-value">—</span>
             <svg class="icon">
               <use href="#icon-config"></use>
             </svg>
           </button>
-          <div id="profile-options-panel" class="sidebar-panel" data-panel="profile">Profile options panel placeholder.
+          <div id="profile-options-panel" class="options-panel" data-panel="profile">Profile options panel placeholder.
           </div>
-          <button class="sidebar-row is-clickable" type="button" data-options-panel="form">
-            <span class="sidebar-row-label">Form</span>
-            <span id="form-name" class="sidebar-row-value">Bound</span>
+          <button class="control-row" data-interactive="true" type="button" data-options-panel="form">
+            <span class="control-label">Form</span>
+            <span id="form-name" class="control-value">Bound</span>
             <svg class="icon">
               <use href="#icon-config"></use>
             </svg>
           </button>
-          <div id="form-options-panel" class="sidebar-panel" data-panel="form">Form options panel placeholder.</div>
-          <div id="limit-row" class="sidebar-row">
-            <span class="sidebar-row-label">Limit</span>
-            <span class="sidebar-row-value"><span id="limit-display">—</span> <span
-                class="sidebar-row-suffix">Blocks</span></span>
+          <div id="form-options-panel" class="options-panel" data-panel="form">Form options panel placeholder.</div>
+          <div id="limit-row" class="control-row">
+            <span class="control-label">Limit</span>
+            <span class="control-value"><span id="limit-display">—</span> <span
+                class="control-suffix">Blocks</span></span>
             <svg class="icon">
               <use href="#icon-lock"></use>
             </svg>
           </div>
-          <button class="sidebar-row is-clickable" type="button" data-options-panel="height">
-            <span class="sidebar-row-label">Height</span>
-            <span class="sidebar-row-value"><span id="stack-height">—</span> <span
-                class="sidebar-row-suffix">Units</span></span>
+          <button class="control-row" data-interactive="true" type="button" data-options-panel="height">
+            <span class="control-label">Height</span>
+            <span class="control-value"><span id="stack-height">—</span> <span
+                class="control-suffix">Units</span></span>
             <svg class="icon">
               <use href="#icon-config"></use>
             </svg>
           </button>
-          <div id="height-options-panel" class="sidebar-panel" data-panel="height">Height options panel placeholder.
+          <div id="height-options-panel" class="options-panel" data-panel="height">Height options panel placeholder.
           </div>
-          <div class="sidebar-row sidebar-row--no-icon" id="shapes-heading">
-            <span class="sidebar-row-label">Shapes</span>
-            <span id="shape-count" class="sidebar-row-value">—</span>
+          <div class="control-row u-hide-icon" id="shapes-heading">
+            <span class="control-label">Shapes</span>
+            <span id="shape-count" class="control-value">—</span>
           </div>
           <div id="shapes-list" role="list" aria-labelledby="shapes-heading"></div>
-        </div>
+        </section>
       </div>
-      <div class="export-bar">
-        <button class="export-btn" id="export-png-btn">
+      <div class="action-bar">
+        <button class="button" id="export-png-btn">
           <span>PNG</span>
           <svg class="icon">
             <use href="#icon-down-arrow"></use>
           </svg>
         </button>
-        <button class="export-btn" id="export-svg-btn">
+        <button class="button" id="export-svg-btn">
           <span>SVG</span>
           <svg class="icon">
             <use href="#icon-down-arrow"></use>
           </svg>
         </button>
-        <button class="keyboard-btn" aria-label="Keyboard Shortcuts">
+        <button class="icon-button" id="keyboard-shortcuts-btn" aria-label="Keyboard Shortcuts">
           <svg class="icon">
             <use href="#icon-custom-keyboard"></use>
           </svg>
@@ -1916,32 +1916,32 @@
 
         const aspectRatioValue = document.getElementById('aspect-ratio-value');
         const aspectIcon = document.getElementById('aspect-ratio-icon');
-        const canvasWrap = document.getElementById('canvas-wrap');
+        const canvasWrap = document.getElementById('canvas');
         if (aspectRatioValue) {
           aspectRatioValue.textContent = appState.aspectRatio;
           if (aspectIcon) {
             aspectIcon.querySelector('use').setAttribute('href', appState.aspectRatio === '1:1' ? '#icon-custom-1-1-ratio' : '#icon-custom-9-16-ratio');
           }
           if (canvasWrap) {
-            canvasWrap.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
+            appState.aspectRatio === '9:16' ? canvasWrap.setAttribute('data-aspect-ratio', '9:16') : canvasWrap.removeAttribute('data-aspect-ratio');
           }
-          document.documentElement.classList.toggle('is-aspect-9-16', appState.aspectRatio === '9:16');
+          appState.aspectRatio === '9:16' ? document.documentElement.setAttribute('data-aspect-ratio', '9:16') : document.documentElement.removeAttribute('data-aspect-ratio');
         }
       },
 
       renderSidebarState() {
-        const panel = document.getElementById('params-panel');
+        const panel = document.getElementById('sidebar');
         const toggle = document.getElementById('sidebar-toggle');
-        if (panel) panel.classList.toggle('is-collapsed', !appState.isSidebarOpen);
+        if (panel) !appState.isSidebarOpen ? panel.setAttribute('data-state', 'collapsed') : panel.removeAttribute('data-state');
         if (toggle) {
-          toggle.classList.toggle('is-closed', !appState.isSidebarOpen);
+          !appState.isSidebarOpen ? toggle.setAttribute('data-state', 'closed') : toggle.removeAttribute('data-state');
           toggle.setAttribute('aria-label', appState.isSidebarOpen ? 'Close sidebar' : 'Open sidebar');
         }
 
-        document.documentElement.classList.toggle('is-sidebar-hidden', !appState.isSidebarOpen);
+        !appState.isSidebarOpen ? document.documentElement.setAttribute('data-sidebar-state', 'hidden') : document.documentElement.removeAttribute('data-sidebar-state');
 
         document.querySelectorAll('.sidebar-panel').forEach(panelEl => {
-          panelEl.classList.toggle('is-open', panelEl.dataset.panel === appState.activeOptionsPanel);
+          panelEl.dataset.panel === appState.activeOptionsPanel ? panelEl.setAttribute('data-state', 'open') : panelEl.removeAttribute('data-state');
         });
       },
 
@@ -1960,7 +1960,7 @@
       renderArtwork() {
         if (!appState.artwork) return;
         const { placements, heightUnits, palette } = appState.artwork;
-        const svg = document.getElementById('svg-out');
+        const svg = document.getElementById('artwork-svg');
         svg.innerHTML = '';
 
         const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
@@ -2019,7 +2019,7 @@
         root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
         root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
 
-        document.getElementById('export-overlay')?.classList.toggle('is-hidden', !appState.showExport);
+        !appState.showExport ? document.getElementById('export-overlay')?.setAttribute('data-state', 'hidden') : document.getElementById('export-overlay')?.removeAttribute('data-state');
 
         const seedDisplayEl = document.getElementById('seed-display');
         if (seedDisplayEl) seedDisplayEl.textContent = appState.seed;
@@ -2051,9 +2051,9 @@
 
         Object.keys(counts).map(Number).sort((a, b) => a - b).forEach(units => {
           const row = document.createElement('div');
-          row.className = 'sidebar-row sidebar-row--no-icon';
+          row.className = 'control-row u-hide-icon';
           row.setAttribute('role', 'listitem');
-          row.innerHTML = `<span class="sidebar-row-label">${formatUnitLabel(units)}</span><span class="sidebar-row-value">${counts[units]}</span>`;
+          row.innerHTML = `<span class="control-label">${formatUnitLabel(units)}</span><span class="control-value">${counts[units]}</span>`;
           shapesList.appendChild(row);
         });
       },
@@ -2115,10 +2115,10 @@
         }
 
         function onPointerDown(e) {
-          const isThumb = e.target.closest('.limit-slider-thumb');
+          const isThumb = e.target.closest('.slider-thumb');
           if (isThumb) {
             isDragging = true;
-            thumb.classList.add('is-dragging');
+            thumb.setAttribute('data-dragging', 'true');
             window.addEventListener('pointermove', onPointerMove);
             window.addEventListener('pointerup', onPointerUp);
           } else {
@@ -2148,7 +2148,7 @@
 
         function onPointerUp() {
           isDragging = false;
-          thumb.classList.remove('is-dragging');
+          thumb.removeAttribute('data-dragging');
           window.removeEventListener('pointermove', onPointerMove);
           window.removeEventListener('pointerup', onPointerUp);
         }
@@ -2172,18 +2172,18 @@
 
         POSSIBLE_HEIGHTS.slice().sort((a, b) => a - b).forEach(h => {
           const cell = document.createElement('div');
-          cell.className = 'height-cell';
+          cell.className = 'toggle-cell';
 
           // Styling purely references the single source of truth: selectedHeights
           if (appState.heightMode === 'multi') {
-            if (appState.selectedHeights.has(h)) cell.classList.add('is-selected');
+            if (appState.selectedHeights.has(h)) cell.setAttribute('data-state', 'selected');
           } else {
             if (appState.selectedHeights.has(h)) {
-              cell.classList.add('in-range');
+              cell.setAttribute('data-state', 'in-range');
               const min = appState.rangeEnd !== null ? Math.min(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
               const max = appState.rangeEnd !== null ? Math.max(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
-              if (h === min) cell.classList.add('range-start');
-              if (h === max) cell.classList.add('range-end');
+              if (h === min) cell.setAttribute('data-range-edge', 'start');
+              if (h === max) cell.setAttribute('data-range-edge', 'end');
             }
           }
 
@@ -2313,7 +2313,7 @@
     // --- EXPORT MODULE ---
     const ExportActions = {
       getSVGString() {
-        const svg = document.getElementById('svg-out');
+        const svg = document.getElementById('artwork-svg');
         const clone = svg.cloneNode(true);
         clone.setAttribute('width', CANVAS_SIZE);
         clone.setAttribute('height', CANVAS_SIZE);
