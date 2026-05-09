@@ -19,15 +19,37 @@
       --page-pad-y: 20px;
       --app-width-ratio: 1.365;
       --canvas-size: min(100vh - (var(--page-pad-y) * 2), (100vw - (var(--page-pad-x) * 2)) / var(--app-width-ratio));
-      --rule-width: max(1px, calc(var(--canvas-size) * 0.001));
+      /* Modular Scale System */
+      --scale-unit: calc(var(--canvas-size) * 0.001);
+      --sz-01: calc(var(--scale-unit) * 1);
+      --sz-02: calc(var(--scale-unit) * 2);
+      --sz-05: calc(var(--scale-unit) * 5);
+      --sz-07: calc(var(--scale-unit) * 7);
+      --sz-08: calc(var(--scale-unit) * 8);
+      --sz-10: calc(var(--scale-unit) * 10);
+      --sz-15: calc(var(--scale-unit) * 15);
+      --sz-16: calc(var(--scale-unit) * 16);
+      --sz-18: calc(var(--scale-unit) * 18);
+      --sz-20: calc(var(--scale-unit) * 20);
+      --sz-25: calc(var(--scale-unit) * 25);
+      --sz-30: calc(var(--scale-unit) * 30);
+      --sz-40: calc(var(--scale-unit) * 40);
+      --sz-54: calc(var(--scale-unit) * 54);
+      --sz-56: calc(var(--scale-unit) * 56);
+      --sz-64: calc(var(--scale-unit) * 64);
+      --sz-90: calc(var(--scale-unit) * 90);
+      --sz-120: calc(var(--scale-unit) * 120);
+      --sz-365: calc(var(--scale-unit) * 365);
+
+      --rule-width: max(1px, var(--sz-01));
       --ui-bg: #f4f1ea;
       --ui-ink: rgba(28, 28, 26, 0.9);
       --ui-ink-solid: rgb(28, 28, 26);
       --ui-ink-muted: rgba(28, 28, 26, 0.5);
       --ui-rule: rgba(28, 28, 26, 0.1);
-      --ui-border-width: max(1px, calc(var(--canvas-size) * 0.002));
-      --ui-text-size: calc(var(--canvas-size) * 0.015);
-      --ui-brand-size: calc(var(--canvas-size) * 0.03);
+      --ui-border-width: max(1px, var(--sz-02));
+      --ui-text-size: var(--sz-15);
+      --ui-brand-size: var(--sz-30);
     }
 
     :root[data-sidebar-state="hidden"] {
@@ -77,7 +99,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: calc(var(--canvas-size) * 0.02);
+      gap: var(--sz-20);
       width: var(--canvas-size);
     }
 
@@ -92,7 +114,7 @@
     .l-sidebar {
       position: relative;
       flex: none;
-      width: calc(var(--canvas-size) * 0.365);
+      width: var(--sz-365);
       min-height: var(--canvas-size);
       max-height: var(--canvas-size);
       padding: 0;
@@ -111,8 +133,8 @@
     }
 
     .sidebar-content {
-      padding: calc(var(--canvas-size) * 0.02);
-      padding-bottom: calc(var(--canvas-size) * 0.12);
+      padding: var(--sz-20);
+      padding-bottom: var(--sz-120);
       flex: 1;
       overflow-y: auto;
     }
@@ -145,10 +167,10 @@
 
     .watermark {
       position: absolute;
-      right: calc(var(--canvas-size) * 0.02);
-      bottom: calc(var(--canvas-size) * 0.02);
-      width: calc(var(--canvas-size) * 0.09);
-      height: calc(var(--canvas-size) * 0.03);
+      right: var(--sz-20);
+      bottom: var(--sz-20);
+      width: var(--sz-90);
+      height: var(--sz-30);
       z-index: 3;
       pointer-events: none;
     }
@@ -163,8 +185,8 @@
     .project-header {
       display: flex;
       flex-direction: column;
-      gap: calc(var(--canvas-size) * 0.008);
-      margin-bottom: calc(var(--canvas-size) * 0.04);
+      gap: var(--sz-08);
+      margin-bottom: var(--sz-40);
       font-size: var(--ui-brand-size);
       line-height: 0.95;
       letter-spacing: 0;
@@ -185,17 +207,17 @@
     }
 
     .params-section {
-      padding-top: calc(var(--canvas-size) * 0.04);
+      padding-top: var(--sz-40);
     }
 
     .control-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
-      gap: calc(var(--canvas-size) * 0.01);
+      gap: var(--sz-10);
       width: 100%;
-      min-height: calc(var(--canvas-size) * 0.056);
-      padding: calc(var(--canvas-size) * 0.02) 0;
+      min-height: var(--sz-56);
+      padding: var(--sz-20) 0;
       border: none;
       border-bottom: var(--rule-width) solid var(--ui-rule);
       color: var(--ui-ink);
@@ -245,7 +267,7 @@
 
     .options-panel {
       display: none;
-      padding: calc(var(--canvas-size) * 0.016) 0 calc(var(--canvas-size) * 0.02);
+      padding: var(--sz-16) 0 var(--sz-20);
       border-bottom: var(--rule-width) solid var(--ui-rule);
       color: var(--ui-ink-muted);
       font-size: var(--ui-text-size);
@@ -260,20 +282,20 @@
        6. SPECIFIC CONTROLS
        ========================================================================== */
     #seed-display:focus-visible {
-      outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
-      outline-offset: calc(var(--canvas-size) * 0.002);
-      border-radius: calc(var(--canvas-size) * 0.002);
+      outline: var(--sz-02) solid var(--ui-ink-muted);
+      outline-offset: var(--sz-02);
+      border-radius: var(--sz-02);
     }
 
     .sidebar-toggle {
       position: absolute;
-      top: calc(var(--canvas-size) * 0.02);
-      right: calc(var(--canvas-size) * 0.02);
+      top: var(--sz-20);
+      right: var(--sz-20);
       display: flex;
       align-items: center;
       justify-content: center;
-      width: calc(var(--canvas-size) * 0.016);
-      height: calc(var(--canvas-size) * 0.016);
+      width: var(--sz-16);
+      height: var(--sz-16);
       color: var(--ui-ink);
       background: none;
       border: none;
@@ -290,9 +312,9 @@
     }
 
     .sidebar-toggle:focus-visible {
-      outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
-      outline-offset: calc(var(--canvas-size) * 0.002);
-      border-radius: calc(var(--canvas-size) * 0.002);
+      outline: var(--sz-02) solid var(--ui-ink-muted);
+      outline-offset: var(--sz-02);
+      border-radius: var(--sz-02);
     }
 
     .action-bar {
@@ -301,9 +323,9 @@
       left: 0;
       right: 0;
       background: var(--ui-bg);
-      padding: calc(var(--canvas-size) * 0.02);
+      padding: var(--sz-20);
       display: flex;
-      gap: calc(var(--canvas-size) * 0.01);
+      gap: var(--sz-10);
       align-items: center;
       z-index: 10;
     }
@@ -311,10 +333,10 @@
     .button {
       display: flex;
       align-items: center;
-      gap: calc(var(--canvas-size) * 0.002);
-      padding: calc(var(--canvas-size) * 0.005) calc(var(--canvas-size) * 0.007) calc(var(--canvas-size) * 0.005) calc(var(--canvas-size) * 0.01);
+      gap: var(--sz-02);
+      padding: var(--sz-05) var(--sz-07) var(--sz-05) var(--sz-10);
       border: var(--ui-border-width) solid var(--ui-ink);
-      border-radius: calc(var(--canvas-size) * 0.03);
+      border-radius: var(--sz-30);
       background: transparent;
       color: var(--ui-ink);
       font-family: 'Space Mono', monospace;
@@ -339,8 +361,8 @@
     }
 
     .button:focus-visible {
-      outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
-      outline-offset: calc(var(--canvas-size) * 0.002);
+      outline: var(--sz-02) solid var(--ui-ink-muted);
+      outline-offset: var(--sz-02);
     }
 
     .icon-button {
@@ -364,16 +386,16 @@
     }
 
     .icon-button:focus-visible {
-      outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
-      outline-offset: calc(var(--canvas-size) * 0.002);
-      border-radius: calc(var(--canvas-size) * 0.002);
+      outline: var(--sz-02) solid var(--ui-ink-muted);
+      outline-offset: var(--sz-02);
+      border-radius: var(--sz-02);
     }
 
     .slider {
       position: relative;
       width: 100%;
-      height: calc(var(--canvas-size) * 0.03);
-      margin-top: calc(var(--canvas-size) * 0.015);
+      height: var(--sz-30);
+      margin-top: var(--sz-15);
       cursor: pointer;
       user-select: none;
       touch-action: none;
@@ -389,8 +411,8 @@
     .slider-thumb {
       position: absolute;
       height: 100%;
-      min-width: calc(var(--canvas-size) * 0.054);
-      padding: 0 calc(var(--canvas-size) * 0.015);
+      min-width: var(--sz-54);
+      padding: 0 var(--sz-15);
       background-color: var(--ui-ink);
       color: var(--ui-bg);
       border-radius: 999px;
@@ -398,7 +420,7 @@
       align-items: center;
       justify-content: center;
       font-family: 'Space Mono', monospace;
-      font-size: calc(var(--canvas-size) * 0.018);
+      font-size: var(--sz-18);
       transform: translateX(0);
       z-index: 2;
       transition: transform 0.1s ease-out;
@@ -410,8 +432,8 @@
     }
 
     .slider-thumb:focus-visible {
-      outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
-      outline-offset: calc(var(--canvas-size) * 0.002);
+      outline: var(--sz-02) solid var(--ui-ink-muted);
+      outline-offset: var(--sz-02);
     }
 
     .toggle-cell {
@@ -419,20 +441,20 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: calc(var(--canvas-size) * 0.03);
-      min-width: calc(var(--canvas-size) * 0.064);
-      padding: 0 calc(var(--canvas-size) * 0.025) 0 calc(var(--canvas-size) * 0.015);
+      height: var(--sz-30);
+      min-width: var(--sz-64);
+      padding: 0 var(--sz-25) 0 var(--sz-15);
       color: var(--ui-ink);
       font-family: 'Space Mono', monospace;
-      font-size: calc(var(--canvas-size) * 0.018);
+      font-size: var(--sz-18);
       cursor: pointer;
     }
 
     .toggle-cell::before {
       content: '';
       position: absolute;
-      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
-      border: calc(var(--canvas-size) * 0.002) solid var(--ui-ink);
+      inset: 0 var(--sz-10) 0 0;
+      border: var(--sz-02) solid var(--ui-ink);
       border-radius: 999px;
       z-index: 0;
     }
@@ -464,18 +486,18 @@
     }
 
     .toggle-cell[data-range-edge="end"]::before {
-      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
+      inset: 0 var(--sz-10) 0 0;
       border-radius: 0 999px 999px 0;
     }
 
     .toggle-cell[data-range-edge="start"].range-end::before {
-      inset: 0 calc(var(--canvas-size) * 0.01) 0 0;
+      inset: 0 var(--sz-10) 0 0;
       border-radius: 999px;
     }
 
     .toggle-cell:focus-visible {
-      outline: calc(var(--canvas-size) * 0.002) solid var(--ui-ink-muted);
-      outline-offset: calc(var(--canvas-size) * 0.002);
+      outline: var(--sz-02) solid var(--ui-ink-muted);
+      outline-offset: var(--sz-02);
       border-radius: 999px;
     }
 
@@ -487,8 +509,8 @@
        7. ICONS
        ========================================================================== */
     .icon {
-      width: calc(var(--canvas-size) * 0.016);
-      height: calc(var(--canvas-size) * 0.016);
+      width: var(--sz-16);
+      height: var(--sz-16);
       fill: currentColor;
       color: var(--ui-ink-muted);
       display: inline-block;
