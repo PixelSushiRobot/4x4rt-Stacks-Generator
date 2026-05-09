@@ -42,6 +42,7 @@
       --sz-365: calc(var(--scale-unit) * 365);
 
       --rule-width: max(1px, var(--sz-01));
+      /* Failsafe colors from Spice palette to avoid unstyled content on first paint */
       --ui-bg: #f4f1ea;
       --ui-ink: rgba(28, 28, 26, 0.9);
       --ui-ink-solid: rgb(28, 28, 26);
@@ -73,7 +74,10 @@
       padding: 0;
     }
 
-    button, input, select, textarea {
+    button,
+    input,
+    select,
+    textarea {
       font-family: inherit;
       color: inherit;
       font-size: inherit;
@@ -2421,7 +2425,7 @@
     Controls.bindShortcuts();
     State.applyToDOM();
     State.triggerGeneration();
-  
+
   </script>
 </body>
 
