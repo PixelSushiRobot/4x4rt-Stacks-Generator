@@ -782,6 +782,10 @@
     </aside>
   </div>
   <script>
+
+    // ==========================================================================
+    // 1. CONSTANTS & CONFIG
+    // ==========================================================================
     const BORDER_WIDTH = 10;
     const CANVAS_SIZE = 1000;
     const CELL_SIZE = 100;
@@ -789,6 +793,23 @@
     const COLUMN_WIDTH = 2 * CELL_STEP + BORDER_WIDTH; // Width of a 2-unit column: two steps + one closing border
     const INK_COLOR = '#1c1c1a'; // Fixed dark ink specifically for the structural artwork outlines
 
+    // Every artwork uses a deterministic number of "blocks" (SVG rect counts).
+    // This previously fixed 16-block constraint is now a user-controllable parameter.
+    // The default 16 blocks limit is the reason for the name 4x4art, every artwork uses exactly 16 blocks. 
+    const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2); // 2, 4, 6... 40
+    const DEFAULT_LIMIT = POSSIBLE_LIMITS.includes(16) ? 16 : POSSIBLE_LIMITS[0];
+    const VALID_PROFILE_IDS = new Set(['isolate', 'drift', 'spectrum']);
+
+    const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
+    const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
+    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z']; // Display order for internal family operations.
+    const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 }; // Solver search order within the backtracker (lower = tried first).
+    const MAX_SOLUTIONS_PER_HEIGHT = 24; // Per-height solution cap — keeps the solver fast on complex heights.
+
+
+    // ==========================================================================
+    // 2. DESIGN TOKENS
+    // ==========================================================================
     // A cohesive generative system: Curated, thematic, and distinct.
     const PALETTES = [
       // 1. THE CLASSICS (Anchored to Warm Cotton, Newsprint, and Kraft papers)
@@ -852,74 +873,6 @@
       { name: 'flint', bg: '#f4f4f4', category: 'mineral', colors: ['#ffffff', '#050505', '#151515', '#2a2a2a', '#73777a', '#b5b8ba'] },
     ];
     const VALID_PALETTE_NAMES = new Set(PALETTES.map(palette => palette.name));
-    // Initialize UI colors from data, not hardcoded CSS
-    // Runs synchronously before first paint so there's no flash
-    (function initUIColors() {
-      const p = PALETTES.find(p => p.name === 'spice') || PALETTES[0];
-      const root = document.documentElement;
-      root.style.setProperty('--ui-bg', p.bg);
-      root.style.setProperty('--ui-ink', 'rgba(28, 28, 26, 0.9)');
-      root.style.setProperty('--ui-ink-solid', 'rgb(28, 28, 26)');
-      root.style.setProperty('--ui-ink-muted', 'rgba(28, 28, 26, 0.5)');
-      root.style.setProperty('--ui-rule', 'rgba(28, 28, 26, 0.1)');
-    })();
-
-    // --- DETERMINISTIC PRNG (Seed Engine) ---
-    // xmur3: string hasher — converts the seed string into a numeric state used to initialize the PRNG.
-    function xmur3(str) {
-      for (var i = 0, h = 1779033703 ^ str.length; i < str.length; i++) {
-        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-        h = h << 13 | h >>> 19;
-      } return function () {
-        h = Math.imul(h ^ (h >>> 16), 2246822507);
-        h = Math.imul(h ^ (h >>> 13), 3266489909);
-        return (h ^= h >>> 16) >>> 0;
-      }
-    }
-
-    // mulberry32: fast 32-bit PRNG — produces deterministic floats in [0, 1) from a numeric seed state.
-    function mulberry32(a) {
-      return function () {
-        var t = a += 0x6D2B79F5;
-        t = Math.imul(t ^ t >>> 15, t | 1);
-        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-        return ((t ^ t >>> 14) >>> 0) / 4294967296;
-      }
-    }
-
-    // Hot function pointer — replaced by setSeed() to switch between seeded and unseeded modes.
-    let nextRandom = Math.random;
-
-    function setSeed(seedStr) {
-      if (!seedStr) {
-        nextRandom = Math.random;
-        return;
-      }
-      const seedFunc = xmur3(seedStr);
-      nextRandom = mulberry32(seedFunc());
-    }
-
-    function generateRandomSeed() {
-      const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      let result = '';
-      for (let i = 0; i < 6; i++) result += chars[Math.floor(Math.random() * 36)];
-      return result;
-    }
-
-    // WCAG relative luminance — determines whether to apply light or dark UI ink over a palette background.
-    function getLuminance(hex) {
-      const c = hex.replace('#', '');
-      const r = parseInt(c.slice(0, 2), 16) / 255;
-      const g = parseInt(c.slice(2, 4), 16) / 255;
-      const b = parseInt(c.slice(4, 6), 16) / 255;
-      const toLinear = x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
-      return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-    }
-
-    // Threshold of 0.35 is slightly lower than the WCAG midpoint (0.5), biased toward
-    // treating mid-tones as 'dark' so the UI renders lighter ink — avoiding muddy mid-tone text.
-    function isLight(hex) { return getLuminance(hex) > 0.35; }
-
     // --- SHAPE CATALOG ---
     // Shape fields:
     //   piece    — internal family code (O, I, J, L, T, S, Z); mapped to UI-facing trait labels in PIECE_TRAIT_LABELS
@@ -1166,44 +1119,65 @@
       },
     };
 
-    // Every artwork uses a deterministic number of "blocks" (SVG rect counts).
-    // This previously fixed 16-block constraint is now a user-controllable parameter.
-    // The default 16 blocks limit is the reason for the name 4x4art, every artwork uses exactly 16 blocks. 
-    const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2); // 2, 4, 6... 40
-    const DEFAULT_LIMIT = POSSIBLE_LIMITS.includes(16) ? 16 : POSSIBLE_LIMITS[0];
-    const VALID_PROFILE_IDS = new Set(['isolate', 'drift', 'spectrum']);
 
-    const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
-    const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
-    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z']; // Display order for internal family operations.
-    const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 }; // Solver search order within the backtracker (lower = tried first).
-    const MAX_SOLUTIONS_PER_HEIGHT = 24; // Per-height solution cap — keeps the solver fast on complex heights.
+    // ==========================================================================
+    // 3. UTILITIES
+    // ==========================================================================
+    // --- DETERMINISTIC PRNG (Seed Engine) ---
+    // xmur3: string hasher — converts the seed string into a numeric state used to initialize the PRNG.
+    function xmur3(str) {
+      for (var i = 0, h = 1779033703 ^ str.length; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = h << 13 | h >>> 19;
+      } return function () {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        return (h ^= h >>> 16) >>> 0;
+      }
+    }
 
-    // GLOBAL STATE LAYER
-    const appState = {
-      heightMode: 'multi',
-      targetBlocks: DEFAULT_LIMIT,
-      isLimitVisible: false,
-      selectedHeights: new Set(),
+    // mulberry32: fast 32-bit PRNG — produces deterministic floats in [0, 1) from a numeric seed state.
+    function mulberry32(a) {
+      return function () {
+        var t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      }
+    }
 
-      rangeStart: null,
-      rangeEnd: null,
+    // Hot function pointer — replaced by setSeed() to switch between seeded and unseeded modes.
+    let nextRandom = Math.random;
 
-      selectedPalettes: [],
-      selectedProfiles: [],
+    function setSeed(seedStr) {
+      if (!seedStr) {
+        nextRandom = Math.random;
+        return;
+      }
+      const seedFunc = xmur3(seedStr);
+      nextRandom = mulberry32(seedFunc());
+    }
 
-      showOutline: true,
-      showMetadata: true,
-      showExport: true,
-      displayLayout: 'art',
-      aspectRatio: '1:1',
-      isSidebarOpen: true,
-      activeOptionsPanel: null,
+    function generateRandomSeed() {
+      const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let result = '';
+      for (let i = 0; i < 6; i++) result += chars[Math.floor(Math.random() * 36)];
+      return result;
+    }
 
-      seed: null, // The string guaranteeing exact reproduction
-      artwork: null, // Holds the output of the generation engine
-      shareUrl: null // Safe fallback URL for environments that block replaceState
-    };
+    // WCAG relative luminance — determines whether to apply light or dark UI ink over a palette background.
+    function getLuminance(hex) {
+      const c = hex.replace('#', '');
+      const r = parseInt(c.slice(0, 2), 16) / 255;
+      const g = parseInt(c.slice(2, 4), 16) / 255;
+      const b = parseInt(c.slice(4, 6), 16) / 255;
+      const toLinear = x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+      return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    }
+
+    // Threshold of 0.35 is slightly lower than the WCAG midpoint (0.5), biased toward
+    // treating mid-tones as 'dark' so the UI renders lighter ink — avoiding muddy mid-tone text.
+    function isLight(hex) { return getLuminance(hex) > 0.35; }
 
     // --- HELPER FUNCTIONS ---
     function pick(arr) { return arr[Math.floor(nextRandom() * arr.length)]; }
@@ -1318,6 +1292,10 @@
       return true;
     }
 
+
+    // ==========================================================================
+    // 4. ALGORITHMS
+    // ==========================================================================
     // --- CORE GENERATION ALGORITHMS ---
 
     function searchStack(grid, targetHeight, targetBlocks, blocksUsed, placements, solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
@@ -1411,6 +1389,10 @@
     let POSSIBLE_HEIGHTS = computeValidHeights(DEFAULT_LIMIT);
 
 
+
+    // ==========================================================================
+    // 5. ENGINE
+    // ==========================================================================
     function generateStack(params) {
       let currentSeed = params.seed;
       let palette;
@@ -1556,80 +1538,35 @@
       };
     }
 
-    // --- URL STATE SYNCING ---
-    function normalizeSeed(value) {
-      if (typeof value !== 'string') return null;
-      const normalized = value.trim().toUpperCase();
-      return /^[A-Z0-9]{6}$/.test(normalized) ? normalized : null;
-    }
 
-    function parseCommaList(value) {
-      if (typeof value !== 'string') return [];
-      return value.split(',').map(item => item.trim()).filter(Boolean);
-    }
+    // ==========================================================================
+    // 6. STATE
+    // ==========================================================================
+    // GLOBAL STATE LAYER
+    const appState = {
+      heightMode: 'multi',
+      targetBlocks: DEFAULT_LIMIT,
+      isLimitVisible: false,
+      selectedHeights: new Set(),
 
-    function parseHeightsParam(value) {
-      if (typeof value !== 'string' || value.trim() === '') {
-        return { heightMode: 'multi', selectedHeights: new Set(), rangeStart: null, rangeEnd: null };
-      }
+      rangeStart: null,
+      rangeEnd: null,
 
-      if (value.includes('-')) {
-        const [startRaw, endRaw] = value.split('-', 2);
-        const start = Number.parseInt(startRaw, 10);
-        const end = Number.parseInt(endRaw, 10);
-        if (!Number.isFinite(start) || !Number.isFinite(end)) {
-          return { heightMode: 'multi', selectedHeights: new Set(), rangeStart: null, rangeEnd: null };
-        }
-        return { heightMode: 'range', selectedHeights: new Set(), rangeStart: start, rangeEnd: end };
-      }
+      selectedPalettes: [],
+      selectedProfiles: [],
 
-      const parsedHeights = parseCommaList(value)
-        .map(item => Number.parseInt(item, 10))
-        .filter(height => Number.isFinite(height));
-      return {
-        heightMode: 'multi',
-        selectedHeights: new Set(parsedHeights),
-        rangeStart: null,
-        rangeEnd: null
-      };
-    }
+      showOutline: true,
+      showMetadata: true,
+      showExport: true,
+      displayLayout: 'art',
+      aspectRatio: '1:1',
+      isSidebarOpen: true,
+      activeOptionsPanel: null,
 
-    function formatUnitLabel(units) {
-      return units > 0 ? '•'.repeat(units) : '';
-    }
-
-    function sanitizeHeightState() {
-      const validHeightSet = new Set(POSSIBLE_HEIGHTS);
-      const sanitizedHeights = [...appState.selectedHeights].filter(height => validHeightSet.has(height));
-      let wasChanged = sanitizedHeights.length !== appState.selectedHeights.size;
-
-      if (appState.heightMode === 'range') {
-        const selectedRangeHeights = sanitizedHeights.slice().sort((a, b) => a - b);
-
-        if (selectedRangeHeights.length > 0) {
-          const nextStart = selectedRangeHeights[0];
-          const nextEnd = selectedRangeHeights[selectedRangeHeights.length - 1];
-          if (appState.rangeStart !== nextStart || appState.rangeEnd !== nextEnd) wasChanged = true;
-          appState.rangeStart = nextStart;
-          appState.rangeEnd = nextEnd === nextStart ? null : nextEnd;
-          appState.selectedHeights = new Set(selectedRangeHeights);
-        } else if (appState.rangeStart !== null || appState.rangeEnd !== null || appState.selectedHeights.size > 0) {
-          appState.rangeStart = null;
-          appState.rangeEnd = null;
-          appState.selectedHeights = new Set();
-          wasChanged = true;
-        } else {
-          appState.selectedHeights = new Set();
-        }
-      } else {
-        if (appState.rangeStart !== null || appState.rangeEnd !== null) wasChanged = true;
-        appState.rangeStart = null;
-        appState.rangeEnd = null;
-        appState.selectedHeights = new Set(sanitizedHeights.sort((a, b) => a - b));
-      }
-
-      return wasChanged;
-    }
+      seed: null, // The string guaranteeing exact reproduction
+      artwork: null, // Holds the output of the generation engine
+      shareUrl: null // Safe fallback URL for environments that block replaceState
+    };
 
     // --- STATE MODULE ---
     const State = {
@@ -1914,6 +1851,89 @@
         this.syncURL();
       }
     };
+
+
+    // ==========================================================================
+    // 7. SYNC
+    // ==========================================================================
+    // --- URL STATE SYNCING ---
+    function normalizeSeed(value) {
+      if (typeof value !== 'string') return null;
+      const normalized = value.trim().toUpperCase();
+      return /^[A-Z0-9]{6}$/.test(normalized) ? normalized : null;
+    }
+
+    function parseCommaList(value) {
+      if (typeof value !== 'string') return [];
+      return value.split(',').map(item => item.trim()).filter(Boolean);
+    }
+
+    function parseHeightsParam(value) {
+      if (typeof value !== 'string' || value.trim() === '') {
+        return { heightMode: 'multi', selectedHeights: new Set(), rangeStart: null, rangeEnd: null };
+      }
+
+      if (value.includes('-')) {
+        const [startRaw, endRaw] = value.split('-', 2);
+        const start = Number.parseInt(startRaw, 10);
+        const end = Number.parseInt(endRaw, 10);
+        if (!Number.isFinite(start) || !Number.isFinite(end)) {
+          return { heightMode: 'multi', selectedHeights: new Set(), rangeStart: null, rangeEnd: null };
+        }
+        return { heightMode: 'range', selectedHeights: new Set(), rangeStart: start, rangeEnd: end };
+      }
+
+      const parsedHeights = parseCommaList(value)
+        .map(item => Number.parseInt(item, 10))
+        .filter(height => Number.isFinite(height));
+      return {
+        heightMode: 'multi',
+        selectedHeights: new Set(parsedHeights),
+        rangeStart: null,
+        rangeEnd: null
+      };
+    }
+
+    function sanitizeHeightState() {
+      const validHeightSet = new Set(POSSIBLE_HEIGHTS);
+      const sanitizedHeights = [...appState.selectedHeights].filter(height => validHeightSet.has(height));
+      let wasChanged = sanitizedHeights.length !== appState.selectedHeights.size;
+
+      if (appState.heightMode === 'range') {
+        const selectedRangeHeights = sanitizedHeights.slice().sort((a, b) => a - b);
+
+        if (selectedRangeHeights.length > 0) {
+          const nextStart = selectedRangeHeights[0];
+          const nextEnd = selectedRangeHeights[selectedRangeHeights.length - 1];
+          if (appState.rangeStart !== nextStart || appState.rangeEnd !== nextEnd) wasChanged = true;
+          appState.rangeStart = nextStart;
+          appState.rangeEnd = nextEnd === nextStart ? null : nextEnd;
+          appState.selectedHeights = new Set(selectedRangeHeights);
+        } else if (appState.rangeStart !== null || appState.rangeEnd !== null || appState.selectedHeights.size > 0) {
+          appState.rangeStart = null;
+          appState.rangeEnd = null;
+          appState.selectedHeights = new Set();
+          wasChanged = true;
+        } else {
+          appState.selectedHeights = new Set();
+        }
+      } else {
+        if (appState.rangeStart !== null || appState.rangeEnd !== null) wasChanged = true;
+        appState.rangeStart = null;
+        appState.rangeEnd = null;
+        appState.selectedHeights = new Set(sanitizedHeights.sort((a, b) => a - b));
+      }
+
+      return wasChanged;
+    }
+
+
+    // ==========================================================================
+    // 8. RENDER
+    // ==========================================================================
+    function formatUnitLabel(units) {
+      return units > 0 ? '•'.repeat(units) : '';
+    }
 
     // --- RENDER MODULE ---
     const Render = {
@@ -2215,6 +2235,10 @@
       }
     };
 
+
+    // ==========================================================================
+    // 9. CONTROLS
+    // ==========================================================================
     // --- CONTROLS MODULE ---
     const Controls = {
       regenerateFromFilters() {
@@ -2374,6 +2398,22 @@
       }
     };
 
+
+    // ==========================================================================
+    // 10. INIT
+    // ==========================================================================
+    // Initialize UI colors from data, not hardcoded CSS
+    // Runs synchronously before first paint so there's no flash
+    (function initUIColors() {
+      const p = PALETTES.find(p => p.name === 'spice') || PALETTES[0];
+      const root = document.documentElement;
+      root.style.setProperty('--ui-bg', p.bg);
+      root.style.setProperty('--ui-ink', 'rgba(28, 28, 26, 0.9)');
+      root.style.setProperty('--ui-ink-solid', 'rgb(28, 28, 26)');
+      root.style.setProperty('--ui-ink-muted', 'rgba(28, 28, 26, 0.5)');
+      root.style.setProperty('--ui-rule', 'rgba(28, 28, 26, 0.1)');
+    })();
+
     // --- INIT SEQUENCE ---
     Controls.bindGlobalControls();
     State.parseURL();
@@ -2381,6 +2421,7 @@
     Controls.bindShortcuts();
     State.applyToDOM();
     State.triggerGeneration();
+  
   </script>
 </body>
 
