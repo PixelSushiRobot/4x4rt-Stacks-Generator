@@ -634,15 +634,14 @@
     }
 
     .color-cell {
-      width: var(--poster-metadata-height);
-      flex: 0 0 var(--poster-metadata-height);
+      width: calc(var(--poster-metadata-height) - var(--ui-border-width));
+      flex: 0 0 calc(var(--poster-metadata-height) - var(--ui-border-width));
       flex-shrink: 0;
       border-right: var(--ui-border-width) solid var(--ui-ink-solid);
       padding: var(--sz-20);
       display: flex;
       flex-direction: row;
       align-items: flex-end;
-      gap: var(--ui-border-width);
     }
 
     .poster-color-bar {
@@ -699,12 +698,7 @@
       flex: 1 0 0;
     }
 
-    .poster-cell.color-cell {
-      width: var(--poster-metadata-height);
-      flex: 0 0 var(--poster-metadata-height);
-      flex-direction: row;
-      align-items: flex-end;
-    }
+
 
     .meta-label {
       font-size: var(--sz-15);
@@ -796,8 +790,6 @@
         d="M4.821 10.535h6.358a.533.533 0 0 1 0 1.066H4.82a.533.533 0 0 1 0-1.066m-.75-5.6a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0M4.07 8.001a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m0 3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m3.067-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0" />
     </symbol>
 
-    color: var(--ui-ink-solid);
-    }
   </svg>
   <div id="app" class="l-app">
     <main id="canvas" class="l-canvas">
