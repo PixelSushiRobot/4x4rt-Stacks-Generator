@@ -695,6 +695,10 @@
       background: var(--bar-color);
     }
 
+    .poster-color-bar[data-unused="true"] {
+      aspect-ratio: 1 / 1;
+    }
+
 
 
     .meta-label {
@@ -2323,22 +2327,25 @@
           document.getElementById('poster-shapes').textContent = placements.length;
 
           // Color Bars
-          const colorCounts = {};
-          palette.colors.forEach(c => colorCounts[c] = 0);
-          placements.forEach(p => colorCounts[p.color]++);
-          const maxUsage = Math.max(...Object.values(colorCounts));
+          const colorUsage = {};
+          palette.colors.forEach(c => colorUsage[c] = 0);
+          placements.forEach(p => {
+            const units = SHAPE_CATALOG[p.id].units;
+            colorUsage[p.color] += units;
+          });
+          const maxUnits = Math.max(...Object.values(colorUsage));
 
           const colorBarsContainer = document.getElementById('poster-color-bars');
           colorBarsContainer.innerHTML = '';
           palette.colors.forEach(color => {
-            const usage = colorCounts[color];
+            const units = colorUsage[color];
             const bar = document.createElement('div');
             bar.className = 'poster-color-bar';
             bar.style.setProperty('--bar-color', color);
-            if (usage === 0) {
-              bar.style.height = 'calc(var(--scale-unit) * 16)'; // make it a square
+            if (units === 0 || maxUnits === 0) {
+              bar.dataset.unused = 'true';
             } else {
-              bar.style.height = `${(usage / maxUsage) * 100}%`;
+              bar.style.height = `${(units / maxUnits) * 100}%`;
             }
             colorBarsContainer.appendChild(bar);
           });
@@ -2735,10 +2742,13 @@
           acc[units] = (acc[units] || 0) + 1;
           return acc;
         }, {});
-        const colorCounts = {};
-        palette.colors.forEach(color => colorCounts[color] = 0);
-        placements.forEach(placement => colorCounts[placement.color]++);
-        const maxUsage = Math.max(...Object.values(colorCounts), 1);
+        const colorUsage = {};
+        palette.colors.forEach(color => colorUsage[color] = 0);
+        placements.forEach(p => {
+          const units = SHAPE_CATALOG[p.id].units;
+          colorUsage[p.color] += units;
+        });
+        const maxUnits = Math.max(...Object.values(colorUsage), 0);
 
         const barW = canvasW * 0.156;
         const rowH = metadataH / 2;
@@ -2768,8 +2778,10 @@
         const barGap = border;
         const colorBarW = (barW - (pad * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
         palette.colors.forEach((color, index) => {
-          const usage = colorCounts[color];
-          const barH = usage === 0 ? small : (usage / maxUsage) * (metadataH - (pad * 2));
+          const units = colorUsage[color];
+          const barH = (units === 0 || maxUnits === 0) 
+            ? colorBarW 
+            : (units / maxUnits) * (metadataH - (pad * 2));
           ctx.fillStyle = color;
           ctx.fillRect(pad + (index * (colorBarW + barGap)), metadataY + metadataH - pad - barH, colorBarW, barH);
         });
