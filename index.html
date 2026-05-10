@@ -935,14 +935,7 @@
           </button>
           <div id="profile-options-panel" class="options-panel" data-panel="profile">Profile options panel placeholder.
           </div>
-          <!-- TEMPORARY DEBUG ROWS -->
-          <div id="debug-color-count" class="control-row u-hide-icon">
-            <span class="control-label">Colors Used</span>
-            <span id="debug-color-count-value" class="control-value">—</span>
-          </div>
-          <div id="debug-color-list" style="padding: 0 var(--sz-20) var(--sz-10); font-size: calc(var(--sz-10) + 2px); color: var(--ui-ink-muted); text-transform: uppercase;">
-          </div>
-          <!-- END TEMPORARY DEBUG ROWS -->
+
           <button class="control-row" data-interactive="true" type="button" data-options-panel="form">
             <span class="control-label">Form</span>
             <span id="form-name" class="control-value">Bound</span>
@@ -2324,30 +2317,7 @@
         const limitDisplayEl = document.getElementById('limit-display');
         if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
 
-          // Color Usage (Shared for Poster & Debug)
-          const colorUsage = {};
-          palette.colors.forEach(c => colorUsage[c] = 0);
-          placements.forEach(p => {
-            const units = SHAPE_CATALOG[p.id].units;
-            colorUsage[p.color] += units;
-          });
-          const maxUnits = Math.max(...Object.values(colorUsage), 0);
-          const usedColors = palette.colors.filter(c => colorUsage[c] > 0);
 
-          // Update Debug Rows
-          const debugColorCountEl = document.getElementById('debug-color-count-value');
-          if (debugColorCountEl) debugColorCountEl.textContent = usedColors.length;
-          const debugColorListEl = document.getElementById('debug-color-list');
-          if (debugColorListEl) {
-            debugColorListEl.innerHTML = usedColors
-              .sort((a, b) => colorUsage[b] - colorUsage[a])
-              .map(color => `
-                <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                  <span>${color}</span>
-                  <span>${colorUsage[color]} units</span>
-                </div>
-              `).join('');
-          }
 
           // Populate Poster Metadata
           if (appState.displayLayout === 'poster') {
@@ -2358,6 +2328,15 @@
             document.getElementById('poster-limit').textContent = appState.targetBlocks + ' blocks';
             document.getElementById('poster-height').textContent = heightUnits + ' units';
             document.getElementById('poster-shapes').textContent = placements.length;
+
+            // Color Usage Calculation
+            const colorUsage = {};
+            palette.colors.forEach(c => colorUsage[c] = 0);
+            placements.forEach(p => {
+              const units = SHAPE_CATALOG[p.id].units;
+              colorUsage[p.color] += units;
+            });
+            const maxUnits = Math.max(...Object.values(colorUsage), 0);
 
             const colorBarsContainer = document.getElementById('poster-color-bars');
             colorBarsContainer.innerHTML = '';
