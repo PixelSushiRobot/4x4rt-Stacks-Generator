@@ -935,6 +935,14 @@
           </button>
           <div id="profile-options-panel" class="options-panel" data-panel="profile">Profile options panel placeholder.
           </div>
+          <!-- TEMPORARY DEBUG ROWS -->
+          <div id="debug-color-count" class="control-row u-hide-icon">
+            <span class="control-label">Colors Used</span>
+            <span id="debug-color-count-value" class="control-value">—</span>
+          </div>
+          <div id="debug-color-list" style="padding: 0 var(--sz-20) var(--sz-10); font-size: calc(var(--sz-10) + 2px); color: var(--ui-ink-muted); text-transform: uppercase;">
+          </div>
+          <!-- END TEMPORARY DEBUG ROWS -->
           <button class="control-row" data-interactive="true" type="button" data-options-panel="form">
             <span class="control-label">Form</span>
             <span id="form-name" class="control-value">Bound</span>
@@ -2316,39 +2324,60 @@
         const limitDisplayEl = document.getElementById('limit-display');
         if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
 
-        // Populate Poster Metadata
-        if (appState.displayLayout === 'poster') {
-          document.getElementById('poster-seed').textContent = appState.seed;
-          document.getElementById('poster-palette').textContent = palette.name;
-          document.getElementById('poster-profile').textContent = activeProfile;
-          document.getElementById('poster-form').textContent = appState.showOutline ? 'bound' : 'unbound';
-          document.getElementById('poster-limit').textContent = appState.targetBlocks + ' blocks';
-          document.getElementById('poster-height').textContent = heightUnits + ' units';
-          document.getElementById('poster-shapes').textContent = placements.length;
-
-          // Color Bars
+          // Color Usage (Shared for Poster & Debug)
           const colorUsage = {};
           palette.colors.forEach(c => colorUsage[c] = 0);
           placements.forEach(p => {
             const units = SHAPE_CATALOG[p.id].units;
             colorUsage[p.color] += units;
           });
-          const maxUnits = Math.max(...Object.values(colorUsage));
+          const maxUnits = Math.max(...Object.values(colorUsage), 0);
+          const usedColors = palette.colors.filter(c => colorUsage[c] > 0);
 
-          const colorBarsContainer = document.getElementById('poster-color-bars');
-          colorBarsContainer.innerHTML = '';
-          palette.colors.forEach(color => {
-            const units = colorUsage[color];
-            const bar = document.createElement('div');
-            bar.className = 'poster-color-bar';
-            bar.style.setProperty('--bar-color', color);
-            if (units === 0 || maxUnits === 0) {
-              bar.dataset.unused = 'true';
-            } else {
-              bar.style.height = `${(units / maxUnits) * 100}%`;
-            }
-            colorBarsContainer.appendChild(bar);
-          });
+          // Update Debug Rows
+          const debugColorCountEl = document.getElementById('debug-color-count-value');
+          if (debugColorCountEl) debugColorCountEl.textContent = usedColors.length;
+          const debugColorListEl = document.getElementById('debug-color-list');
+          if (debugColorListEl) {
+            debugColorListEl.innerHTML = usedColors
+              .sort((a, b) => colorUsage[b] - colorUsage[a])
+              .map(color => `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                  <span>${color}</span>
+                  <span>${colorUsage[color]} units</span>
+                </div>
+              `).join('');
+          }
+
+          // Populate Poster Metadata
+          if (appState.displayLayout === 'poster') {
+            document.getElementById('poster-seed').textContent = appState.seed;
+            document.getElementById('poster-palette').textContent = palette.name;
+            document.getElementById('poster-profile').textContent = activeProfile;
+            document.getElementById('poster-form').textContent = appState.showOutline ? 'bound' : 'unbound';
+            document.getElementById('poster-limit').textContent = appState.targetBlocks + ' blocks';
+            document.getElementById('poster-height').textContent = heightUnits + ' units';
+            document.getElementById('poster-shapes').textContent = placements.length;
+
+            const colorBarsContainer = document.getElementById('poster-color-bars');
+            colorBarsContainer.innerHTML = '';
+            palette.colors.forEach(color => {
+              const units = colorUsage[color];
+              const bar = document.createElement('div');
+              bar.className = 'poster-color-bar';
+              bar.style.setProperty('--bar-color', color);
+
+              // Minimum height is 1/N of the container height to ensure it's at least a square
+              const minHeightRatio = 1 / palette.colors.length;
+              const usageRatio = maxUnits > 0 ? (units / maxUnits) : 0;
+              const finalRatio = Math.max(usageRatio, minHeightRatio);
+
+              if (units === 0 || maxUnits === 0) {
+                bar.dataset.unused = 'true';
+              }
+              bar.style.height = `${finalRatio * 100}%`;
+              colorBarsContainer.appendChild(bar);
+            });
 
           // Shape Units
           const shapeCounts = placements.reduce((acc, p) => {
@@ -2779,9 +2808,10 @@
         const colorBarW = (barW - (pad * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
         palette.colors.forEach((color, index) => {
           const units = colorUsage[color];
-          const barH = (units === 0 || maxUnits === 0) 
-            ? colorBarW 
-            : (units / maxUnits) * (metadataH - (pad * 2));
+          const minHeight = colorBarW;
+          const usageHeight = maxUnits > 0 ? (units / maxUnits) * (metadataH - (pad * 2)) : 0;
+          const barH = Math.max(usageHeight, minHeight);
+
           ctx.fillStyle = color;
           ctx.fillRect(pad + (index * (colorBarW + barGap)), metadataY + metadataH - pad - barH, colorBarW, barH);
         });
