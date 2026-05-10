@@ -559,6 +559,124 @@
         display: none !important;
       }
     }
+
+    /* --- Poster Layout Overrides --- */
+    :root[data-layout="poster"] .artwork-container {
+      height: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    :root[data-layout="poster"] .poster-title,
+    :root[data-layout="poster"] .poster-metadata {
+      display: block !important;
+    }
+
+    .poster-title {
+      position: absolute;
+      top: var(--sz-20);
+      left: var(--sz-20);
+      color: var(--ui-ink);
+      text-transform: uppercase;
+      z-index: 10;
+    }
+
+    .poster-title-label {
+      font-size: var(--sz-15);
+      line-height: 1.45;
+    }
+
+    .poster-title-value {
+      font-size: var(--sz-30);
+      line-height: 1;
+    }
+
+    .poster-metadata {
+      width: 100%;
+      border-top: var(--ui-border-width) solid var(--ui-ink-solid);
+      background: var(--ui-bg);
+      color: var(--ui-ink);
+      text-transform: uppercase;
+      margin-bottom: calc(var(--ui-border-width) * -1);
+      /* Collapse bottom border with container */
+    }
+
+    .poster-meta-grid {
+      display: flex;
+      width: 100%;
+    }
+
+    .color-cell {
+      width: calc(var(--scale-unit) * 156);
+      flex-shrink: 0;
+      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
+      padding: var(--sz-20);
+      display: flex;
+      align-items: flex-end;
+      gap: var(--ui-border-width);
+    }
+
+    .poster-color-bar {
+      flex: 1 0 0;
+      background: var(--bar-color);
+    }
+
+    .poster-data-cols {
+      flex: 1 0 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .poster-row {
+      display: flex;
+      flex: 1 0 0;
+      width: 100%;
+    }
+
+    .poster-row:first-child {
+      border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
+    }
+
+    .poster-cell {
+      padding: var(--sz-20);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
+    }
+
+    .poster-row>.poster-cell:last-child {
+      border-right: none;
+    }
+
+    .poster-units-container {
+      display: flex;
+      flex: 0 0 auto;
+    }
+
+    .poster-units-container>.poster-cell:last-child {
+      border-right: none;
+    }
+
+    .poster-cell.hug {
+      flex: 0 0 auto;
+    }
+
+    .poster-cell.fill {
+      flex: 1 0 0;
+    }
+
+    .meta-label {
+      font-size: var(--sz-15);
+      color: var(--ui-ink);
+      line-height: 1.45;
+    }
+
+    .meta-value {
+      font-size: var(--sz-30);
+      color: var(--ui-ink);
+      line-height: 1;
+    }
   </style>
 </head>
 
@@ -637,118 +755,8 @@
       <path fill="currentColor"
         d="M4.821 10.535h6.358a.533.533 0 0 1 0 1.066H4.82a.533.533 0 0 1 0-1.066m-.75-5.6a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0M4.07 8.001a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m0 3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m3.067-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0" />
     </symbol>
-    /* --- Poster Layout Overrides --- */
-    :root[data-layout="poster"] .artwork-container {
-      height: auto;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    :root[data-layout="poster"] .poster-title,
-    :root[data-layout="poster"] .poster-metadata {
-      display: block !important;
-    }
 
-    .poster-title {
-      position: absolute;
-      top: var(--sz-20);
-      left: var(--sz-20);
-      color: var(--ui-ink);
-      text-transform: uppercase;
-      z-index: 10;
-    }
-
-    .poster-title-label {
-      font-size: var(--sz-15);
-      margin-bottom: var(--sz-08);
-    }
-    
-    .poster-title-value {
-      font-size: var(--sz-30);
-    }
-
-    .poster-metadata {
-      width: 100%;
-      border-top: var(--ui-border-width) solid var(--ui-ink-solid);
-      background: var(--ui-bg);
-      color: var(--ui-ink);
-      text-transform: uppercase;
-      margin-bottom: calc(var(--ui-border-width) * -1); /* Collapse bottom border with container */
-    }
-
-    .poster-meta-grid {
-      display: flex;
-      width: 100%;
-    }
-
-    .color-cell {
-      width: calc(var(--scale-unit) * 156);
-      flex-shrink: 0;
-      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
-      padding: var(--sz-20);
-      display: flex;
-      align-items: flex-end;
-      gap: var(--ui-border-width);
-    }
-
-    .poster-color-bar {
-      flex: 1 0 0;
-      background: var(--bar-color);
-    }
-
-    .poster-data-cols {
-      flex: 1 0 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .poster-row {
-      display: flex;
-      flex: 1 0 0;
-      width: 100%;
-    }
-
-    .poster-row:first-child {
-      border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
-    }
-
-    .poster-cell {
-      padding: var(--sz-20);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
-    }
-
-    .poster-row > .poster-cell:last-child {
-      border-right: none;
-    }
-
-    .poster-units-container {
-      display: flex;
-      flex: 0 0 auto;
-    }
-    
-    .poster-units-container > .poster-cell:last-child {
-      border-right: none;
-    }
-
-    .poster-cell.hug {
-      flex: 0 0 auto;
-    }
-    .poster-cell.fill {
-      flex: 1 0 0;
-    }
-
-    .meta-label {
-      font-size: var(--sz-15);
-      margin-bottom: var(--sz-08);
-      color: var(--ui-ink-muted);
-    }
-
-    .meta-value {
-      font-size: var(--sz-30);
-      color: var(--ui-ink-solid);
+    color: var(--ui-ink-solid);
     }
   </svg>
   <div id="app" class="l-app">
@@ -1766,6 +1774,7 @@
 
       toggleDisplayLayout() {
         appState.displayLayout = appState.displayLayout === 'art' ? 'poster' : 'art';
+        document.documentElement.setAttribute('data-layout', appState.displayLayout);
       },
 
       toggleAspectRatio() {
@@ -1876,6 +1885,7 @@
         Render.renderHeightFilter();
         Render.renderDisplayOptions();
         Render.renderSidebarState();
+        document.documentElement.setAttribute('data-layout', appState.displayLayout);
       },
 
       buildGenerationParams() {
@@ -2253,13 +2263,13 @@
           document.getElementById('poster-limit').textContent = appState.targetBlocks + ' blocks';
           document.getElementById('poster-height').textContent = heightUnits + ' units';
           document.getElementById('poster-shapes').textContent = placements.length;
-          
+
           // Color Bars
           const colorCounts = {};
           palette.colors.forEach(c => colorCounts[c] = 0);
           placements.forEach(p => colorCounts[p.color]++);
           const maxUsage = Math.max(...Object.values(colorCounts));
-          
+
           const colorBarsContainer = document.getElementById('poster-color-bars');
           colorBarsContainer.innerHTML = '';
           palette.colors.forEach(color => {
@@ -2274,14 +2284,14 @@
             }
             colorBarsContainer.appendChild(bar);
           });
-          
+
           // Shape Units
           const shapeCounts = placements.reduce((acc, p) => {
             const units = SHAPE_CATALOG[p.id].units;
             acc[units] = (acc[units] || 0) + 1;
             return acc;
           }, {});
-          
+
           const unitsKeys = Object.keys(shapeCounts).map(Number).sort((a, b) => a - b);
           const unitsContainer = document.getElementById('poster-units-container');
           unitsContainer.innerHTML = '';
@@ -2656,6 +2666,7 @@
     Controls.bindParamsPanel();
     Controls.bindShortcuts();
     State.applyToDOM();
+    document.documentElement.setAttribute('data-layout', appState.displayLayout);
     State.triggerGeneration();
 
   </script>
