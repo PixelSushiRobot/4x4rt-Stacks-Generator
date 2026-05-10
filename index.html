@@ -51,6 +51,7 @@
       --ui-border-width: max(1px, var(--sz-02));
       --ui-text-size: var(--sz-15);
       --ui-brand-size: var(--sz-30);
+      --poster-metadata-height: calc(var(--canvas-size) * 0.17);
     }
 
     :root[data-sidebar-state="hidden"] {
@@ -169,6 +170,13 @@
       height: var(--canvas-size);
       background: var(--ui-bg);
       border: var(--ui-border-width) solid var(--ui-ink-solid);
+    }
+
+    .artwork-stage {
+      position: relative;
+      width: 100%;
+      height: var(--canvas-size);
+      flex: none;
     }
 
     .artwork-svg {
@@ -364,6 +372,17 @@
     .button:focus-visible {
       outline: var(--sz-02) solid var(--ui-ink-muted);
       outline-offset: var(--sz-02);
+    }
+
+    :root[data-layout="poster"] #export-svg-btn {
+      display: none;
+    }
+
+    @media (min-width: 641px) {
+      :root[data-layout="poster"] .l-sidebar {
+        min-height: calc(var(--canvas-size) + var(--poster-metadata-height));
+        max-height: calc(var(--canvas-size) + var(--poster-metadata-height));
+      }
     }
 
     .icon-button {
@@ -592,6 +611,7 @@
     }
 
     .poster-metadata {
+      height: var(--poster-metadata-height);
       width: 100%;
       border-top: var(--ui-border-width) solid var(--ui-ink-solid);
       background: var(--ui-bg);
@@ -604,6 +624,7 @@
     .poster-meta-grid {
       display: flex;
       width: 100%;
+      height: 100%;
     }
 
     .color-cell {
@@ -762,42 +783,44 @@
   <div id="app" class="l-app">
     <main id="canvas" class="l-canvas">
       <div id="artwork-container" class="artwork-container">
-        <!-- Poster Title -->
-        <div id="poster-title" class="poster-title" style="display: none;">
-          <div class="poster-title-label">project</div>
-          <div class="poster-title-value">4x4rt Stacks</div>
-        </div>
+        <div class="artwork-stage">
+          <!-- Poster Title -->
+          <div id="poster-title" class="poster-title" style="display: none;">
+            <div class="poster-title-label">project</div>
+            <div class="poster-title-value">4x4rt Stacks</div>
+          </div>
 
-        <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
-          <svg class="icon icon-desktop">
-            <use href="#icon-custom-right-panel"></use>
-          </svg>
-          <svg class="icon icon-mobile">
-            <use href="#icon-custom-bottom-panel"></use>
-          </svg>
-        </button>
-        <svg id="artwork-svg" class="artwork-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
+            <svg class="icon icon-desktop">
+              <use href="#icon-custom-right-panel"></use>
+            </svg>
+            <svg class="icon icon-mobile">
+              <use href="#icon-custom-bottom-panel"></use>
+            </svg>
+          </button>
+          <svg id="artwork-svg" class="artwork-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
 
-        <div id="watermark" class="watermark">
-          <svg viewBox="0 0 90 30" preserveAspectRatio="xMaxYMax meet" xmlns="http://www.w3.org/2000/svg">
-            <g fill="var(--ui-ink-muted)">
-              <rect width="24" height="6" />
-              <rect y="16" width="24" height="6" />
-              <rect y="24" width="12" height="6" />
-              <rect x="12" y="8" width="18" height="6" />
+          <div id="watermark" class="watermark">
+            <svg viewBox="0 0 90 30" preserveAspectRatio="xMaxYMax meet" xmlns="http://www.w3.org/2000/svg">
+              <g fill="var(--ui-ink-muted)">
+                <rect width="24" height="6" />
+                <rect y="16" width="24" height="6" />
+                <rect y="24" width="12" height="6" />
+                <rect x="12" y="8" width="18" height="6" />
 
-              <rect x="30" y="8" width="24" height="6" />
-              <rect x="30" y="24" width="24" height="6" />
-              <rect x="36" width="24" height="6" />
-              <rect x="36" y="16" width="24" height="6" />
+                <rect x="30" y="8" width="24" height="6" />
+                <rect x="30" y="24" width="24" height="6" />
+                <rect x="36" width="24" height="6" />
+                <rect x="36" y="16" width="24" height="6" />
 
-              <rect x="60" width="24" height="6" />
-              <rect x="60" y="16" width="24" height="6" />
-              <rect x="60" y="24" width="12" height="6" />
-              <rect x="72" y="8" width="18" height="6" />
-              <rect x="78" y="24" width="12" height="6" />
-            </g>
-          </svg>
+                <rect x="60" width="24" height="6" />
+                <rect x="60" y="16" width="24" height="6" />
+                <rect x="60" y="24" width="12" height="6" />
+                <rect x="72" y="8" width="18" height="6" />
+                <rect x="78" y="24" width="12" height="6" />
+              </g>
+            </svg>
+          </div>
         </div>
 
         <!-- Poster Metadata -->
@@ -2148,7 +2171,7 @@
 
         !appState.isSidebarOpen ? document.documentElement.setAttribute('data-sidebar-state', 'hidden') : document.documentElement.removeAttribute('data-sidebar-state');
 
-        document.querySelectorAll('.sidebar-panel').forEach(panelEl => {
+        document.querySelectorAll('.options-panel').forEach(panelEl => {
           panelEl.dataset.panel === appState.activeOptionsPanel ? panelEl.setAttribute('data-state', 'open') : panelEl.removeAttribute('data-state');
         });
       },
@@ -2249,6 +2272,9 @@
 
         const profileNameEl = document.getElementById('profile-name');
         if (profileNameEl) profileNameEl.textContent = activeProfile;
+
+        const formNameEl = document.getElementById('form-name');
+        if (formNameEl) formNameEl.textContent = appState.showOutline ? 'Bound' : 'Unbound';
 
         const limitDisplayEl = document.getElementById('limit-display');
         if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
@@ -2584,8 +2610,11 @@
       getSVGString() {
         const svg = document.getElementById('artwork-svg');
         const clone = svg.cloneNode(true);
-        clone.setAttribute('width', CANVAS_SIZE);
-        clone.setAttribute('height', CANVAS_SIZE);
+        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE;
+        clone.setAttribute('width', canvasW);
+        clone.setAttribute('height', canvasH);
+        clone.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
         if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
         return new XMLSerializer().serializeToString(clone);
       },
@@ -2600,37 +2629,167 @@
         }
       },
 
-      _capturePosterPNG() {
-        const container = document.getElementById('artwork-container');
-        html2canvas(container, {
-          scale: 2, // High resolution
-          backgroundColor: null
-        }).then(canvas => {
-          const a = document.createElement('a');
-          a.href = canvas.toDataURL('image/png');
-          a.download = `4x4rt-poster-${appState.seed}-${Date.now()}.png`;
-          a.click();
+      async _loadSVGImage() {
+        const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(this.getSVGString())}`;
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = url;
         });
       },
 
+      drawWatermark(ctx, x, y, unit, color) {
+        ctx.fillStyle = color;
+        [
+          [0, 0, 24, 6], [0, 16, 24, 6], [0, 24, 12, 6], [12, 8, 18, 6],
+          [30, 8, 24, 6], [30, 24, 24, 6], [36, 0, 24, 6], [36, 16, 24, 6],
+          [60, 0, 24, 6], [60, 16, 24, 6], [60, 24, 12, 6], [72, 8, 18, 6], [78, 24, 12, 6]
+        ].forEach(([rx, ry, rw, rh]) => {
+          ctx.fillRect(x + (rx * unit), y + (ry * unit), rw * unit, rh * unit);
+        });
+      },
+
+      drawPosterText(ctx, text, x, y, size, color, align = 'left') {
+        ctx.fillStyle = color;
+        ctx.font = `${size}px "Space Mono", monospace`;
+        ctx.textBaseline = 'top';
+        ctx.textAlign = align;
+        ctx.fillText(text, x, y);
+      },
+
+      async _capturePosterPNG() {
+        const container = document.getElementById('artwork-container');
+        const scale = 2;
+        const rect = container.getBoundingClientRect();
+        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE;
+        const posterH = Math.max(canvasH, canvasW * (rect.height / rect.width));
+        const metadataH = Math.max(canvasW * 0.17, posterH - canvasH);
+        const metadataY = canvasH;
+        const border = Math.max(1, canvasW * 0.002);
+        const pad = canvasW * 0.02;
+        const small = canvasW * 0.015;
+        const large = canvasW * 0.03;
+        const ink = getComputedStyle(document.documentElement).getPropertyValue('--ui-ink-solid').trim() || '#1c1c1a';
+        const muted = getComputedStyle(document.documentElement).getPropertyValue('--ui-ink-muted').trim() || 'rgba(28, 28, 26, 0.5)';
+        const bg = appState.artwork.palette.bg;
+        const image = await this._loadSVGImage();
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(canvasW * scale);
+        canvas.height = Math.round((canvasH + metadataH) * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvasW, canvasH + metadataH);
+        ctx.drawImage(image, 0, 0, canvasW, canvasH);
+
+        this.drawPosterText(ctx, 'project', pad, pad, small, ink);
+        this.drawPosterText(ctx, '4x4rt Stacks', pad, pad + (small * 1.2), large, ink);
+        this.drawWatermark(ctx, canvasW - pad - (canvasW * 0.09), canvasH - pad - (canvasW * 0.03), canvasW * 0.001, muted);
+
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = border;
+        ctx.strokeRect(border / 2, border / 2, canvasW - border, canvasH + metadataH - border);
+        ctx.beginPath();
+        ctx.moveTo(0, metadataY);
+        ctx.lineTo(canvasW, metadataY);
+        ctx.stroke();
+
+        const { placements, heightUnits, palette, activeProfile } = appState.artwork;
+        const shapeCounts = placements.reduce((acc, placement) => {
+          const units = SHAPE_CATALOG[placement.id].units;
+          acc[units] = (acc[units] || 0) + 1;
+          return acc;
+        }, {});
+        const colorCounts = {};
+        palette.colors.forEach(color => colorCounts[color] = 0);
+        placements.forEach(placement => colorCounts[placement.color]++);
+        const maxUsage = Math.max(...Object.values(colorCounts), 1);
+
+        const barW = canvasW * 0.156;
+        const rowH = metadataH / 2;
+        const cellDefs = [
+          [
+            { label: 'seed', value: appState.seed, width: canvasW * 0.12 },
+            { label: 'palette', value: palette.name, width: canvasW * 0.28 },
+            { label: 'profile', value: activeProfile, width: canvasW * 0.16 },
+            { label: 'form', value: appState.showOutline ? 'bound' : 'unbound', width: canvasW * 0.14 }
+          ],
+          [
+            { label: 'limit', value: `${appState.targetBlocks} blocks`, width: canvasW * 0.28 },
+            { label: 'height', value: `${heightUnits} units`, width: canvasW * 0.16 },
+            { label: 'shapes', value: placements.length, width: canvasW * 0.12 },
+            ...Object.keys(shapeCounts).map(Number).sort((a, b) => a - b).map(units => ({
+              label: formatUnitLabel(units),
+              value: shapeCounts[units],
+              width: canvasW * 0.08
+            }))
+          ]
+        ];
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, metadataY, barW, metadataH);
+        ctx.clip();
+        const barGap = border;
+        const colorBarW = (barW - (pad * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
+        palette.colors.forEach((color, index) => {
+          const usage = colorCounts[color];
+          const barH = usage === 0 ? small : (usage / maxUsage) * (metadataH - (pad * 2));
+          ctx.fillStyle = color;
+          ctx.fillRect(pad + (index * (colorBarW + barGap)), metadataY + metadataH - pad - barH, colorBarW, barH);
+        });
+        ctx.restore();
+
+        let x = barW;
+        ctx.beginPath();
+        ctx.moveTo(barW, metadataY);
+        ctx.lineTo(barW, metadataY + metadataH);
+        ctx.moveTo(barW, metadataY + rowH);
+        ctx.lineTo(canvasW, metadataY + rowH);
+        ctx.stroke();
+
+        cellDefs.forEach((row, rowIndex) => {
+          x = barW;
+          const y = metadataY + (rowIndex * rowH);
+          row.forEach(cell => {
+            const width = Math.min(cell.width, canvasW - x);
+            if (width <= 0) return;
+            ctx.beginPath();
+            ctx.moveTo(x + width, y);
+            ctx.lineTo(x + width, y + rowH);
+            ctx.stroke();
+            this.drawPosterText(ctx, cell.label, x + pad, y + pad, small, ink);
+            this.drawPosterText(ctx, String(cell.value), x + pad, y + pad + (small * 1.3), large, ink);
+            x += width;
+          });
+        });
+
+        this.triggerDownload(canvas.toDataURL('image/png'), `4x4rt-poster-${appState.seed || 'export'}.png`);
+      },
+
       downloadSVG() {
+        if (appState.displayLayout === 'poster') return;
         const blob = new Blob([this.getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
         this.triggerDownload(URL.createObjectURL(blob), '4x4rt-stacks.svg');
       },
 
       async downloadPNG() {
+        if (appState.displayLayout === 'poster') {
+          try {
+            await this._capturePosterPNG();
+          } catch (error) {
+            console.error('Poster PNG download failed', error);
+          }
+          return;
+        }
+
         const scale = 2;
         const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
         const canvasH = CANVAS_SIZE; // Always 1000
-        const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(this.getSVGString())}`;
-
         try {
-          const img = await new Promise((resolve, reject) => {
-            const image = new Image();
-            image.onload = () => resolve(image);
-            image.onerror = reject;
-            image.src = url;
-          });
+          const img = await this._loadSVGImage();
 
           const canvas = document.createElement('canvas');
           canvas.width = canvasW * scale;
