@@ -583,7 +583,7 @@
 
     .poster-title-label {
       font-size: var(--sz-15);
-      line-height: 1.45;
+      line-height: 1.2;
     }
 
     .poster-title-value {
@@ -597,7 +597,7 @@
       background: var(--ui-bg);
       color: var(--ui-ink);
       text-transform: uppercase;
-      margin-bottom: calc(var(--ui-border-width) * -1);
+      /* margin-bottom removed to fix missing bottom border */
       /* Collapse bottom border with container */
     }
 
@@ -669,7 +669,7 @@
     .meta-label {
       font-size: var(--sz-15);
       color: var(--ui-ink);
-      line-height: 1.45;
+      line-height: 1.2;
     }
 
     .meta-value {
@@ -2232,7 +2232,8 @@
 
         const domWatermark = document.getElementById('watermark');
         if (domWatermark) {
-          if (appState.displayLayout === 'poster') domWatermark.style.display = 'none';
+          // Watermark is always shown in both Art and Poster mode
+          domWatermark.style.display = 'block';
           else domWatermark.style.display = 'block';
         }
 
@@ -2327,9 +2328,9 @@
       render() {
         if (!appState.artwork) return;
         this.renderArtwork();
+        this.renderMetadata();
         this.renderDisplayOptions();
         this.renderSidebarState();
-        this.renderMetadata();
       },
 
       renderLimitSlider() {
@@ -2488,7 +2489,7 @@
       bindParamsPanel() {
         document.getElementById('layout-row')?.addEventListener('click', () => {
           State.toggleDisplayLayout();
-          Render.renderDisplayOptions();
+          Render.render();
           State.syncURL();
         });
 
