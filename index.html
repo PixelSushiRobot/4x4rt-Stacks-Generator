@@ -637,10 +637,129 @@
       <path fill="currentColor"
         d="M4.821 10.535h6.358a.533.533 0 0 1 0 1.066H4.82a.533.533 0 0 1 0-1.066m-.75-5.6a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0M4.07 8.001a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m3.066-3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m0 3.066a.533.533 0 1 1-1.066 0 .533.533 0 0 1 1.066 0m3.067-3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0m0 3.066a.533.533 0 1 1-1.067 0 .533.533 0 0 1 1.067 0" />
     </symbol>
+    /* --- Poster Layout Overrides --- */
+    :root[data-layout="poster"] .artwork-container {
+      height: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    :root[data-layout="poster"] .poster-title,
+    :root[data-layout="poster"] .poster-metadata {
+      display: block !important;
+    }
+
+    .poster-title {
+      position: absolute;
+      top: var(--sz-20);
+      left: var(--sz-20);
+      color: var(--ui-ink);
+      text-transform: uppercase;
+      z-index: 10;
+    }
+
+    .poster-title-label {
+      font-size: var(--sz-15);
+      margin-bottom: var(--sz-08);
+    }
+    
+    .poster-title-value {
+      font-size: var(--sz-30);
+    }
+
+    .poster-metadata {
+      width: 100%;
+      border-top: var(--ui-border-width) solid var(--ui-ink-solid);
+      background: var(--ui-bg);
+      color: var(--ui-ink);
+      text-transform: uppercase;
+      margin-bottom: calc(var(--ui-border-width) * -1); /* Collapse bottom border with container */
+    }
+
+    .poster-meta-grid {
+      display: flex;
+      width: 100%;
+    }
+
+    .color-cell {
+      width: calc(var(--scale-unit) * 156);
+      flex-shrink: 0;
+      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
+      padding: var(--sz-20);
+      display: flex;
+      align-items: flex-end;
+      gap: var(--ui-border-width);
+    }
+
+    .poster-color-bar {
+      flex: 1 0 0;
+      background: var(--bar-color);
+    }
+
+    .poster-data-cols {
+      flex: 1 0 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .poster-row {
+      display: flex;
+      flex: 1 0 0;
+      width: 100%;
+    }
+
+    .poster-row:first-child {
+      border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
+    }
+
+    .poster-cell {
+      padding: var(--sz-20);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
+    }
+
+    .poster-row > .poster-cell:last-child {
+      border-right: none;
+    }
+
+    .poster-units-container {
+      display: flex;
+      flex: 0 0 auto;
+    }
+    
+    .poster-units-container > .poster-cell:last-child {
+      border-right: none;
+    }
+
+    .poster-cell.hug {
+      flex: 0 0 auto;
+    }
+    .poster-cell.fill {
+      flex: 1 0 0;
+    }
+
+    .meta-label {
+      font-size: var(--sz-15);
+      margin-bottom: var(--sz-08);
+      color: var(--ui-ink-muted);
+    }
+
+    .meta-value {
+      font-size: var(--sz-30);
+      color: var(--ui-ink-solid);
+    }
   </svg>
   <div id="app" class="l-app">
     <main id="canvas" class="l-canvas">
       <div id="artwork-container" class="artwork-container">
+        <!-- Poster Title -->
+        <div id="poster-title" class="poster-title" style="display: none;">
+          <div class="poster-title-label">project</div>
+          <div class="poster-title-value">4x4rt Stacks</div>
+        </div>
+
         <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
           <svg class="icon icon-desktop">
             <use href="#icon-custom-right-panel"></use>
@@ -671,6 +790,48 @@
               <rect x="78" y="24" width="12" height="6" />
             </g>
           </svg>
+        </div>
+
+        <!-- Poster Metadata -->
+        <div id="poster-metadata" class="poster-metadata" style="display: none;">
+          <div class="poster-meta-grid">
+            <div class="poster-cell color-cell" id="poster-color-bars"></div>
+            <div class="poster-data-cols">
+              <div class="poster-row">
+                <div class="poster-cell hug">
+                  <div class="meta-label">seed</div>
+                  <div class="meta-value" id="poster-seed"></div>
+                </div>
+                <div class="poster-cell fill">
+                  <div class="meta-label">palette</div>
+                  <div class="meta-value" id="poster-palette"></div>
+                </div>
+                <div class="poster-cell hug">
+                  <div class="meta-label">profile</div>
+                  <div class="meta-value" id="poster-profile"></div>
+                </div>
+                <div class="poster-cell hug" style="border-right: none;">
+                  <div class="meta-label">form</div>
+                  <div class="meta-value" id="poster-form"></div>
+                </div>
+              </div>
+              <div class="poster-row">
+                <div class="poster-cell fill">
+                  <div class="meta-label">limit</div>
+                  <div class="meta-value" id="poster-limit"></div>
+                </div>
+                <div class="poster-cell hug">
+                  <div class="meta-label">height</div>
+                  <div class="meta-value" id="poster-height"></div>
+                </div>
+                <div class="poster-cell hug">
+                  <div class="meta-label">shapes</div>
+                  <div class="meta-value" id="poster-shapes"></div>
+                </div>
+                <div id="poster-units-container" class="poster-units-container"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
 
@@ -1994,6 +2155,7 @@
         });
       },
 
+
       renderArtwork() {
         if (!appState.artwork) return;
         const { placements, heightUnits, palette } = appState.artwork;
@@ -2058,6 +2220,12 @@
 
         !appState.showExport ? document.getElementById('export-overlay')?.setAttribute('data-state', 'hidden') : document.getElementById('export-overlay')?.removeAttribute('data-state');
 
+        const domWatermark = document.getElementById('watermark');
+        if (domWatermark) {
+          if (appState.displayLayout === 'poster') domWatermark.style.display = 'none';
+          else domWatermark.style.display = 'block';
+        }
+
         const seedDisplayEl = document.getElementById('seed-display');
         if (seedDisplayEl) seedDisplayEl.textContent = appState.seed;
 
@@ -2075,6 +2243,57 @@
 
         const limitDisplayEl = document.getElementById('limit-display');
         if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
+
+        // Populate Poster Metadata
+        if (appState.displayLayout === 'poster') {
+          document.getElementById('poster-seed').textContent = appState.seed;
+          document.getElementById('poster-palette').textContent = palette.name;
+          document.getElementById('poster-profile').textContent = activeProfile;
+          document.getElementById('poster-form').textContent = appState.showOutline ? 'bound' : 'unbound';
+          document.getElementById('poster-limit').textContent = appState.targetBlocks + ' blocks';
+          document.getElementById('poster-height').textContent = heightUnits + ' units';
+          document.getElementById('poster-shapes').textContent = placements.length;
+          
+          // Color Bars
+          const colorCounts = {};
+          palette.colors.forEach(c => colorCounts[c] = 0);
+          placements.forEach(p => colorCounts[p.color]++);
+          const maxUsage = Math.max(...Object.values(colorCounts));
+          
+          const colorBarsContainer = document.getElementById('poster-color-bars');
+          colorBarsContainer.innerHTML = '';
+          palette.colors.forEach(color => {
+            const usage = colorCounts[color];
+            const bar = document.createElement('div');
+            bar.className = 'poster-color-bar';
+            bar.style.setProperty('--bar-color', color);
+            if (usage === 0) {
+              bar.style.height = 'calc(var(--scale-unit) * 16)'; // make it a square
+            } else {
+              bar.style.height = `${(usage / maxUsage) * 100}%`;
+            }
+            colorBarsContainer.appendChild(bar);
+          });
+          
+          // Shape Units
+          const shapeCounts = placements.reduce((acc, p) => {
+            const units = SHAPE_CATALOG[p.id].units;
+            acc[units] = (acc[units] || 0) + 1;
+            return acc;
+          }, {});
+          
+          const unitsKeys = Object.keys(shapeCounts).map(Number).sort((a, b) => a - b);
+          const unitsContainer = document.getElementById('poster-units-container');
+          unitsContainer.innerHTML = '';
+          unitsKeys.forEach(units => {
+            const lbl = formatUnitLabel(units);
+            const val = shapeCounts[units];
+            const cell = document.createElement('div');
+            cell.className = 'poster-cell hug';
+            cell.innerHTML = `<div class="meta-label">${lbl}</div><div class="meta-value">${val}</div>`;
+            unitsContainer.appendChild(cell);
+          });
+        }
 
         const shapesList = document.getElementById('shapes-list');
         if (!shapesList) return;
@@ -2370,6 +2589,19 @@
         if (dataUrl.startsWith('blob:')) {
           setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
         }
+      },
+
+      _capturePosterPNG() {
+        const container = document.getElementById('artwork-container');
+        html2canvas(container, {
+          scale: 2, // High resolution
+          backgroundColor: null
+        }).then(canvas => {
+          const a = document.createElement('a');
+          a.href = canvas.toDataURL('image/png');
+          a.download = `4x4rt-poster-${appState.seed}-${Date.now()}.png`;
+          a.click();
+        });
       },
 
       downloadSVG() {

@@ -1,15 +1,7 @@
 const fs = require('fs');
-const content = fs.readFileSync('index.html', 'utf8');
+const code = fs.readFileSync('index.html', 'utf8');
 
-const regex = /--sz-[0-9]+/g;
-const matches = content.match(regex) || [];
-const counts = {};
-for (const match of matches) {
-    counts[match] = (counts[match] || 0) + 1;
-}
-
-for (const [key, val] of Object.entries(counts)) {
-    if (val === 1) {
-        console.log("Unused:", key);
-    }
-}
+// I need to clean up the HTML at the end of artwork-container.
+const startIdx = code.indexOf('<div id="poster-metadata"');
+const endIdx = code.indexOf('</main>');
+console.log(code.substring(startIdx, endIdx));
