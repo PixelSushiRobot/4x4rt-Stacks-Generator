@@ -19,7 +19,7 @@
       --page-pad-y: 20px;
       --sidebar-width-ratio: 0.365;
       --poster-metadata-ratio: 0.17;
-      --app-width-ratio: calc(1 + var(--sidebar-width-ratio));
+      --app-width-ratio: 1.365;
       --canvas-size: min(100vh - (var(--page-pad-y) * 2), (100vw - (var(--page-pad-x) * 2)) / var(--app-width-ratio));
       /* Modular Scale System */
       --scale-unit: calc(var(--canvas-size) * 0.001);
@@ -54,13 +54,7 @@
       --ui-text-size: var(--sz-15);
       --ui-brand-size: var(--sz-30);
       --poster-metadata-height: calc(var(--canvas-size) * var(--poster-metadata-ratio));
-    }
-
-    :root[data-layout="poster"] {
-      --canvas-size: min(
-        (100vh - (var(--page-pad-y) * 2)) / (1 + var(--poster-metadata-ratio)),
-        (100vw - (var(--page-pad-x) * 2)) / var(--app-width-ratio)
-      );
+      --poster-total-height: calc(var(--canvas-size) + var(--poster-metadata-height) + (var(--ui-border-width) * 2));
     }
 
     :root[data-sidebar-state="hidden"] {
@@ -389,8 +383,8 @@
 
     @media (min-width: 641px) {
       :root[data-layout="poster"] .l-sidebar {
-        min-height: calc(var(--canvas-size) + var(--poster-metadata-height));
-        max-height: calc(var(--canvas-size) + var(--poster-metadata-height));
+        min-height: var(--poster-total-height);
+        max-height: var(--poster-total-height);
       }
     }
 
@@ -640,11 +634,13 @@
     }
 
     .color-cell {
-      width: calc(var(--scale-unit) * 156);
+      width: var(--poster-metadata-height);
+      flex: 0 0 var(--poster-metadata-height);
       flex-shrink: 0;
       border-right: var(--ui-border-width) solid var(--ui-ink-solid);
       padding: var(--sz-20);
       display: flex;
+      flex-direction: row;
       align-items: flex-end;
       gap: var(--ui-border-width);
     }
@@ -701,6 +697,13 @@
 
     .poster-cell.fill {
       flex: 1 0 0;
+    }
+
+    .poster-cell.color-cell {
+      width: var(--poster-metadata-height);
+      flex: 0 0 var(--poster-metadata-height);
+      flex-direction: row;
+      align-items: flex-end;
     }
 
     .meta-label {
@@ -1811,18 +1814,42 @@
         appState[flag] = value;
       },
 
+      syncCanvasScale() {
+        const root = document.documentElement;
+        if (appState.displayLayout !== 'poster') {
+          root.style.removeProperty('--canvas-size');
+          return;
+        }
+
+        const styles = getComputedStyle(root);
+        const pagePadX = parseFloat(styles.getPropertyValue('--page-pad-x')) || 20;
+        const pagePadY = parseFloat(styles.getPropertyValue('--page-pad-y')) || 20;
+        const border = parseFloat(styles.getPropertyValue('--ui-border-width')) || 1;
+        const metadataRatio = 0.17;
+        const appWidthRatio = appState.aspectRatio === '9:16'
+          ? (appState.isSidebarOpen ? 0.9275 : 0.5625)
+          : (appState.isSidebarOpen ? 1.365 : 1);
+        const byHeight = (window.innerHeight - (pagePadY * 2) - (border * 2)) / (1 + metadataRatio);
+        const byWidth = (window.innerWidth - (pagePadX * 2)) / appWidthRatio;
+        const nextCanvasSize = Math.max(1, Math.min(byHeight, byWidth));
+        root.style.setProperty('--canvas-size', `${nextCanvasSize}px`);
+      },
+
       toggleDisplayLayout() {
         appState.displayLayout = appState.displayLayout === 'art' ? 'poster' : 'art';
         document.documentElement.setAttribute('data-layout', appState.displayLayout);
+        this.syncCanvasScale();
       },
 
       toggleAspectRatio() {
         appState.aspectRatio = appState.aspectRatio === '1:1' ? '9:16' : '1:1';
+        this.syncCanvasScale();
       },
 
       toggleSidebar() {
         appState.isSidebarOpen = !appState.isSidebarOpen;
         if (!appState.isSidebarOpen) appState.activeOptionsPanel = null;
+        this.syncCanvasScale();
       },
 
       toggleOptionsPanel(panelName) {
@@ -1922,6 +1949,7 @@
         if (exportEl) exportEl.checked = appState.showExport;
 
         Render.renderHeightFilter();
+        this.syncCanvasScale();
         Render.renderDisplayOptions();
         Render.renderSidebarState();
         document.documentElement.setAttribute('data-layout', appState.displayLayout);
@@ -2841,6 +2869,12 @@
     Controls.bindShortcuts();
     State.applyToDOM();
     document.documentElement.setAttribute('data-layout', appState.displayLayout);
+    State.syncCanvasScale();
+    window.addEventListener('resize', () => {
+      State.syncCanvasScale();
+      Render.renderDisplayOptions();
+      Render.renderSidebarState();
+    });
     State.triggerGeneration();
 
   </script>
