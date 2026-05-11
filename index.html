@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
   <style>
     /* ==========================================================================
        1. DESIGN TOKENS & SCOPE MODIFIERS
@@ -2696,140 +2697,6 @@
         });
       },
 
-      drawWatermark(ctx, x, y, unit, color) {
-        ctx.fillStyle = color;
-        [
-          [0, 0, 24, 6], [0, 16, 24, 6], [0, 24, 12, 6], [12, 8, 18, 6],
-          [30, 8, 24, 6], [30, 24, 24, 6], [36, 0, 24, 6], [36, 16, 24, 6],
-          [60, 0, 24, 6], [60, 16, 24, 6], [60, 24, 12, 6], [72, 8, 18, 6], [78, 24, 12, 6]
-        ].forEach(([rx, ry, rw, rh]) => {
-          ctx.fillRect(x + (rx * unit), y + (ry * unit), rw * unit, rh * unit);
-        });
-      },
-
-      drawPosterText(ctx, text, x, y, size, color, align = 'left') {
-        ctx.fillStyle = color;
-        ctx.font = `${size}px "Space Mono", monospace`;
-        ctx.textBaseline = 'top';
-        ctx.textAlign = align;
-        ctx.fillText(text, x, y);
-      },
-
-      async _capturePosterPNG(scale = 2) {
-        const container = document.getElementById('artwork-container');
-        const rect = container.getBoundingClientRect();
-        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-        const canvasH = CANVAS_SIZE;
-        const posterH = Math.max(canvasH, canvasW * (rect.height / rect.width));
-        const metadataH = Math.max(canvasW * 0.17, posterH - canvasH);
-        const metadataY = canvasH;
-        const border = Math.max(1, canvasW * 0.002);
-        const pad = canvasW * 0.02;
-        const small = canvasW * 0.015;
-        const large = canvasW * 0.03;
-        const ink = getComputedStyle(document.documentElement).getPropertyValue('--ui-ink-solid').trim() || '#1c1c1a';
-        const muted = getComputedStyle(document.documentElement).getPropertyValue('--ui-ink-muted').trim() || 'rgba(28, 28, 26, 0.5)';
-        const bg = appState.artwork.palette.bg;
-        const image = await this._loadSVGImage();
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(canvasW * scale);
-        canvas.height = Math.round((canvasH + metadataH) * scale);
-        const ctx = canvas.getContext('2d');
-        ctx.scale(scale, scale);
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, canvasW, canvasH + metadataH);
-        ctx.drawImage(image, 0, 0, canvasW, canvasH);
-
-        this.drawPosterText(ctx, 'project', pad, pad, small, ink);
-        this.drawPosterText(ctx, '4x4rt Stacks', pad, pad + (small * 1.2), large, ink);
-        this.drawWatermark(ctx, canvasW - pad - (canvasW * 0.09), canvasH - pad - (canvasW * 0.03), canvasW * 0.001, muted);
-
-        ctx.strokeStyle = ink;
-        ctx.lineWidth = border;
-        ctx.strokeRect(border / 2, border / 2, canvasW - border, canvasH + metadataH - border);
-        ctx.beginPath();
-        ctx.moveTo(0, metadataY);
-        ctx.lineTo(canvasW, metadataY);
-        ctx.stroke();
-
-        const { placements, heightUnits, palette, activeProfile } = appState.artwork;
-        const shapeCounts = placements.reduce((acc, placement) => {
-          const units = SHAPE_CATALOG[placement.id].units;
-          acc[units] = (acc[units] || 0) + 1;
-          return acc;
-        }, {});
-        const colorUsage = {};
-        palette.colors.forEach(color => colorUsage[color] = 0);
-        placements.forEach(p => {
-          const units = SHAPE_CATALOG[p.id].units;
-          colorUsage[p.color] += units;
-        });
-        const maxUnits = Math.max(...Object.values(colorUsage), 0);
-
-        const barW = canvasW * 0.156;
-        const rowH = metadataH / 2;
-        const cellDefs = [
-          [
-            { label: 'seed', value: appState.seed, width: canvasW * 0.12 },
-            { label: 'palette', value: palette.name, width: canvasW * 0.28 },
-            { label: 'profile', value: activeProfile, width: canvasW * 0.16 },
-            { label: 'form', value: appState.showOutline ? 'bound' : 'unbound', width: canvasW * 0.14 }
-          ],
-          [
-            { label: 'limit', value: `${appState.targetBlocks} blocks`, width: canvasW * 0.28 },
-            { label: 'height', value: `${heightUnits} units`, width: canvasW * 0.16 },
-            { label: 'shapes', value: placements.length, width: canvasW * 0.12 },
-            ...Object.keys(shapeCounts).map(Number).sort((a, b) => a - b).map(units => ({
-              label: formatUnitLabel(units),
-              value: shapeCounts[units],
-              width: canvasW * 0.08
-            }))
-          ]
-        ];
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, metadataY, barW, metadataH);
-        ctx.clip();
-        const barGap = border;
-        const colorBarW = (barW - (pad * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
-        palette.colors.forEach((color, index) => {
-          const units = colorUsage[color];
-          const minHeight = colorBarW;
-          const usageHeight = maxUnits > 0 ? (units / maxUnits) * (metadataH - (pad * 2)) : 0;
-          const barH = Math.max(usageHeight, minHeight);
-
-          ctx.fillStyle = color;
-          ctx.fillRect(pad + (index * (colorBarW + barGap)), metadataY + metadataH - pad - barH, colorBarW, barH);
-        });
-        ctx.restore();
-
-        let x = barW;
-        ctx.beginPath();
-        ctx.moveTo(barW, metadataY);
-        ctx.lineTo(barW, metadataY + metadataH);
-        ctx.moveTo(barW, metadataY + rowH);
-        ctx.lineTo(canvasW, metadataY + rowH);
-        ctx.stroke();
-
-        cellDefs.forEach((row, rowIndex) => {
-          x = barW;
-          const y = metadataY + (rowIndex * rowH);
-          row.forEach(cell => {
-            const width = Math.min(cell.width, canvasW - x);
-            if (width <= 0) return;
-            ctx.beginPath();
-            ctx.moveTo(x + width, y);
-            ctx.lineTo(x + width, y + rowH);
-            ctx.stroke();
-            this.drawPosterText(ctx, cell.label, x + pad, y + pad, small, ink);
-            this.drawPosterText(ctx, String(cell.value), x + pad, y + pad + (small * 1.3), large, ink);
-            x += width;
-          });
-        });
-
-        this.triggerDownload(canvas.toDataURL('image/png'), `4x4rt-poster-${appState.seed || 'export'}.png`);
-      },
 
       downloadSVG() {
         if (appState.displayLayout === 'poster') return;
@@ -2840,7 +2707,16 @@
       async downloadPNG(pixelRatio = 2) {
         if (appState.displayLayout === 'poster') {
           try {
-            await this._capturePosterPNG(pixelRatio);
+            const node = document.getElementById('artwork-container');
+            const dataUrl = await htmlToImage.toPng(node, {
+              pixelRatio: pixelRatio,
+              backgroundColor: appState.artwork.palette.bg,
+              style: {
+                transform: 'scale(1)',
+                transformOrigin: 'top left'
+              }
+            });
+            this.triggerDownload(dataUrl, `4x4rt-poster-${appState.seed || 'export'}.png`);
           } catch (error) {
             console.error('Poster PNG download failed', error);
           }
