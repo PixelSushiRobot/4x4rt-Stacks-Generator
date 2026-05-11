@@ -381,6 +381,10 @@
       display: none;
     }
 
+    :root[data-layout="art"] #export-hires-btn {
+      display: none;
+    }
+
     @media (min-width: 641px) {
       :root[data-layout="poster"] .l-sidebar {
         min-height: var(--poster-total-height);
@@ -972,6 +976,12 @@
       <div class="action-bar">
         <button class="button" id="export-png-btn">
           <span>PNG</span>
+          <svg class="icon">
+            <use href="#icon-down-arrow"></use>
+          </svg>
+        </button>
+        <button class="button" id="export-hires-btn">
+          <span>HI-RES</span>
           <svg class="icon">
             <use href="#icon-down-arrow"></use>
           </svg>
@@ -2592,7 +2602,8 @@
           State.toggleSidebar();
           Render.renderSidebarState();
         });
-        document.getElementById('export-png-btn')?.addEventListener('click', () => ExportActions.downloadPNG());
+        document.getElementById('export-png-btn')?.addEventListener('click', () => ExportActions.downloadPNG(2));
+        document.getElementById('export-hires-btn')?.addEventListener('click', () => ExportActions.downloadPNG(6));
         document.getElementById('export-svg-btn')?.addEventListener('click', () => ExportActions.downloadSVG());
 
         document.getElementById('seed-display')?.addEventListener('click', event => {
@@ -2706,9 +2717,8 @@
         ctx.fillText(text, x, y);
       },
 
-      async _capturePosterPNG() {
+      async _capturePosterPNG(scale = 2) {
         const container = document.getElementById('artwork-container');
-        const scale = 2;
         const rect = container.getBoundingClientRect();
         const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
         const canvasH = CANVAS_SIZE;
@@ -2829,17 +2839,17 @@
         this.triggerDownload(URL.createObjectURL(blob), '4x4rt-stacks.svg');
       },
 
-      async downloadPNG() {
+      async downloadPNG(pixelRatio = 2) {
         if (appState.displayLayout === 'poster') {
           try {
-            await this._capturePosterPNG();
+            await this._capturePosterPNG(pixelRatio);
           } catch (error) {
             console.error('Poster PNG download failed', error);
           }
           return;
         }
 
-        const scale = 2;
+        const scale = pixelRatio;
         const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
         const canvasH = CANVAS_SIZE; // Always 1000
         try {
