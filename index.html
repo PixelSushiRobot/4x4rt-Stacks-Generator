@@ -8,9 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap"
     rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <style>
     /* ==========================================================================
        1. DESIGN TOKENS & SCOPE MODIFIERS
@@ -58,15 +57,15 @@
       --poster-total-height: calc(var(--canvas-size) + var(--poster-metadata-height) + (var(--ui-border-width) * 2));
     }
 
-    [data-sidebar-state="hidden"] {
+    :root[data-sidebar-state="hidden"] {
       --app-width-ratio: 1;
     }
 
-    [data-aspect-ratio="9:16"] {
+    :root[data-aspect-ratio="9:16"] {
       --app-width-ratio: 0.9275;
     }
 
-    [data-sidebar-state="hidden"][data-aspect-ratio="9:16"] {
+    :root[data-sidebar-state="hidden"][data-aspect-ratio="9:16"] {
       --app-width-ratio: 0.5625;
     }
 
@@ -380,7 +379,7 @@
 
 
     @media (min-width: 641px) {
-      [data-layout="poster"] .l-sidebar {
+      :root[data-layout="poster"] .l-sidebar {
         min-height: var(--poster-total-height);
         max-height: var(--poster-total-height);
       }
@@ -581,18 +580,18 @@
     }
 
     /* --- Poster Layout Overrides --- */
-    [data-layout="poster"] .artwork-container {
+    :root[data-layout="poster"] .artwork-container {
       height: auto;
       display: flex;
       flex-direction: column;
     }
 
-    [data-layout="poster"] .artwork-stage {
+    :root[data-layout="poster"] .artwork-stage {
       height: var(--canvas-size);
     }
 
-    [data-layout="poster"] .poster-title,
-    [data-layout="poster"] .poster-metadata {
+    :root[data-layout="poster"] .poster-title,
+    :root[data-layout="poster"] .poster-metadata {
       display: block !important;
     }
 
@@ -794,11 +793,7 @@
     <main id="canvas" class="l-canvas">
       <div id="artwork-container" class="artwork-container">
         <div class="artwork-stage">
-          <!-- Poster Title -->
-          <div id="poster-title" class="poster-title" style="display: none;">
-            <div class="poster-title-label">project</div>
-            <div class="poster-title-value">4x4rt Stacks</div>
-          </div>
+          <!-- Poster Title handled by Native SVG -->
 
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
             <svg class="icon icon-desktop">
@@ -833,47 +828,7 @@
           </div>
         </div>
 
-        <!-- Poster Metadata -->
-        <div id="poster-metadata" class="poster-metadata" style="display: none;">
-          <div class="poster-meta-grid">
-            <div class="poster-cell color-cell" id="poster-color-bars"></div>
-            <div class="poster-data-cols">
-              <div class="poster-row">
-                <div class="poster-cell hug">
-                  <div class="meta-label">seed</div>
-                  <div class="meta-value" id="poster-seed"></div>
-                </div>
-                <div class="poster-cell fill">
-                  <div class="meta-label">palette</div>
-                  <div class="meta-value" id="poster-palette"></div>
-                </div>
-                <div class="poster-cell hug">
-                  <div class="meta-label">profile</div>
-                  <div class="meta-value" id="poster-profile"></div>
-                </div>
-                <div class="poster-cell hug" style="border-right: none;">
-                  <div class="meta-label">form</div>
-                  <div class="meta-value" id="poster-form"></div>
-                </div>
-              </div>
-              <div class="poster-row">
-                <div class="poster-cell fill">
-                  <div class="meta-label">limit</div>
-                  <div class="meta-value" id="poster-limit"></div>
-                </div>
-                <div class="poster-cell hug">
-                  <div class="meta-label">height</div>
-                  <div class="meta-value" id="poster-height"></div>
-                </div>
-                <div class="poster-cell hug">
-                  <div class="meta-label">shapes</div>
-                  <div class="meta-value" id="poster-shapes"></div>
-                </div>
-                <div id="poster-units-container" class="poster-units-container"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Poster Metadata handled by Native SVG -->
 
 
       </div>
@@ -2291,7 +2246,7 @@
 
         const domWatermark = document.getElementById('watermark');
         if (domWatermark) {
-          domWatermark.style.display = 'block';
+          domWatermark.style.display = appState.displayLayout === 'poster' ? 'none' : 'block';
         }
 
         const seedDisplayEl = document.getElementById('seed-display');
@@ -2315,65 +2270,19 @@
         const limitDisplayEl = document.getElementById('limit-display');
         if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
 
-
-
-          // Populate Poster Metadata
-          if (appState.displayLayout === 'poster') {
-            document.getElementById('poster-seed').textContent = appState.seed;
-            document.getElementById('poster-palette').textContent = palette.name;
-            document.getElementById('poster-profile').textContent = activeProfile;
-            document.getElementById('poster-form').textContent = appState.showOutline ? 'bound' : 'unbound';
-            document.getElementById('poster-limit').textContent = appState.targetBlocks + ' blocks';
-            document.getElementById('poster-height').textContent = heightUnits + ' units';
-            document.getElementById('poster-shapes').textContent = placements.length;
-
-            // Color Usage Calculation
-            const colorUsage = {};
-            palette.colors.forEach(c => colorUsage[c] = 0);
-            placements.forEach(p => {
-              const units = SHAPE_CATALOG[p.id].units;
-              colorUsage[p.color] += units;
-            });
-            const maxUnits = Math.max(...Object.values(colorUsage), 0);
-
-            const colorBarsContainer = document.getElementById('poster-color-bars');
-            colorBarsContainer.innerHTML = '';
-            palette.colors.forEach(color => {
-              const units = colorUsage[color];
-              const bar = document.createElement('div');
-              bar.className = 'poster-color-bar';
-              bar.style.setProperty('--bar-color', color);
-
-              // Minimum height is 1/N of the container height to ensure it's at least a square
-              const minHeightRatio = 1 / palette.colors.length;
-              const usageRatio = maxUnits > 0 ? (units / maxUnits) : 0;
-              const finalRatio = Math.max(usageRatio, minHeightRatio);
-
-              if (units === 0 || maxUnits === 0) {
-                bar.dataset.unused = 'true';
-              }
-              bar.style.height = `${finalRatio * 100}%`;
-              colorBarsContainer.appendChild(bar);
-            });
-
-          // Shape Units
-          const shapeCounts = placements.reduce((acc, p) => {
-            const units = SHAPE_CATALOG[p.id].units;
-            acc[units] = (acc[units] || 0) + 1;
-            return acc;
-          }, {});
-
-          const unitsKeys = Object.keys(shapeCounts).map(Number).sort((a, b) => a - b);
-          const unitsContainer = document.getElementById('poster-units-container');
-          unitsContainer.innerHTML = '';
-          unitsKeys.forEach(units => {
-            const lbl = formatUnitLabel(units);
-            const val = shapeCounts[units];
-            const cell = document.createElement('div');
-            cell.className = 'poster-cell hug';
-            cell.innerHTML = `<div class="meta-label">${lbl}</div><div class="meta-value">${val}</div>`;
-            unitsContainer.appendChild(cell);
-          });
+        // Populate Poster Metadata
+        if (appState.displayLayout === 'poster') {
+          this.renderPosterSVG();
+        } else {
+          // Reset SVG for normal view
+          const svg = document.getElementById('artwork-svg');
+          if (svg) {
+            const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+            svg.setAttribute('viewBox', `0 0 ${canvasW} ${CANVAS_SIZE}`);
+            document.getElementById('poster-metadata-group')?.remove();
+            document.getElementById('poster-title-group')?.remove();
+            document.getElementById('poster-watermark')?.remove();
+          }
         }
 
         const shapesList = document.getElementById('shapes-list');
@@ -2393,6 +2302,169 @@
           row.innerHTML = `<span class="control-label">${formatUnitLabel(units)}</span><span class="control-value">${counts[units]}</span>`;
           shapesList.appendChild(row);
         });
+      },
+
+      renderPosterSVG() {
+        if (!appState.artwork) return;
+        const { placements, heightUnits, palette, activeProfile } = appState.artwork;
+        const svg = document.getElementById('artwork-svg');
+        if (!svg) return;
+
+        // 1. Cleanup
+        document.getElementById('poster-metadata-group')?.remove();
+        document.getElementById('poster-title-group')?.remove();
+        document.getElementById('poster-watermark')?.remove();
+
+        // 2. Data Preparation
+        const colorUsage = {};
+        palette.colors.forEach(c => colorUsage[c] = 0);
+        placements.forEach(p => {
+          const units = SHAPE_CATALOG[p.id].units;
+          colorUsage[p.color] += units;
+        });
+        const maxUnits = Math.max(...Object.values(colorUsage), 0);
+
+        const shapeCounts = placements.reduce((acc, p) => {
+          const units = SHAPE_CATALOG[p.id].units;
+          acc[units] = (acc[units] || 0) + 1;
+          return acc;
+        }, {});
+        const unitsKeys = Object.keys(shapeCounts).map(Number).sort((a, b) => a - b);
+
+        // 3. Dimensions & Layout Constants
+        const W = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const B = 4; // Border width
+        const P = 12; // Padding
+        const LABEL_SZ = 15;
+        const VALUE_SZ = 30;
+        const ROW_H = LABEL_SZ + VALUE_SZ + (P * 2.5);
+        const META_H = (ROW_H * 2) + B;
+        const COLOR_CELL_W = META_H - B;
+
+        const rows = [
+          [
+            { label: 'seed', value: appState.seed, mode: 'hug', minW: 150 },
+            { label: 'palette', value: palette.name, mode: 'fill' },
+            { label: 'profile', value: activeProfile, mode: 'hug', minW: 160 },
+            { label: 'form', value: appState.showOutline ? 'bound' : 'unbound', mode: 'hug', minW: 130 }
+          ],
+          [
+            { label: 'limit', value: `${appState.targetBlocks} blocks`, mode: 'fill' },
+            { label: 'height', value: `${heightUnits} units`, mode: 'hug', minW: 160 },
+            { label: 'shapes', value: placements.length, mode: 'hug', minW: 110 },
+            ...unitsKeys.map(u => ({ label: formatUnitLabel(u), value: shapeCounts[u], mode: 'hug', minW: 80 }))
+          ]
+        ];
+
+        // 4. Create Groups
+        const NS = 'http://www.w3.org/2000/svg';
+        
+        // Title Group
+        const titleG = document.createElementNS(NS, 'g');
+        titleG.id = 'poster-title-group';
+        titleG.setAttribute('transform', `translate(${P*2}, ${P*2})`);
+        const createText = (txt, x, y, sz, fill) => {
+          const t = document.createElementNS(NS, 'text');
+          t.textContent = txt;
+          t.setAttribute('x', x);
+          t.setAttribute('y', y);
+          t.setAttribute('font-family', '"Space Mono", monospace');
+          t.setAttribute('font-size', sz);
+          t.setAttribute('fill', fill);
+          t.setAttribute('dominant-baseline', 'hanging');
+          return t;
+        };
+        titleG.appendChild(createText('project', 0, 0, LABEL_SZ, 'var(--ui-ink)'));
+        titleG.appendChild(createText('4x4rt Stacks', 0, LABEL_SZ + 4, VALUE_SZ, 'var(--ui-ink)'));
+        svg.appendChild(titleG);
+
+        // Watermark
+        const watermark = document.createElementNS(NS, 'g');
+        watermark.id = 'poster-watermark';
+        watermark.setAttribute('transform', `translate(${W - P*2 - 80}, ${CANVAS_SIZE - P*2 - 24})`);
+        [
+          [0, 0, 24, 6], [0, 16, 24, 6], [0, 24, 12, 6], [12, 8, 18, 6],
+          [30, 8, 24, 6], [30, 24, 24, 6], [36, 0, 24, 6], [36, 16, 24, 6],
+          [60, 0, 24, 6], [60, 16, 24, 6], [60, 24, 12, 6], [72, 8, 18, 6], [78, 24, 12, 6]
+        ].forEach(([rx, ry, rw, rh]) => {
+          const r = document.createElementNS(NS, 'rect');
+          r.setAttribute('x', rx); r.setAttribute('y', ry); r.setAttribute('width', rw); r.setAttribute('height', rh);
+          r.setAttribute('fill', 'var(--ui-ink-muted)');
+          watermark.appendChild(r);
+        });
+        svg.appendChild(watermark);
+
+        // Metadata Group
+        const metaG = document.createElementNS(NS, 'g');
+        metaG.id = 'poster-metadata-group';
+        metaG.setAttribute('transform', `translate(0, ${CANVAS_SIZE})`);
+        
+        const rect = (w, h, fill) => {
+          const r = document.createElementNS(NS, 'rect');
+          r.setAttribute('width', w); r.setAttribute('height', h); r.setAttribute('fill', fill);
+          return r;
+        };
+        metaG.appendChild(rect(W, META_H, palette.bg));
+
+        // Outer Border
+        const border = document.createElementNS(NS, 'rect');
+        border.setAttribute('x', B/2); border.setAttribute('y', -CANVAS_SIZE + B/2);
+        border.setAttribute('width', W - B); border.setAttribute('height', CANVAS_SIZE + META_H - B);
+        border.setAttribute('fill', 'none'); border.setAttribute('stroke', 'var(--ui-ink-solid)');
+        border.setAttribute('stroke-width', B);
+        metaG.appendChild(border);
+
+        // Color Bars
+        const barGap = B;
+        const colorBarW = (COLOR_CELL_W - (P * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
+        palette.colors.forEach((color, i) => {
+          const units = colorUsage[color];
+          const minH = colorBarW;
+          const usageRatio = maxUnits > 0 ? (units / maxUnits) : 0;
+          const barH = Math.max(usageRatio * (COLOR_CELL_W - P * 2), minH);
+          const bar = document.createElementNS(NS, 'rect');
+          bar.setAttribute('x', P + (i * (colorBarW + barGap)));
+          bar.setAttribute('y', COLOR_CELL_W - P - barH);
+          bar.setAttribute('width', colorBarW); bar.setAttribute('height', barH);
+          bar.setAttribute('fill', color);
+          if (units === 0 || maxUnits === 0) bar.setAttribute('opacity', '0.5');
+          metaG.appendChild(bar);
+        });
+
+        // Separators & Rows
+        const line = (x1, y1, x2, y2) => {
+          const l = document.createElementNS(NS, 'line');
+          l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+          l.setAttribute('stroke', 'var(--ui-ink-solid)'); l.setAttribute('stroke-width', B);
+          return l;
+        };
+        metaG.appendChild(line(COLOR_CELL_W, 0, COLOR_CELL_W, META_H));
+        metaG.appendChild(line(0, 0, W, 0));
+
+        rows.forEach((row, rowIndex) => {
+          const rowY = rowIndex * (ROW_H + B / 2);
+          if (rowIndex > 0) metaG.appendChild(line(COLOR_CELL_W, rowY, W, rowY));
+          
+          const hugTotalW = row.reduce((sum, cell) => sum + (cell.mode === 'hug' ? cell.minW : 0), 0);
+          const fillW = (W - COLOR_CELL_W - hugTotalW) / row.filter(c => c.mode === 'fill').length;
+
+          let currentX = COLOR_CELL_W;
+          row.forEach((cell, cellIndex) => {
+            const cellW = cell.mode === 'fill' ? fillW : cell.minW;
+            const cellG = document.createElementNS(NS, 'g');
+            cellG.setAttribute('transform', `translate(${currentX}, ${rowY})`);
+            cellG.appendChild(createText(cell.label, P, P, LABEL_SZ, 'var(--ui-ink)'));
+            cellG.appendChild(createText(String(cell.value), P, P + LABEL_SZ + 4, VALUE_SZ, 'var(--ui-ink)'));
+            if (cellIndex < row.length - 1) cellG.appendChild(line(cellW, 0, cellW, ROW_H));
+            metaG.appendChild(cellG);
+            currentX += cellW;
+          });
+        });
+
+        svg.setAttribute('viewBox', `0 0 ${W} ${CANVAS_SIZE + META_H}`);
+        svg.setAttribute('width', W);
+        svg.setAttribute('height', CANVAS_SIZE + META_H);
+        svg.appendChild(metaG);
       },
 
       render() {
@@ -2654,6 +2726,16 @@
     // --- EXPORT MODULE ---
     const ExportActions = {
 
+      getSVGString() {
+        const svg = document.getElementById('artwork-svg');
+        const clone = svg.cloneNode(true);
+        const vb = svg.viewBox.baseVal;
+        clone.setAttribute('width', vb.width);
+        clone.setAttribute('height', vb.height);
+        if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        return new XMLSerializer().serializeToString(clone);
+      },
+
       triggerDownload(dataUrl, fileName) {
         const link = document.createElement('a');
         link.href = dataUrl;
@@ -2664,131 +2746,43 @@
         }
       },
 
-      _setupOffscreenClone(isPng) {
-        const isPoster = appState.displayLayout === 'poster';
-        const originalNode = isPoster ? document.getElementById('artwork-container') : document.getElementById('artwork-svg');
-        
-        const baseSize = 1000;
-        const is916 = appState.aspectRatio === '9:16';
-        const canvasW = is916 ? 562.5 : baseSize;
-        
-        let targetW, targetH;
-        if (isPoster) {
-          const borderWidth = 2; // From CSS: max(1px, 1000 * 0.002)
-          const metaHeight = 170; // From CSS: 1000 * 0.17
-          targetW = is916 ? ((baseSize - 4) * 0.5625 + 4) : baseSize;
-          targetH = baseSize + metaHeight + (borderWidth * 2);
-        } else {
-          targetW = canvasW;
-          targetH = baseSize;
-        }
+      async _loadSVGImage() {
+        const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(this.getSVGString())}`;
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = url;
+        });
+      },
 
-        // Create an offscreen wrapper that mimics the root context
-        const offscreen = document.createElement('div');
-        offscreen.style.position = 'fixed';
-        offscreen.style.top = '0';
-        offscreen.style.left = '-9999px';
-        offscreen.style.width = `${targetW}px`;
-        offscreen.style.height = `${targetH}px`;
-        offscreen.setAttribute('data-layout', appState.displayLayout);
-        offscreen.setAttribute('data-aspect-ratio', appState.aspectRatio);
-        
-        // Force the absolute scaling variables on the offscreen context so getComputedStyle reads them correctly
-        const styles = {
-          '--canvas-size': `${baseSize}px`,
-          '--scale-unit': '1px',
-          '--sz-01': '1px',
-          '--sz-02': '2px',
-          '--sz-05': '5px',
-          '--sz-07': '7px',
-          '--sz-08': '8px',
-          '--sz-10': '10px',
-          '--sz-15': '15px',
-          '--sz-16': '16px',
-          '--sz-18': '18px',
-          '--sz-20': '20px',
-          '--sz-25': '25px',
-          '--sz-30': '30px',
-          '--sz-40': '40px',
-          '--sz-54': '54px',
-          '--sz-56': '56px',
-          '--sz-64': '64px',
-          '--sz-90': '90px',
-          '--sz-120': '120px',
-          '--sz-365': '365px',
-          '--rule-width': '1px',
-          '--ui-border-width': '2px',
-          '--ui-text-size': '15px',
-          '--ui-brand-size': '30px',
-          '--poster-metadata-height': '170px',
-          '--poster-total-height': '1174px'
-        };
-        for (const [k, v] of Object.entries(styles)) {
-          offscreen.style.setProperty(k, v);
-        }
-
-        const clone = originalNode.cloneNode(true);
-        offscreen.appendChild(clone);
-        document.body.appendChild(offscreen);
-
-        return {
-          clone,
-          offscreen,
-          isPoster,
-          options: {
-            pixelRatio: isPng ? 2 : 1,
-            backgroundColor: appState.artwork.palette.bg,
-            width: targetW,
-            height: targetH,
-            style: {
-              margin: '0',
-              padding: '0',
-              transform: 'none'
-            }
-          }
-        };
+      downloadSVG() {
+        const blob = new Blob([this.getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
+        const fileName = appState.displayLayout === 'poster' ? `4x4rt-poster-${appState.seed}.svg` : `4x4rt-stacks-${appState.seed}.svg`;
+        this.triggerDownload(URL.createObjectURL(blob), fileName);
       },
 
       async downloadPNG() {
-        const { clone, offscreen, isPoster, options } = this._setupOffscreenClone(true);
-        const fileName = isPoster ? `4x4rt-poster-${appState.seed}.png` : `4x4rt-stacks-${appState.seed}.png`;
-        
+        const scale = 2;
         try {
-          await document.fonts.ready;
-          // Allow the browser to compute the layout styles of the offscreen node
-          await new Promise(r => requestAnimationFrame(r));
-          await new Promise(r => setTimeout(r, 150));
-          const dataUrl = await htmlToImage.toPng(clone, options);
-          this.triggerDownload(dataUrl, fileName);
-        } catch (error) {
-          console.error('PNG export failed', error);
-        } finally {
-          if (offscreen && offscreen.parentNode) offscreen.parentNode.removeChild(offscreen);
-        }
-      },
+          const svg = document.getElementById('artwork-svg');
+          const vb = svg.viewBox.baseVal;
+          const img = await this._loadSVGImage();
 
-      async downloadSVG() {
-        const { clone, offscreen, isPoster, options } = this._setupOffscreenClone(false);
-        const fileName = isPoster ? `4x4rt-poster-${appState.seed}.svg` : `4x4rt-stacks-${appState.seed}.svg`;
-
-        try {
-          await document.fonts.ready;
-          await new Promise(r => requestAnimationFrame(r));
-          await new Promise(r => setTimeout(r, 150));
+          const canvas = document.createElement('canvas');
+          canvas.width = vb.width * scale;
+          canvas.height = vb.height * scale;
+          const ctx = canvas.getContext('2d');
           
-          let dataUrl;
-          if (!isPoster) {
-            if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-            const svgString = new XMLSerializer().serializeToString(clone);
-            dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
-          } else {
-            dataUrl = await htmlToImage.toSvg(clone, options);
-          }
-          this.triggerDownload(dataUrl, fileName);
+          // Draw a background rect behind the SVG (since SVG background is transparent)
+          ctx.fillStyle = appState.artwork.palette.bg;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const fileName = appState.displayLayout === 'poster' ? `4x4rt-poster-${appState.seed}.png` : `4x4rt-stacks-${appState.seed}.png`;
+          this.triggerDownload(canvas.toDataURL('image/png'), fileName);
         } catch (error) {
-          console.error('SVG export failed', error);
-        } finally {
-          if (offscreen && offscreen.parentNode) offscreen.parentNode.removeChild(offscreen);
+          console.error('PNG download failed', error);
         }
       }
     };
