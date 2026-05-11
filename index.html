@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
     rel="stylesheet">
   <style>
     /* ==========================================================================
@@ -18,7 +18,7 @@
       --page-pad-x: 20px;
       --page-pad-y: 20px;
       --sidebar-width-ratio: 0.365;
-      --poster-metadata-ratio: 0.152;
+      --poster-metadata-ratio: 0.17;
       --app-width-ratio: 1.365;
       --canvas-size: min(100vh - (var(--page-pad-y) * 2), (100vw - (var(--page-pad-x) * 2)) / var(--app-width-ratio));
       /* Modular Scale System */
@@ -54,7 +54,7 @@
       --ui-text-size: var(--sz-15);
       --ui-brand-size: var(--sz-30);
       --poster-metadata-height: calc(var(--canvas-size) * var(--poster-metadata-ratio));
-      --poster-total-height: calc(var(--canvas-size) + var(--poster-metadata-height));
+      --poster-total-height: calc(var(--canvas-size) + var(--poster-metadata-height) + (var(--ui-border-width) * 2));
     }
 
     :root[data-sidebar-state="hidden"] {
@@ -377,6 +377,9 @@
       outline-offset: var(--sz-02);
     }
 
+    :root[data-layout="poster"] #export-svg-btn {
+      display: none;
+    }
 
     @media (min-width: 641px) {
       :root[data-layout="poster"] .l-sidebar {
@@ -584,11 +587,10 @@
       height: auto;
       display: flex;
       flex-direction: column;
-      border: none;
     }
 
     :root[data-layout="poster"] .artwork-stage {
-      height: var(--poster-total-height);
+      height: var(--canvas-size);
     }
 
     :root[data-layout="poster"] .poster-title,
@@ -794,7 +796,11 @@
     <main id="canvas" class="l-canvas">
       <div id="artwork-container" class="artwork-container">
         <div class="artwork-stage">
-          <!-- Poster Title handled by Native SVG -->
+          <!-- Poster Title -->
+          <div id="poster-title" class="poster-title" style="display: none;">
+            <div class="poster-title-label">project</div>
+            <div class="poster-title-value">4x4rt Stacks</div>
+          </div>
 
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
             <svg class="icon icon-desktop">
@@ -829,7 +835,47 @@
           </div>
         </div>
 
-        <!-- Poster Metadata handled by Native SVG -->
+        <!-- Poster Metadata -->
+        <div id="poster-metadata" class="poster-metadata" style="display: none;">
+          <div class="poster-meta-grid">
+            <div class="poster-cell color-cell" id="poster-color-bars"></div>
+            <div class="poster-data-cols">
+              <div class="poster-row">
+                <div class="poster-cell hug">
+                  <div class="meta-label">seed</div>
+                  <div class="meta-value" id="poster-seed"></div>
+                </div>
+                <div class="poster-cell fill">
+                  <div class="meta-label">palette</div>
+                  <div class="meta-value" id="poster-palette"></div>
+                </div>
+                <div class="poster-cell hug">
+                  <div class="meta-label">profile</div>
+                  <div class="meta-value" id="poster-profile"></div>
+                </div>
+                <div class="poster-cell hug" style="border-right: none;">
+                  <div class="meta-label">form</div>
+                  <div class="meta-value" id="poster-form"></div>
+                </div>
+              </div>
+              <div class="poster-row">
+                <div class="poster-cell fill">
+                  <div class="meta-label">limit</div>
+                  <div class="meta-value" id="poster-limit"></div>
+                </div>
+                <div class="poster-cell hug">
+                  <div class="meta-label">height</div>
+                  <div class="meta-value" id="poster-height"></div>
+                </div>
+                <div class="poster-cell hug">
+                  <div class="meta-label">shapes</div>
+                  <div class="meta-value" id="poster-shapes"></div>
+                </div>
+                <div id="poster-units-container" class="poster-units-container"></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
 
       </div>
@@ -1773,11 +1819,11 @@
         const pagePadX = parseFloat(styles.getPropertyValue('--page-pad-x')) || 20;
         const pagePadY = parseFloat(styles.getPropertyValue('--page-pad-y')) || 20;
         const border = parseFloat(styles.getPropertyValue('--ui-border-width')) || 1;
-        const metadataRatio = 0.152;
+        const metadataRatio = 0.17;
         const appWidthRatio = appState.aspectRatio === '9:16'
           ? (appState.isSidebarOpen ? 0.9275 : 0.5625)
           : (appState.isSidebarOpen ? 1.365 : 1);
-        const byHeight = (window.innerHeight - (pagePadY * 2)) / (1 + metadataRatio);
+        const byHeight = (window.innerHeight - (pagePadY * 2) - (border * 2)) / (1 + metadataRatio);
         const byWidth = (window.innerWidth - (pagePadX * 2)) / appWidthRatio;
         const nextCanvasSize = Math.max(1, Math.min(byHeight, byWidth));
         root.style.setProperty('--canvas-size', `${nextCanvasSize}px`);
@@ -2247,7 +2293,7 @@
 
         const domWatermark = document.getElementById('watermark');
         if (domWatermark) {
-          domWatermark.style.display = appState.displayLayout === 'poster' ? 'none' : 'block';
+          domWatermark.style.display = 'block';
         }
 
         const seedDisplayEl = document.getElementById('seed-display');
@@ -2271,19 +2317,65 @@
         const limitDisplayEl = document.getElementById('limit-display');
         if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
 
+
+
         // Populate Poster Metadata
         if (appState.displayLayout === 'poster') {
-          this.renderPosterSVG();
-        } else {
-          // Reset SVG for normal view
-          const svg = document.getElementById('artwork-svg');
-          if (svg) {
-            const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-            svg.setAttribute('viewBox', `0 0 ${canvasW} ${CANVAS_SIZE}`);
-            document.getElementById('poster-metadata-group')?.remove();
-            document.getElementById('poster-title-group')?.remove();
-            document.getElementById('poster-watermark')?.remove();
-          }
+          document.getElementById('poster-seed').textContent = appState.seed;
+          document.getElementById('poster-palette').textContent = palette.name;
+          document.getElementById('poster-profile').textContent = activeProfile;
+          document.getElementById('poster-form').textContent = appState.showOutline ? 'bound' : 'unbound';
+          document.getElementById('poster-limit').textContent = appState.targetBlocks + ' blocks';
+          document.getElementById('poster-height').textContent = heightUnits + ' units';
+          document.getElementById('poster-shapes').textContent = placements.length;
+
+          // Color Usage Calculation
+          const colorUsage = {};
+          palette.colors.forEach(c => colorUsage[c] = 0);
+          placements.forEach(p => {
+            const units = SHAPE_CATALOG[p.id].units;
+            colorUsage[p.color] += units;
+          });
+          const maxUnits = Math.max(...Object.values(colorUsage), 0);
+
+          const colorBarsContainer = document.getElementById('poster-color-bars');
+          colorBarsContainer.innerHTML = '';
+          palette.colors.forEach(color => {
+            const units = colorUsage[color];
+            const bar = document.createElement('div');
+            bar.className = 'poster-color-bar';
+            bar.style.setProperty('--bar-color', color);
+
+            // Minimum height is 1/N of the container height to ensure it's at least a square
+            const minHeightRatio = 1 / palette.colors.length;
+            const usageRatio = maxUnits > 0 ? (units / maxUnits) : 0;
+            const finalRatio = Math.max(usageRatio, minHeightRatio);
+
+            if (units === 0 || maxUnits === 0) {
+              bar.dataset.unused = 'true';
+            }
+            bar.style.height = `${finalRatio * 100}%`;
+            colorBarsContainer.appendChild(bar);
+          });
+
+          // Shape Units
+          const shapeCounts = placements.reduce((acc, p) => {
+            const units = SHAPE_CATALOG[p.id].units;
+            acc[units] = (acc[units] || 0) + 1;
+            return acc;
+          }, {});
+
+          const unitsKeys = Object.keys(shapeCounts).map(Number).sort((a, b) => a - b);
+          const unitsContainer = document.getElementById('poster-units-container');
+          unitsContainer.innerHTML = '';
+          unitsKeys.forEach(units => {
+            const lbl = formatUnitLabel(units);
+            const val = shapeCounts[units];
+            const cell = document.createElement('div');
+            cell.className = 'poster-cell hug';
+            cell.innerHTML = `<div class="meta-label">${lbl}</div><div class="meta-value">${val}</div>`;
+            unitsContainer.appendChild(cell);
+          });
         }
 
         const shapesList = document.getElementById('shapes-list');
@@ -2303,169 +2395,6 @@
           row.innerHTML = `<span class="control-label">${formatUnitLabel(units)}</span><span class="control-value">${counts[units]}</span>`;
           shapesList.appendChild(row);
         });
-      },
-
-      renderPosterSVG() {
-        if (!appState.artwork) return;
-        const { placements, heightUnits, palette, activeProfile } = appState.artwork;
-        const svg = document.getElementById('artwork-svg');
-        if (!svg) return;
-
-        // 1. Cleanup
-        document.getElementById('poster-metadata-group')?.remove();
-        document.getElementById('poster-title-group')?.remove();
-        document.getElementById('poster-watermark')?.remove();
-
-        // 2. Data Preparation
-        const colorUsage = {};
-        palette.colors.forEach(c => colorUsage[c] = 0);
-        placements.forEach(p => {
-          const units = SHAPE_CATALOG[p.id].units;
-          colorUsage[p.color] += units;
-        });
-        const maxUnits = Math.max(...Object.values(colorUsage), 0);
-
-        const shapeCounts = placements.reduce((acc, p) => {
-          const units = SHAPE_CATALOG[p.id].units;
-          acc[units] = (acc[units] || 0) + 1;
-          return acc;
-        }, {});
-        const unitsKeys = Object.keys(shapeCounts).map(Number).sort((a, b) => a - b);
-
-        // 3. Dimensions & Layout Constants
-        const W = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-        const B = 2; // Border width
-        const P = 12; // Padding
-        const LABEL_SZ = 15;
-        const VALUE_SZ = 30;
-        const ROW_H = LABEL_SZ + VALUE_SZ + (P * 2.5);
-        const META_H = (ROW_H * 2) + B;
-        const COLOR_CELL_W = META_H - B;
-
-        const rows = [
-          [
-            { label: 'seed'.toUpperCase(), value: String(appState.seed).toUpperCase(), mode: 'hug', minW: 150 },
-            { label: 'palette'.toUpperCase(), value: palette.name.toUpperCase(), mode: 'fill' },
-            { label: 'profile'.toUpperCase(), value: activeProfile.toUpperCase(), mode: 'hug', minW: 160 },
-            { label: 'form'.toUpperCase(), value: (appState.showOutline ? 'bound' : 'unbound').toUpperCase(), mode: 'hug', minW: 130 }
-          ],
-          [
-            { label: 'limit'.toUpperCase(), value: `${appState.targetBlocks} blocks`.toUpperCase(), mode: 'fill' },
-            { label: 'height'.toUpperCase(), value: `${heightUnits} units`.toUpperCase(), mode: 'hug', minW: 160 },
-            { label: 'shapes'.toUpperCase(), value: String(placements.length).toUpperCase(), mode: 'hug', minW: 110 },
-            ...unitsKeys.map(u => ({ label: formatUnitLabel(u).toUpperCase(), value: String(shapeCounts[u]).toUpperCase(), mode: 'hug', minW: 80 }))
-          ]
-        ];
-
-        // 4. Create Groups
-        const NS = 'http://www.w3.org/2000/svg';
-        
-        // Title Group
-        const titleG = document.createElementNS(NS, 'g');
-        titleG.id = 'poster-title-group';
-        titleG.setAttribute('transform', `translate(${P*2}, ${P*2})`);
-        const createText = (txt, x, y, sz, fill) => {
-          const t = document.createElementNS(NS, 'text');
-          t.textContent = txt;
-          t.setAttribute('x', x);
-          t.setAttribute('y', y);
-          t.setAttribute('font-family', '"Space Mono", monospace');
-          t.setAttribute('font-size', sz);
-          t.setAttribute('fill', fill);
-          t.setAttribute('dominant-baseline', 'hanging');
-          return t;
-        };
-        titleG.appendChild(createText('project'.toUpperCase(), 0, 0, LABEL_SZ, 'var(--ui-ink)'));
-        titleG.appendChild(createText('4x4rt Stacks'.toUpperCase(), 0, LABEL_SZ + 4, VALUE_SZ, 'var(--ui-ink)'));
-        svg.appendChild(titleG);
-
-        // Watermark
-        const watermark = document.createElementNS(NS, 'g');
-        watermark.id = 'poster-watermark';
-        watermark.setAttribute('transform', `translate(${W - P*2 - 80}, ${CANVAS_SIZE - P*2 - 24})`);
-        [
-          [0, 0, 24, 6], [0, 16, 24, 6], [0, 24, 12, 6], [12, 8, 18, 6],
-          [30, 8, 24, 6], [30, 24, 24, 6], [36, 0, 24, 6], [36, 16, 24, 6],
-          [60, 0, 24, 6], [60, 16, 24, 6], [60, 24, 12, 6], [72, 8, 18, 6], [78, 24, 12, 6]
-        ].forEach(([rx, ry, rw, rh]) => {
-          const r = document.createElementNS(NS, 'rect');
-          r.setAttribute('x', rx); r.setAttribute('y', ry); r.setAttribute('width', rw); r.setAttribute('height', rh);
-          r.setAttribute('fill', 'var(--ui-ink-muted)');
-          watermark.appendChild(r);
-        });
-        svg.appendChild(watermark);
-
-        // Metadata Group
-        const metaG = document.createElementNS(NS, 'g');
-        metaG.id = 'poster-metadata-group';
-        metaG.setAttribute('transform', `translate(0, ${CANVAS_SIZE})`);
-        
-        const rect = (w, h, fill) => {
-          const r = document.createElementNS(NS, 'rect');
-          r.setAttribute('width', w); r.setAttribute('height', h); r.setAttribute('fill', fill);
-          return r;
-        };
-        metaG.appendChild(rect(W, META_H, palette.bg));
-
-        // Outer Border
-        const border = document.createElementNS(NS, 'rect');
-        border.setAttribute('x', B/2); border.setAttribute('y', -CANVAS_SIZE + B/2);
-        border.setAttribute('width', W - B); border.setAttribute('height', CANVAS_SIZE + META_H - B);
-        border.setAttribute('fill', 'none'); border.setAttribute('stroke', 'var(--ui-ink-solid)');
-        border.setAttribute('stroke-width', B);
-        metaG.appendChild(border);
-
-        // Color Bars
-        const barGap = 0;
-        const colorBarW = (COLOR_CELL_W - (P * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
-        palette.colors.forEach((color, i) => {
-          const units = colorUsage[color];
-          const minH = colorBarW;
-          const usageRatio = maxUnits > 0 ? (units / maxUnits) : 0;
-          const barH = Math.max(usageRatio * (COLOR_CELL_W - P * 2), minH);
-          const bar = document.createElementNS(NS, 'rect');
-          bar.setAttribute('x', P + (i * (colorBarW + barGap)));
-          bar.setAttribute('y', COLOR_CELL_W - P - barH);
-          bar.setAttribute('width', colorBarW); bar.setAttribute('height', barH);
-          bar.setAttribute('fill', color);
-          if (units === 0 || maxUnits === 0) bar.setAttribute('opacity', '0.5');
-          metaG.appendChild(bar);
-        });
-
-        // Separators & Rows
-        const line = (x1, y1, x2, y2) => {
-          const l = document.createElementNS(NS, 'line');
-          l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
-          l.setAttribute('stroke', 'var(--ui-ink-solid)'); l.setAttribute('stroke-width', B);
-          return l;
-        };
-        metaG.appendChild(line(COLOR_CELL_W, 0, COLOR_CELL_W, META_H));
-        metaG.appendChild(line(0, 0, W, 0));
-
-        rows.forEach((row, rowIndex) => {
-          const rowY = rowIndex * (ROW_H + B / 2);
-          if (rowIndex > 0) metaG.appendChild(line(COLOR_CELL_W, rowY, W, rowY));
-          
-          const hugTotalW = row.reduce((sum, cell) => sum + (cell.mode === 'hug' ? cell.minW : 0), 0);
-          const fillW = (W - COLOR_CELL_W - hugTotalW) / row.filter(c => c.mode === 'fill').length;
-
-          let currentX = COLOR_CELL_W;
-          row.forEach((cell, cellIndex) => {
-            const cellW = cell.mode === 'fill' ? fillW : cell.minW;
-            const cellG = document.createElementNS(NS, 'g');
-            cellG.setAttribute('transform', `translate(${currentX}, ${rowY})`);
-            cellG.appendChild(createText(cell.label, P, P, LABEL_SZ, 'var(--ui-ink)'));
-            cellG.appendChild(createText(String(cell.value), P, P + LABEL_SZ + 4, VALUE_SZ, 'var(--ui-ink)'));
-            if (cellIndex < row.length - 1) cellG.appendChild(line(cellW, 0, cellW, ROW_H));
-            metaG.appendChild(cellG);
-            currentX += cellW;
-          });
-        });
-
-        svg.setAttribute('viewBox', `0 0 ${W} ${CANVAS_SIZE + META_H}`);
-        svg.setAttribute('width', W);
-        svg.setAttribute('height', CANVAS_SIZE + META_H);
-        svg.appendChild(metaG);
       },
 
       render() {
@@ -2726,13 +2655,14 @@
 
     // --- EXPORT MODULE ---
     const ExportActions = {
-
       getSVGString() {
         const svg = document.getElementById('artwork-svg');
         const clone = svg.cloneNode(true);
-        const vb = svg.viewBox.baseVal;
-        clone.setAttribute('width', vb.width);
-        clone.setAttribute('height', vb.height);
+        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE;
+        clone.setAttribute('width', canvasW);
+        clone.setAttribute('height', canvasH);
+        clone.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
         if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
         return new XMLSerializer().serializeToString(clone);
       },
@@ -2757,31 +2687,169 @@
         });
       },
 
+      drawWatermark(ctx, x, y, unit, color) {
+        ctx.fillStyle = color;
+        [
+          [0, 0, 24, 6], [0, 16, 24, 6], [0, 24, 12, 6], [12, 8, 18, 6],
+          [30, 8, 24, 6], [30, 24, 24, 6], [36, 0, 24, 6], [36, 16, 24, 6],
+          [60, 0, 24, 6], [60, 16, 24, 6], [60, 24, 12, 6], [72, 8, 18, 6], [78, 24, 12, 6]
+        ].forEach(([rx, ry, rw, rh]) => {
+          ctx.fillRect(x + (rx * unit), y + (ry * unit), rw * unit, rh * unit);
+        });
+      },
+
+      drawPosterText(ctx, text, x, y, size, color, align = 'left') {
+        ctx.fillStyle = color;
+        ctx.font = `${size}px "Space Mono", monospace`;
+        ctx.textBaseline = 'top';
+        ctx.textAlign = align;
+        ctx.fillText(text, x, y);
+      },
+
+      async _capturePosterPNG() {
+        const container = document.getElementById('artwork-container');
+        const scale = 2;
+        const rect = container.getBoundingClientRect();
+        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE;
+        const posterH = Math.max(canvasH, canvasW * (rect.height / rect.width));
+        const metadataH = Math.max(canvasW * 0.17, posterH - canvasH);
+        const metadataY = canvasH;
+        const border = Math.max(1, canvasW * 0.002);
+        const pad = canvasW * 0.02;
+        const small = canvasW * 0.015;
+        const large = canvasW * 0.03;
+        const ink = getComputedStyle(document.documentElement).getPropertyValue('--ui-ink-solid').trim() || '#1c1c1a';
+        const muted = getComputedStyle(document.documentElement).getPropertyValue('--ui-ink-muted').trim() || 'rgba(28, 28, 26, 0.5)';
+        const bg = appState.artwork.palette.bg;
+        const image = await this._loadSVGImage();
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(canvasW * scale);
+        canvas.height = Math.round((canvasH + metadataH) * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvasW, canvasH + metadataH);
+        ctx.drawImage(image, 0, 0, canvasW, canvasH);
+
+        this.drawPosterText(ctx, 'project', pad, pad, small, ink);
+        this.drawPosterText(ctx, '4x4rt Stacks', pad, pad + (small * 1.2), large, ink);
+        this.drawWatermark(ctx, canvasW - pad - (canvasW * 0.09), canvasH - pad - (canvasW * 0.03), canvasW * 0.001, muted);
+
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = border;
+        ctx.strokeRect(border / 2, border / 2, canvasW - border, canvasH + metadataH - border);
+        ctx.beginPath();
+        ctx.moveTo(0, metadataY);
+        ctx.lineTo(canvasW, metadataY);
+        ctx.stroke();
+
+        const { placements, heightUnits, palette, activeProfile } = appState.artwork;
+        const shapeCounts = placements.reduce((acc, placement) => {
+          const units = SHAPE_CATALOG[placement.id].units;
+          acc[units] = (acc[units] || 0) + 1;
+          return acc;
+        }, {});
+        const colorUsage = {};
+        palette.colors.forEach(color => colorUsage[color] = 0);
+        placements.forEach(p => {
+          const units = SHAPE_CATALOG[p.id].units;
+          colorUsage[p.color] += units;
+        });
+        const maxUnits = Math.max(...Object.values(colorUsage), 0);
+
+        const barW = canvasW * 0.156;
+        const rowH = metadataH / 2;
+        const cellDefs = [
+          [
+            { label: 'seed', value: appState.seed, width: canvasW * 0.12 },
+            { label: 'palette', value: palette.name, width: canvasW * 0.28 },
+            { label: 'profile', value: activeProfile, width: canvasW * 0.16 },
+            { label: 'form', value: appState.showOutline ? 'bound' : 'unbound', width: canvasW * 0.14 }
+          ],
+          [
+            { label: 'limit', value: `${appState.targetBlocks} blocks`, width: canvasW * 0.28 },
+            { label: 'height', value: `${heightUnits} units`, width: canvasW * 0.16 },
+            { label: 'shapes', value: placements.length, width: canvasW * 0.12 },
+            ...Object.keys(shapeCounts).map(Number).sort((a, b) => a - b).map(units => ({
+              label: formatUnitLabel(units),
+              value: shapeCounts[units],
+              width: canvasW * 0.08
+            }))
+          ]
+        ];
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, metadataY, barW, metadataH);
+        ctx.clip();
+        const barGap = border;
+        const colorBarW = (barW - (pad * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
+        palette.colors.forEach((color, index) => {
+          const units = colorUsage[color];
+          const minHeight = colorBarW;
+          const usageHeight = maxUnits > 0 ? (units / maxUnits) * (metadataH - (pad * 2)) : 0;
+          const barH = Math.max(usageHeight, minHeight);
+
+          ctx.fillStyle = color;
+          ctx.fillRect(pad + (index * (colorBarW + barGap)), metadataY + metadataH - pad - barH, colorBarW, barH);
+        });
+        ctx.restore();
+
+        let x = barW;
+        ctx.beginPath();
+        ctx.moveTo(barW, metadataY);
+        ctx.lineTo(barW, metadataY + metadataH);
+        ctx.moveTo(barW, metadataY + rowH);
+        ctx.lineTo(canvasW, metadataY + rowH);
+        ctx.stroke();
+
+        cellDefs.forEach((row, rowIndex) => {
+          x = barW;
+          const y = metadataY + (rowIndex * rowH);
+          row.forEach(cell => {
+            const width = Math.min(cell.width, canvasW - x);
+            if (width <= 0) return;
+            ctx.beginPath();
+            ctx.moveTo(x + width, y);
+            ctx.lineTo(x + width, y + rowH);
+            ctx.stroke();
+            this.drawPosterText(ctx, cell.label, x + pad, y + pad, small, ink);
+            this.drawPosterText(ctx, String(cell.value), x + pad, y + pad + (small * 1.3), large, ink);
+            x += width;
+          });
+        });
+
+        this.triggerDownload(canvas.toDataURL('image/png'), `4x4rt-poster-${appState.seed || 'export'}.png`);
+      },
+
       downloadSVG() {
+        if (appState.displayLayout === 'poster') return;
         const blob = new Blob([this.getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
-        const fileName = appState.displayLayout === 'poster' ? `4x4rt-poster-${appState.seed}.svg` : `4x4rt-stacks-${appState.seed}.svg`;
-        this.triggerDownload(URL.createObjectURL(blob), fileName);
+        this.triggerDownload(URL.createObjectURL(blob), '4x4rt-stacks.svg');
       },
 
       async downloadPNG() {
+        if (appState.displayLayout === 'poster') {
+          try {
+            await this._capturePosterPNG();
+          } catch (error) {
+            console.error('Poster PNG download failed', error);
+          }
+          return;
+        }
+
         const scale = 2;
+        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE; // Always 1000
         try {
-          const svg = document.getElementById('artwork-svg');
-          const vb = svg.viewBox.baseVal;
           const img = await this._loadSVGImage();
 
           const canvas = document.createElement('canvas');
-          canvas.width = vb.width * scale;
-          canvas.height = vb.height * scale;
-          const ctx = canvas.getContext('2d');
-          
-          // Draw a background rect behind the SVG (since SVG background is transparent)
-          ctx.fillStyle = appState.artwork.palette.bg;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const fileName = appState.displayLayout === 'poster' ? `4x4rt-poster-${appState.seed}.png` : `4x4rt-stacks-${appState.seed}.png`;
-          this.triggerDownload(canvas.toDataURL('image/png'), fileName);
+          canvas.width = canvasW * scale;
+          canvas.height = canvasH * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          this.triggerDownload(canvas.toDataURL('image/png'), '4x4rt-stacks.png');
         } catch (error) {
           console.error('PNG download failed', error);
         }
