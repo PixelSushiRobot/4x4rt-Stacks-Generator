@@ -18,7 +18,7 @@
       --page-pad-x: 20px;
       --page-pad-y: 20px;
       --sidebar-width-ratio: 0.365;
-      --poster-metadata-ratio: 0.154;
+      --poster-metadata-ratio: 0.152;
       --app-width-ratio: 1.365;
       --canvas-size: min(100vh - (var(--page-pad-y) * 2), (100vw - (var(--page-pad-x) * 2)) / var(--app-width-ratio));
       /* Modular Scale System */
@@ -584,11 +584,11 @@
       height: auto;
       display: flex;
       flex-direction: column;
+      border: none;
     }
 
     :root[data-layout="poster"] .artwork-stage {
       height: var(--poster-total-height);
-      border: none;
     }
 
     :root[data-layout="poster"] .poster-title,
@@ -1773,7 +1773,7 @@
         const pagePadX = parseFloat(styles.getPropertyValue('--page-pad-x')) || 20;
         const pagePadY = parseFloat(styles.getPropertyValue('--page-pad-y')) || 20;
         const border = parseFloat(styles.getPropertyValue('--ui-border-width')) || 1;
-        const metadataRatio = 0.154;
+        const metadataRatio = 0.152;
         const appWidthRatio = appState.aspectRatio === '9:16'
           ? (appState.isSidebarOpen ? 0.9275 : 0.5625)
           : (appState.isSidebarOpen ? 1.365 : 1);
