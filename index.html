@@ -2334,7 +2334,7 @@
 
         // 3. Dimensions & Layout Constants
         const W = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-        const B = 4; // Border width
+        const B = 2; // Border width
         const P = 12; // Padding
         const LABEL_SZ = 15;
         const VALUE_SZ = 30;
@@ -2344,16 +2344,16 @@
 
         const rows = [
           [
-            { label: 'seed', value: appState.seed, mode: 'hug', minW: 150 },
-            { label: 'palette', value: palette.name, mode: 'fill' },
-            { label: 'profile', value: activeProfile, mode: 'hug', minW: 160 },
-            { label: 'form', value: appState.showOutline ? 'bound' : 'unbound', mode: 'hug', minW: 130 }
+            { label: 'seed'.toUpperCase(), value: String(appState.seed).toUpperCase(), mode: 'hug', minW: 150 },
+            { label: 'palette'.toUpperCase(), value: palette.name.toUpperCase(), mode: 'fill' },
+            { label: 'profile'.toUpperCase(), value: activeProfile.toUpperCase(), mode: 'hug', minW: 160 },
+            { label: 'form'.toUpperCase(), value: (appState.showOutline ? 'bound' : 'unbound').toUpperCase(), mode: 'hug', minW: 130 }
           ],
           [
-            { label: 'limit', value: `${appState.targetBlocks} blocks`, mode: 'fill' },
-            { label: 'height', value: `${heightUnits} units`, mode: 'hug', minW: 160 },
-            { label: 'shapes', value: placements.length, mode: 'hug', minW: 110 },
-            ...unitsKeys.map(u => ({ label: formatUnitLabel(u), value: shapeCounts[u], mode: 'hug', minW: 80 }))
+            { label: 'limit'.toUpperCase(), value: `${appState.targetBlocks} blocks`.toUpperCase(), mode: 'fill' },
+            { label: 'height'.toUpperCase(), value: `${heightUnits} units`.toUpperCase(), mode: 'hug', minW: 160 },
+            { label: 'shapes'.toUpperCase(), value: String(placements.length).toUpperCase(), mode: 'hug', minW: 110 },
+            ...unitsKeys.map(u => ({ label: formatUnitLabel(u).toUpperCase(), value: String(shapeCounts[u]).toUpperCase(), mode: 'hug', minW: 80 }))
           ]
         ];
 
@@ -2375,8 +2375,8 @@
           t.setAttribute('dominant-baseline', 'hanging');
           return t;
         };
-        titleG.appendChild(createText('project', 0, 0, LABEL_SZ, 'var(--ui-ink)'));
-        titleG.appendChild(createText('4x4rt Stacks', 0, LABEL_SZ + 4, VALUE_SZ, 'var(--ui-ink)'));
+        titleG.appendChild(createText('project'.toUpperCase(), 0, 0, LABEL_SZ, 'var(--ui-ink)'));
+        titleG.appendChild(createText('4x4rt Stacks'.toUpperCase(), 0, LABEL_SZ + 4, VALUE_SZ, 'var(--ui-ink)'));
         svg.appendChild(titleG);
 
         // Watermark
@@ -2416,7 +2416,7 @@
         metaG.appendChild(border);
 
         // Color Bars
-        const barGap = B;
+        const barGap = 0;
         const colorBarW = (COLOR_CELL_W - (P * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
         palette.colors.forEach((color, i) => {
           const units = colorUsage[color];
