@@ -18,7 +18,7 @@
       --page-pad-x: 20px;
       --page-pad-y: 20px;
       --sidebar-width-ratio: 0.365;
-      --poster-metadata-ratio: 0.17;
+      --poster-metadata-ratio: 0.154;
       --app-width-ratio: 1.365;
       --canvas-size: min(100vh - (var(--page-pad-y) * 2), (100vw - (var(--page-pad-x) * 2)) / var(--app-width-ratio));
       /* Modular Scale System */
@@ -54,7 +54,7 @@
       --ui-text-size: var(--sz-15);
       --ui-brand-size: var(--sz-30);
       --poster-metadata-height: calc(var(--canvas-size) * var(--poster-metadata-ratio));
-      --poster-total-height: calc(var(--canvas-size) + var(--poster-metadata-height) + (var(--ui-border-width) * 2));
+      --poster-total-height: calc(var(--canvas-size) + var(--poster-metadata-height));
     }
 
     :root[data-sidebar-state="hidden"] {
@@ -587,7 +587,8 @@
     }
 
     :root[data-layout="poster"] .artwork-stage {
-      height: var(--canvas-size);
+      height: var(--poster-total-height);
+      border: none;
     }
 
     :root[data-layout="poster"] .poster-title,
@@ -1772,11 +1773,11 @@
         const pagePadX = parseFloat(styles.getPropertyValue('--page-pad-x')) || 20;
         const pagePadY = parseFloat(styles.getPropertyValue('--page-pad-y')) || 20;
         const border = parseFloat(styles.getPropertyValue('--ui-border-width')) || 1;
-        const metadataRatio = 0.17;
+        const metadataRatio = 0.154;
         const appWidthRatio = appState.aspectRatio === '9:16'
           ? (appState.isSidebarOpen ? 0.9275 : 0.5625)
           : (appState.isSidebarOpen ? 1.365 : 1);
-        const byHeight = (window.innerHeight - (pagePadY * 2) - (border * 2)) / (1 + metadataRatio);
+        const byHeight = (window.innerHeight - (pagePadY * 2)) / (1 + metadataRatio);
         const byWidth = (window.innerWidth - (pagePadX * 2)) / appWidthRatio;
         const nextCanvasSize = Math.max(1, Math.min(byHeight, byWidth));
         root.style.setProperty('--canvas-size', `${nextCanvasSize}px`);
