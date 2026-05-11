@@ -2701,7 +2701,7 @@
       downloadSVG() {
         if (appState.displayLayout === 'poster') return;
         const blob = new Blob([this.getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
-        this.triggerDownload(URL.createObjectURL(blob), '4x4rt-stacks.svg');
+        this.triggerDownload(URL.createObjectURL(blob), `4x4rt-stacks-${appState.seed || 'export'}.svg`);
       },
 
       async downloadPNG(pixelRatio = 2) {
@@ -2725,7 +2725,7 @@
                 transformOrigin: 'top left'
               }
             });
-            this.triggerDownload(dataUrl, `4x4rt-poster-${appState.seed || 'export'}.png`);
+            this.triggerDownload(dataUrl, `4x4rt-stacks-poster-${appState.seed || 'export'}.png`);
           } catch (error) {
             console.error('Poster PNG download failed', error);
           }
@@ -2742,7 +2742,7 @@
           canvas.width = canvasW * scale;
           canvas.height = canvasH * scale;
           canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          this.triggerDownload(canvas.toDataURL('image/png'), '4x4rt-stacks.png');
+          this.triggerDownload(canvas.toDataURL('image/png'), `4x4rt-stacks-${appState.seed || 'export'}.png`);
         } catch (error) {
           console.error('PNG download failed', error);
         }
