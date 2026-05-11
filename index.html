@@ -2708,8 +2708,17 @@
         if (appState.displayLayout === 'poster') {
           try {
             const node = document.getElementById('artwork-container');
+            const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+            const targetWidth = Math.round(canvasW * pixelRatio);
+            const rect = node.getBoundingClientRect();
+            const targetHeight = Math.round((rect.height / rect.width) * targetWidth);
+
             const dataUrl = await htmlToImage.toPng(node, {
-              pixelRatio: pixelRatio,
+              width: rect.width,
+              height: rect.height,
+              canvasWidth: targetWidth,
+              canvasHeight: targetHeight,
+              pixelRatio: 1,
               backgroundColor: appState.artwork.palette.bg,
               style: {
                 transform: 'scale(1)',
