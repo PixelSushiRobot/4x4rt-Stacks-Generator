@@ -10,6 +10,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
     rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.min.js"></script>
   <style>
     /* ==========================================================================
        1. DESIGN TOKENS & SCOPE MODIFIERS
@@ -57,15 +58,15 @@
       --poster-total-height: calc(var(--canvas-size) + var(--poster-metadata-height) + (var(--ui-border-width) * 2));
     }
 
-    :root[data-sidebar-state="hidden"] {
+    [data-sidebar-state="hidden"] {
       --app-width-ratio: 1;
     }
 
-    :root[data-aspect-ratio="9:16"] {
+    [data-aspect-ratio="9:16"] {
       --app-width-ratio: 0.9275;
     }
 
-    :root[data-sidebar-state="hidden"][data-aspect-ratio="9:16"] {
+    [data-sidebar-state="hidden"][data-aspect-ratio="9:16"] {
       --app-width-ratio: 0.5625;
     }
 
@@ -377,12 +378,9 @@
       outline-offset: var(--sz-02);
     }
 
-    :root[data-layout="poster"] #export-svg-btn {
-      display: none;
-    }
 
     @media (min-width: 641px) {
-      :root[data-layout="poster"] .l-sidebar {
+      [data-layout="poster"] .l-sidebar {
         min-height: var(--poster-total-height);
         max-height: var(--poster-total-height);
       }
@@ -583,18 +581,18 @@
     }
 
     /* --- Poster Layout Overrides --- */
-    :root[data-layout="poster"] .artwork-container {
+    [data-layout="poster"] .artwork-container {
       height: auto;
       display: flex;
       flex-direction: column;
     }
 
-    :root[data-layout="poster"] .artwork-stage {
+    [data-layout="poster"] .artwork-stage {
       height: var(--canvas-size);
     }
 
-    :root[data-layout="poster"] .poster-title,
-    :root[data-layout="poster"] .poster-metadata {
+    [data-layout="poster"] .poster-title,
+    [data-layout="poster"] .poster-metadata {
       display: block !important;
     }
 
@@ -2655,17 +2653,6 @@
 
     // --- EXPORT MODULE ---
     const ExportActions = {
-      getSVGString() {
-        const svg = document.getElementById('artwork-svg');
-        const clone = svg.cloneNode(true);
-        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-        const canvasH = CANVAS_SIZE;
-        clone.setAttribute('width', canvasW);
-        clone.setAttribute('height', canvasH);
-        clone.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
-        if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        return new XMLSerializer().serializeToString(clone);
-      },
 
       triggerDownload(dataUrl, fileName) {
         const link = document.createElement('a');
@@ -2677,181 +2664,131 @@
         }
       },
 
-      async _loadSVGImage() {
-        const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(this.getSVGString())}`;
-        return new Promise((resolve, reject) => {
-          const image = new Image();
-          image.onload = () => resolve(image);
-          image.onerror = reject;
-          image.src = url;
-        });
-      },
+      _setupOffscreenClone(isPng) {
+        const isPoster = appState.displayLayout === 'poster';
+        const originalNode = isPoster ? document.getElementById('artwork-container') : document.getElementById('artwork-svg');
+        
+        const baseSize = 1000;
+        const is916 = appState.aspectRatio === '9:16';
+        const canvasW = is916 ? 562.5 : baseSize;
+        
+        let targetW, targetH;
+        if (isPoster) {
+          const borderWidth = 2; // From CSS: max(1px, 1000 * 0.002)
+          const metaHeight = 170; // From CSS: 1000 * 0.17
+          targetW = is916 ? ((baseSize - 4) * 0.5625 + 4) : baseSize;
+          targetH = baseSize + metaHeight + (borderWidth * 2);
+        } else {
+          targetW = canvasW;
+          targetH = baseSize;
+        }
 
-      drawWatermark(ctx, x, y, unit, color) {
-        ctx.fillStyle = color;
-        [
-          [0, 0, 24, 6], [0, 16, 24, 6], [0, 24, 12, 6], [12, 8, 18, 6],
-          [30, 8, 24, 6], [30, 24, 24, 6], [36, 0, 24, 6], [36, 16, 24, 6],
-          [60, 0, 24, 6], [60, 16, 24, 6], [60, 24, 12, 6], [72, 8, 18, 6], [78, 24, 12, 6]
-        ].forEach(([rx, ry, rw, rh]) => {
-          ctx.fillRect(x + (rx * unit), y + (ry * unit), rw * unit, rh * unit);
-        });
-      },
+        // Create an offscreen wrapper that mimics the root context
+        const offscreen = document.createElement('div');
+        offscreen.style.position = 'fixed';
+        offscreen.style.top = '0';
+        offscreen.style.left = '-9999px';
+        offscreen.style.width = `${targetW}px`;
+        offscreen.style.height = `${targetH}px`;
+        offscreen.setAttribute('data-layout', appState.displayLayout);
+        offscreen.setAttribute('data-aspect-ratio', appState.aspectRatio);
+        
+        // Force the absolute scaling variables on the offscreen context so getComputedStyle reads them correctly
+        const styles = {
+          '--canvas-size': `${baseSize}px`,
+          '--scale-unit': '1px',
+          '--sz-01': '1px',
+          '--sz-02': '2px',
+          '--sz-05': '5px',
+          '--sz-07': '7px',
+          '--sz-08': '8px',
+          '--sz-10': '10px',
+          '--sz-15': '15px',
+          '--sz-16': '16px',
+          '--sz-18': '18px',
+          '--sz-20': '20px',
+          '--sz-25': '25px',
+          '--sz-30': '30px',
+          '--sz-40': '40px',
+          '--sz-54': '54px',
+          '--sz-56': '56px',
+          '--sz-64': '64px',
+          '--sz-90': '90px',
+          '--sz-120': '120px',
+          '--sz-365': '365px',
+          '--rule-width': '1px',
+          '--ui-border-width': '2px',
+          '--ui-text-size': '15px',
+          '--ui-brand-size': '30px',
+          '--poster-metadata-height': '170px',
+          '--poster-total-height': '1174px'
+        };
+        for (const [k, v] of Object.entries(styles)) {
+          offscreen.style.setProperty(k, v);
+        }
 
-      drawPosterText(ctx, text, x, y, size, color, align = 'left') {
-        ctx.fillStyle = color;
-        ctx.font = `${size}px "Space Mono", monospace`;
-        ctx.textBaseline = 'top';
-        ctx.textAlign = align;
-        ctx.fillText(text, x, y);
-      },
+        const clone = originalNode.cloneNode(true);
+        offscreen.appendChild(clone);
+        document.body.appendChild(offscreen);
 
-      async _capturePosterPNG() {
-        const container = document.getElementById('artwork-container');
-        const scale = 2;
-        const rect = container.getBoundingClientRect();
-        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-        const canvasH = CANVAS_SIZE;
-        const posterH = Math.max(canvasH, canvasW * (rect.height / rect.width));
-        const metadataH = Math.max(canvasW * 0.17, posterH - canvasH);
-        const metadataY = canvasH;
-        const border = Math.max(1, canvasW * 0.002);
-        const pad = canvasW * 0.02;
-        const small = canvasW * 0.015;
-        const large = canvasW * 0.03;
-        const ink = getComputedStyle(document.documentElement).getPropertyValue('--ui-ink-solid').trim() || '#1c1c1a';
-        const muted = getComputedStyle(document.documentElement).getPropertyValue('--ui-ink-muted').trim() || 'rgba(28, 28, 26, 0.5)';
-        const bg = appState.artwork.palette.bg;
-        const image = await this._loadSVGImage();
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(canvasW * scale);
-        canvas.height = Math.round((canvasH + metadataH) * scale);
-        const ctx = canvas.getContext('2d');
-        ctx.scale(scale, scale);
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, canvasW, canvasH + metadataH);
-        ctx.drawImage(image, 0, 0, canvasW, canvasH);
-
-        this.drawPosterText(ctx, 'project', pad, pad, small, ink);
-        this.drawPosterText(ctx, '4x4rt Stacks', pad, pad + (small * 1.2), large, ink);
-        this.drawWatermark(ctx, canvasW - pad - (canvasW * 0.09), canvasH - pad - (canvasW * 0.03), canvasW * 0.001, muted);
-
-        ctx.strokeStyle = ink;
-        ctx.lineWidth = border;
-        ctx.strokeRect(border / 2, border / 2, canvasW - border, canvasH + metadataH - border);
-        ctx.beginPath();
-        ctx.moveTo(0, metadataY);
-        ctx.lineTo(canvasW, metadataY);
-        ctx.stroke();
-
-        const { placements, heightUnits, palette, activeProfile } = appState.artwork;
-        const shapeCounts = placements.reduce((acc, placement) => {
-          const units = SHAPE_CATALOG[placement.id].units;
-          acc[units] = (acc[units] || 0) + 1;
-          return acc;
-        }, {});
-        const colorUsage = {};
-        palette.colors.forEach(color => colorUsage[color] = 0);
-        placements.forEach(p => {
-          const units = SHAPE_CATALOG[p.id].units;
-          colorUsage[p.color] += units;
-        });
-        const maxUnits = Math.max(...Object.values(colorUsage), 0);
-
-        const barW = canvasW * 0.156;
-        const rowH = metadataH / 2;
-        const cellDefs = [
-          [
-            { label: 'seed', value: appState.seed, width: canvasW * 0.12 },
-            { label: 'palette', value: palette.name, width: canvasW * 0.28 },
-            { label: 'profile', value: activeProfile, width: canvasW * 0.16 },
-            { label: 'form', value: appState.showOutline ? 'bound' : 'unbound', width: canvasW * 0.14 }
-          ],
-          [
-            { label: 'limit', value: `${appState.targetBlocks} blocks`, width: canvasW * 0.28 },
-            { label: 'height', value: `${heightUnits} units`, width: canvasW * 0.16 },
-            { label: 'shapes', value: placements.length, width: canvasW * 0.12 },
-            ...Object.keys(shapeCounts).map(Number).sort((a, b) => a - b).map(units => ({
-              label: formatUnitLabel(units),
-              value: shapeCounts[units],
-              width: canvasW * 0.08
-            }))
-          ]
-        ];
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, metadataY, barW, metadataH);
-        ctx.clip();
-        const barGap = border;
-        const colorBarW = (barW - (pad * 2) - (barGap * (palette.colors.length - 1))) / palette.colors.length;
-        palette.colors.forEach((color, index) => {
-          const units = colorUsage[color];
-          const minHeight = colorBarW;
-          const usageHeight = maxUnits > 0 ? (units / maxUnits) * (metadataH - (pad * 2)) : 0;
-          const barH = Math.max(usageHeight, minHeight);
-
-          ctx.fillStyle = color;
-          ctx.fillRect(pad + (index * (colorBarW + barGap)), metadataY + metadataH - pad - barH, colorBarW, barH);
-        });
-        ctx.restore();
-
-        let x = barW;
-        ctx.beginPath();
-        ctx.moveTo(barW, metadataY);
-        ctx.lineTo(barW, metadataY + metadataH);
-        ctx.moveTo(barW, metadataY + rowH);
-        ctx.lineTo(canvasW, metadataY + rowH);
-        ctx.stroke();
-
-        cellDefs.forEach((row, rowIndex) => {
-          x = barW;
-          const y = metadataY + (rowIndex * rowH);
-          row.forEach(cell => {
-            const width = Math.min(cell.width, canvasW - x);
-            if (width <= 0) return;
-            ctx.beginPath();
-            ctx.moveTo(x + width, y);
-            ctx.lineTo(x + width, y + rowH);
-            ctx.stroke();
-            this.drawPosterText(ctx, cell.label, x + pad, y + pad, small, ink);
-            this.drawPosterText(ctx, String(cell.value), x + pad, y + pad + (small * 1.3), large, ink);
-            x += width;
-          });
-        });
-
-        this.triggerDownload(canvas.toDataURL('image/png'), `4x4rt-poster-${appState.seed || 'export'}.png`);
-      },
-
-      downloadSVG() {
-        if (appState.displayLayout === 'poster') return;
-        const blob = new Blob([this.getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
-        this.triggerDownload(URL.createObjectURL(blob), '4x4rt-stacks.svg');
+        return {
+          clone,
+          offscreen,
+          isPoster,
+          options: {
+            pixelRatio: isPng ? 2 : 1,
+            backgroundColor: appState.artwork.palette.bg,
+            width: targetW,
+            height: targetH,
+            style: {
+              margin: '0',
+              padding: '0',
+              transform: 'none'
+            }
+          }
+        };
       },
 
       async downloadPNG() {
-        if (appState.displayLayout === 'poster') {
-          try {
-            await this._capturePosterPNG();
-          } catch (error) {
-            console.error('Poster PNG download failed', error);
-          }
-          return;
-        }
-
-        const scale = 2;
-        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-        const canvasH = CANVAS_SIZE; // Always 1000
+        const { clone, offscreen, isPoster, options } = this._setupOffscreenClone(true);
+        const fileName = isPoster ? `4x4rt-poster-${appState.seed}.png` : `4x4rt-stacks-${appState.seed}.png`;
+        
         try {
-          const img = await this._loadSVGImage();
-
-          const canvas = document.createElement('canvas');
-          canvas.width = canvasW * scale;
-          canvas.height = canvasH * scale;
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          this.triggerDownload(canvas.toDataURL('image/png'), '4x4rt-stacks.png');
+          await document.fonts.ready;
+          // Allow the browser to compute the layout styles of the offscreen node
+          await new Promise(r => requestAnimationFrame(r));
+          await new Promise(r => setTimeout(r, 150));
+          const dataUrl = await htmlToImage.toPng(clone, options);
+          this.triggerDownload(dataUrl, fileName);
         } catch (error) {
-          console.error('PNG download failed', error);
+          console.error('PNG export failed', error);
+        } finally {
+          if (offscreen && offscreen.parentNode) offscreen.parentNode.removeChild(offscreen);
+        }
+      },
+
+      async downloadSVG() {
+        const { clone, offscreen, isPoster, options } = this._setupOffscreenClone(false);
+        const fileName = isPoster ? `4x4rt-poster-${appState.seed}.svg` : `4x4rt-stacks-${appState.seed}.svg`;
+
+        try {
+          await document.fonts.ready;
+          await new Promise(r => requestAnimationFrame(r));
+          await new Promise(r => setTimeout(r, 150));
+          
+          let dataUrl;
+          if (!isPoster) {
+            if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            const svgString = new XMLSerializer().serializeToString(clone);
+            dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+          } else {
+            dataUrl = await htmlToImage.toSvg(clone, options);
+          }
+          this.triggerDownload(dataUrl, fileName);
+        } catch (error) {
+          console.error('SVG export failed', error);
+        } finally {
+          if (offscreen && offscreen.parentNode) offscreen.parentNode.removeChild(offscreen);
         }
       }
     };
