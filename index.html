@@ -16,10 +16,12 @@
     :root {
       --page-pad-x: 20px;
       --page-pad-y: 20px;
-      --sidebar-width-ratio: 0.365;
+      --sidebar-width: 365px;
+      --active-sidebar-width: var(--sidebar-width);
+      --content-width: calc(100vw - var(--active-sidebar-width));
       --poster-metadata-ratio: 0.17;
-      --app-width-ratio: 1.365;
-      --canvas-size: min(100vh - (var(--page-pad-y) * 2), (100vw - (var(--page-pad-x) * 2)) / var(--app-width-ratio));
+      --canvas-size: min(calc(100vh - (var(--page-pad-y) * 2)), calc(var(--content-width) - (var(--page-pad-x) * 2)));
+      --artwork-width: var(--canvas-size);
       /* Modular Scale System */
       --scale-unit: calc(var(--canvas-size) * 0.001);
       --sz-01: calc(var(--scale-unit) * 1);
@@ -57,15 +59,11 @@
     }
 
     :root[data-sidebar-state="hidden"] {
-      --app-width-ratio: 1;
+      --active-sidebar-width: 0px;
     }
 
     :root[data-aspect-ratio="9:16"] {
-      --app-width-ratio: 0.9275;
-    }
-
-    :root[data-sidebar-state="hidden"][data-aspect-ratio="9:16"] {
-      --app-width-ratio: 0.5625;
+      --artwork-width: calc((var(--canvas-size) - var(--ui-border-width) * 2) * 0.5625 + var(--ui-border-width) * 2);
     }
 
     /* ==========================================================================
@@ -97,35 +95,29 @@
       color: var(--ui-ink);
       font-family: 'Space Mono', monospace;
       line-height: 1.45;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: var(--page-pad-y) var(--page-pad-x);
+      padding: 0;
       min-height: 100vh;
+      overflow: hidden;
     }
 
     /* ==========================================================================
        3. CORE LAYOUT
        ========================================================================== */
     .l-app {
-      display: flex;
-      gap: 0;
-      align-items: flex-start;
+      position: relative;
       width: 100%;
-      max-width: 100%;
-      justify-content: center;
+      min-height: 100vh;
     }
 
     .l-canvas {
+      position: fixed;
+      inset: 0 var(--active-sidebar-width) 0 0;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: var(--sz-20);
-      width: var(--canvas-size);
-    }
-
-    .l-canvas[data-aspect-ratio="9:16"] {
-      width: calc((var(--canvas-size) - var(--ui-border-width) * 2) * 0.5625 + var(--ui-border-width) * 2);
+      justify-content: center;
+      width: var(--content-width);
+      height: 100vh;
+      padding: var(--page-pad-y) var(--page-pad-x);
     }
 
     .l-canvas:hover .sidebar-toggle {
@@ -133,15 +125,18 @@
     }
 
     .l-sidebar {
-      position: relative;
-      flex: none;
-      width: var(--sz-365);
-      min-height: var(--canvas-size);
-      max-height: var(--canvas-size);
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      min-height: 100vh;
+      max-height: 100vh;
       padding: 0;
-      margin-left: calc(var(--ui-border-width) * -1);
+      margin-left: 0;
       background: var(--ui-bg);
-      border: var(--ui-border-width) solid var(--ui-ink-solid);
+      border-left: var(--rule-width) solid var(--ui-rule);
       text-transform: uppercase;
       display: flex;
       flex-direction: column;
@@ -168,7 +163,7 @@
        ========================================================================== */
     .artwork-container {
       position: relative;
-      width: 100%;
+      width: var(--artwork-width);
       height: var(--canvas-size);
       background: var(--ui-bg);
       border: var(--ui-border-width) solid var(--ui-ink-solid);
@@ -305,6 +300,98 @@
       display: block;
     }
 
+    .option-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sz-08);
+    }
+
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sz-08);
+      padding-bottom: var(--sz-16);
+    }
+
+    .option-group:last-child {
+      padding-bottom: 0;
+    }
+
+    .option-group-title {
+      color: var(--ui-ink);
+      font-size: var(--ui-text-size);
+    }
+
+    .option-row,
+    .option-action {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: var(--sz-10);
+      min-height: var(--sz-30);
+      color: var(--ui-ink-muted);
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .option-row:hover,
+    .option-action:hover {
+      color: var(--ui-ink);
+    }
+
+    .option-row input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .option-row:has(input:checked) {
+      color: var(--ui-ink);
+    }
+
+    .option-row:focus-within,
+    .option-action:focus-visible {
+      outline: var(--sz-02) solid var(--ui-ink-muted);
+      outline-offset: var(--sz-02);
+    }
+
+    .option-marker {
+      width: var(--sz-16);
+      height: var(--sz-16);
+      border: var(--rule-width) solid currentColor;
+      display: block;
+    }
+
+    .option-row input:checked~.option-marker {
+      background: currentColor;
+    }
+
+    .palette-swatch {
+      display: grid;
+      grid-template-columns: repeat(7, var(--sz-08));
+      gap: var(--sz-02);
+    }
+
+    .palette-swatch span {
+      width: var(--sz-08);
+      height: var(--sz-16);
+      background: var(--swatch-color);
+      border: var(--rule-width) solid rgba(28, 28, 26, 0.2);
+    }
+
+    .height-panel-tools {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sz-10);
+      margin-bottom: var(--sz-16);
+    }
+
+    .height-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sz-08) 0;
+    }
+
     /* ==========================================================================
        6. SPECIFIC CONTROLS
        ========================================================================== */
@@ -393,8 +480,8 @@
 
     @media (min-width: 641px) {
       :root[data-layout="poster"] .l-sidebar {
-        min-height: var(--poster-total-height);
-        max-height: var(--poster-total-height);
+        min-height: 100vh;
+        max-height: 100vh;
       }
     }
 
@@ -475,6 +562,9 @@
       padding: 0 var(--sz-25) 0 var(--sz-15);
       font-size: var(--sz-18);
       cursor: pointer;
+      background: transparent;
+      border: none;
+      color: inherit;
     }
 
     .toggle-cell::before {
@@ -556,7 +646,14 @@
       :root {
         --page-pad-x: 20px;
         --page-pad-y: 20px;
+        --active-sidebar-width: 0px;
+        --content-width: 100vw;
         --canvas-size: calc(100vw - (var(--page-pad-x) * 2));
+      }
+
+      body {
+        padding: var(--page-pad-y) var(--page-pad-x);
+        overflow: auto;
       }
 
       .icon-desktop {
@@ -568,16 +665,33 @@
       }
 
       .l-app {
+        display: flex;
         flex-direction: column;
         gap: 0;
+        min-height: auto;
+        width: var(--artwork-width);
+        margin: 0 auto;
+      }
+
+      .l-canvas {
+        position: relative;
+        inset: auto;
+        width: var(--artwork-width);
+        height: auto;
+        padding: 0;
       }
 
       .l-sidebar {
+        position: relative;
+        top: auto;
+        right: auto;
+        bottom: auto;
         width: 100%;
         min-width: 0;
         max-width: none;
         min-height: auto;
         max-height: none;
+        height: auto;
         margin-top: calc(var(--ui-border-width) * -1);
         margin-left: 0;
         border: var(--ui-border-width) solid var(--ui-ink-solid);
@@ -934,7 +1048,8 @@
               <use href="#icon-config"></use>
             </svg>
           </button>
-          <div id="palette-options-panel" class="options-panel" data-panel="palette">Palette options panel placeholder.
+          <div id="palette-options-panel" class="options-panel" data-panel="palette">
+            <div id="palette-filter-list" class="option-list"></div>
           </div>
           <button class="control-row" data-interactive="true" type="button" data-options-panel="profile">
             <span class="control-label">Profile</span>
@@ -943,7 +1058,8 @@
               <use href="#icon-config"></use>
             </svg>
           </button>
-          <div id="profile-options-panel" class="options-panel" data-panel="profile">Profile options panel placeholder.
+          <div id="profile-options-panel" class="options-panel" data-panel="profile">
+            <div id="profile-filter-list" class="option-list"></div>
           </div>
 
           <button class="control-row" data-interactive="true" type="button" data-options-panel="form">
@@ -953,7 +1069,15 @@
               <use href="#icon-config"></use>
             </svg>
           </button>
-          <div id="form-options-panel" class="options-panel" data-panel="form">Form options panel placeholder.</div>
+          <div id="form-options-panel" class="options-panel" data-panel="form">
+            <div class="option-list">
+              <label class="option-row">
+                <span>Bound</span>
+                <input id="toggle-outline" type="checkbox">
+                <span class="option-marker" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
           <div id="limit-row" class="control-row">
             <span class="control-label">Limit</span>
             <span class="control-value"><span id="limit-display">—</span> <span
@@ -970,7 +1094,19 @@
               <use href="#icon-config"></use>
             </svg>
           </button>
-          <div id="height-options-panel" class="options-panel" data-panel="height">Height options panel placeholder.
+          <div id="height-options-panel" class="options-panel" data-panel="height">
+            <div class="height-panel-tools">
+              <label class="option-row">
+                <span>Range</span>
+                <input id="toggle-range-mode" type="checkbox">
+                <span class="option-marker" aria-hidden="true"></span>
+              </label>
+              <button id="clear-height-filter" class="option-action" type="button">
+                <span>Clear</span>
+                <span class="option-marker" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div id="height-filter-container" class="height-grid"></div>
           </div>
           <div class="control-row u-hide-icon" id="shapes-heading">
             <span class="control-label">Shapes</span>
@@ -1826,21 +1962,19 @@
 
       syncCanvasScale() {
         const root = document.documentElement;
-        if (appState.displayLayout !== 'poster') {
-          root.style.removeProperty('--canvas-size');
-          return;
-        }
-
         const styles = getComputedStyle(root);
         const pagePadX = parseFloat(styles.getPropertyValue('--page-pad-x')) || 20;
         const pagePadY = parseFloat(styles.getPropertyValue('--page-pad-y')) || 20;
-        const border = parseFloat(styles.getPropertyValue('--ui-border-width')) || 1;
+        const sidebarWidth = parseFloat(styles.getPropertyValue('--sidebar-width')) || 365;
         const metadataRatio = 0.17;
-        const appWidthRatio = appState.aspectRatio === '9:16'
-          ? (appState.isSidebarOpen ? 0.9275 : 0.5625)
-          : (appState.isSidebarOpen ? 1.365 : 1);
-        const byHeight = (window.innerHeight - (pagePadY * 2) - (border * 2)) / (1 + metadataRatio);
-        const byWidth = (window.innerWidth - (pagePadX * 2)) / appWidthRatio;
+        const isMobile = window.innerWidth <= 640;
+        const activeSidebarWidth = (!isMobile && appState.isSidebarOpen) ? sidebarWidth : 0;
+        const availableWidth = Math.max(1, window.innerWidth - activeSidebarWidth - (pagePadX * 2));
+        const availableHeight = Math.max(1, window.innerHeight - (pagePadY * 2));
+        const artworkRatio = appState.aspectRatio === '9:16' ? 0.5625 : 1;
+        const layoutHeightRatio = appState.displayLayout === 'poster' ? (1 + metadataRatio) : 1;
+        const byHeight = availableHeight / layoutHeightRatio;
+        const byWidth = availableWidth / artworkRatio;
         const nextCanvasSize = Math.max(1, Math.min(byHeight, byWidth));
         root.style.setProperty('--canvas-size', `${nextCanvasSize}px`);
       },
@@ -1912,6 +2046,8 @@
         appState.selectedHeights.clear();
         appState.rangeStart = null;
         appState.rangeEnd = null;
+        appState.selectedPalettes = [];
+        appState.selectedProfiles = [];
         appState.showOutline = true;
         appState.showMetadata = true;
         appState.showExport = true;
@@ -1923,10 +2059,10 @@
 
       syncFromDOM() {
         const paletteInputs = document.querySelectorAll('#palette-filter-list input:checked');
-        if (paletteInputs.length) appState.selectedPalettes = [...paletteInputs].map(input => input.value);
+        appState.selectedPalettes = [...paletteInputs].map(input => input.value);
 
         const profileInputs = document.querySelectorAll('#profile-filter-list input:checked');
-        if (profileInputs.length) appState.selectedProfiles = [...profileInputs].map(input => input.value);
+        appState.selectedProfiles = [...profileInputs].map(input => input.value);
 
         const outlineEl = document.getElementById('toggle-outline');
         if (outlineEl) appState.showOutline = outlineEl.checked;
@@ -1939,6 +2075,9 @@
       },
 
       applyToDOM() {
+        Render.renderPaletteFilter();
+        Render.renderProfileFilter();
+
         document.querySelectorAll('#palette-filter-list input[type="checkbox"]').forEach(checkbox => {
           checkbox.checked = appState.selectedPalettes.includes(checkbox.value);
         });
@@ -2421,6 +2560,84 @@
         this.renderSidebarState();
       },
 
+      renderPaletteFilter() {
+        const list = document.getElementById('palette-filter-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const categories = [...new Set(PALETTES.map(palette => palette.category))];
+        categories.forEach(category => {
+          const group = document.createElement('div');
+          group.className = 'option-group';
+
+          const title = document.createElement('div');
+          title.className = 'option-group-title';
+          title.textContent = category;
+          group.appendChild(title);
+
+          PALETTES.filter(palette => palette.category === category).forEach(palette => {
+            const row = document.createElement('label');
+            row.className = 'option-row';
+
+            const name = document.createElement('span');
+            name.textContent = palette.name;
+
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.value = palette.name;
+            input.checked = appState.selectedPalettes.includes(palette.name);
+
+            const marker = document.createElement('span');
+            marker.className = 'option-marker';
+            marker.setAttribute('aria-hidden', 'true');
+
+            const swatch = document.createElement('span');
+            swatch.className = 'palette-swatch';
+            [palette.bg, ...palette.colors].forEach(color => {
+              const chip = document.createElement('span');
+              chip.style.setProperty('--swatch-color', color);
+              swatch.appendChild(chip);
+            });
+
+            row.append(name, input, marker, swatch);
+            group.appendChild(row);
+          });
+
+          list.appendChild(group);
+        });
+      },
+
+      renderProfileFilter() {
+        const list = document.getElementById('profile-filter-list');
+        if (!list) return;
+        const profiles = [
+          ['isolate', 'Isolate'],
+          ['drift', 'Drift'],
+          ['spectrum', 'Spectrum']
+        ];
+
+        list.innerHTML = '';
+        profiles.forEach(([id, label]) => {
+          const row = document.createElement('label');
+          row.className = 'option-row';
+
+          const name = document.createElement('span');
+          name.textContent = label;
+
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.value = id;
+          input.checked = appState.selectedProfiles.includes(id);
+
+          const marker = document.createElement('span');
+          marker.className = 'option-marker';
+          marker.setAttribute('aria-hidden', 'true');
+
+          row.append(name, input, marker);
+          list.appendChild(row);
+        });
+      },
+
       renderLimitSlider() {
         const container = document.getElementById('limit-slider-container');
         if (!container) return;
@@ -2526,8 +2743,9 @@
         hList.innerHTML = '';
 
         POSSIBLE_HEIGHTS.slice().sort((a, b) => a - b).forEach(h => {
-          const cell = document.createElement('div');
+          const cell = document.createElement('button');
           cell.className = 'toggle-cell';
+          cell.type = 'button';
 
           // Styling purely references the single source of truth: selectedHeights
           if (appState.heightMode === 'multi') {
@@ -2539,6 +2757,10 @@
               const max = appState.rangeEnd !== null ? Math.max(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
               if (h === min) cell.setAttribute('data-range-edge', 'start');
               if (h === max) cell.setAttribute('data-range-edge', 'end');
+              if (h === min && h === max) {
+                cell.setAttribute('data-range-edge', 'start');
+                cell.classList.add('range-end');
+              }
             }
           }
 
@@ -2593,6 +2815,38 @@
             State.toggleOptionsPanel(row.dataset.optionsPanel);
             Render.renderSidebarState();
           });
+        });
+
+        document.getElementById('palette-filter-list')?.addEventListener('change', event => {
+          if (event.target.type !== 'checkbox') return;
+          State.clearSeed();
+          State.triggerGeneration();
+        });
+
+        document.getElementById('profile-filter-list')?.addEventListener('change', event => {
+          if (event.target.type !== 'checkbox') return;
+          State.clearSeed();
+          State.triggerGeneration();
+        });
+
+        document.getElementById('toggle-outline')?.addEventListener('change', event => {
+          this.syncRenderFlag('showOutline', event.target.checked);
+        });
+
+        document.getElementById('toggle-range-mode')?.addEventListener('change', event => {
+          State.setHeightMode(event.target.checked ? 'range' : 'multi');
+          State.clearSeed();
+          Render.renderHeightFilter();
+          State.triggerGeneration();
+        });
+
+        document.getElementById('clear-height-filter')?.addEventListener('click', () => {
+          appState.selectedHeights.clear();
+          appState.rangeStart = null;
+          appState.rangeEnd = null;
+          State.clearSeed();
+          Render.renderHeightFilter();
+          State.triggerGeneration();
         });
 
         document.getElementById('seed-row')?.addEventListener('click', () => this.regenerateFromFilters());
