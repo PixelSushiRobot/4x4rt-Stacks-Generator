@@ -153,6 +153,7 @@
       padding-bottom: var(--sz-120);
       flex: 1;
       overflow-y: auto;
+      overflow-anchor: none; /* don't let the browser auto-shift scroll on panel open/close */
     }
 
     .l-sidebar[data-state="collapsed"] .sidebar-content {
@@ -290,28 +291,45 @@
 
     .options-panel {
       display: none;
-      padding: var(--sz-16) 0 var(--sz-20);
-      border-bottom: var(--rule-width) solid var(--ui-rule);
-      color: var(--ui-ink-muted);
+      margin: 0;
+      padding: 0;
+      background: var(--ui-rule);
+      border-radius: var(--sz-20);
+      color: var(--ui-ink);
       font-size: var(--ui-text-size);
       line-height: 1.45;
     }
 
     .options-panel[data-state="open"] {
       display: block;
+      /* Panel fill hugs its rows; the 20px gap below is spacing before the divider that
+         precedes the next section. The divider itself is drawn by the next section's
+         trigger row (border-top rule below), so it reads as a full-width section line. */
+      margin-bottom: var(--sz-20);
+    }
+
+    /* A trigger row sitting directly above its open panel drops its own bottom line,
+       so there's no rule/space between the heading and the panel. */
+    .control-row[data-interactive="true"]:has(+ .options-panel[data-state="open"]) {
+      border-bottom: none;
+    }
+
+    /* The section AFTER an open panel carries the divider on its top edge. */
+    .options-panel[data-state="open"] + .control-row {
+      border-top: var(--rule-width) solid var(--ui-rule);
     }
 
     .option-list {
       display: flex;
       flex-direction: column;
-      gap: var(--sz-08);
+      gap: 0;
     }
 
     .option-group {
       display: flex;
       flex-direction: column;
-      gap: var(--sz-08);
-      padding-bottom: var(--sz-16);
+      gap: var(--sz-02);
+      padding-bottom: var(--sz-10);
     }
 
     .option-group:last-child {
@@ -319,52 +337,93 @@
     }
 
     .option-group-title {
-      color: var(--ui-ink);
+      color: var(--ui-ink-muted);
       font-size: var(--ui-text-size);
+      padding: var(--sz-08) var(--sz-10) var(--sz-02);
     }
 
     .option-row,
     .option-action {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: var(--sz-10);
+      gap: var(--sz-20);
       min-height: var(--sz-30);
-      color: var(--ui-ink-muted);
+      padding: var(--sz-20);
+      border-radius: 0;
+      /* Reserve the focus stroke's space up front (transparent) so focusing recolors it
+         without shifting layout. */
+      border-bottom: var(--rule-width) solid transparent;
+      color: var(--ui-ink);
       cursor: pointer;
       text-transform: uppercase;
     }
 
+    /* First/last rows echo the panel's corner radius so their hover/selected fill stays
+       inside the rounded panel — no overflow clipping needed. */
+    .option-list > .option-row:first-child {
+      border-top-left-radius: var(--sz-20);
+      border-top-right-radius: var(--sz-20);
+    }
+    .option-list > .option-row:last-child {
+      border-bottom-left-radius: var(--sz-20);
+      border-bottom-right-radius: var(--sz-20);
+    }
+
+    /* Hover and selected share the same fill; neither adds a border. */
     .option-row:hover,
-    .option-action:hover {
+    .option-action:hover,
+    .option-row:has(input:checked) {
+      background: var(--ui-rule);
       color: var(--ui-ink);
+    }
+
+    /* Hidden checkbox pinned inside its own row. It must be position:absolute within the
+       row (row is position:relative) — otherwise it escapes to the scroll container and
+       focusing it on click scrolls the sidebar to a stale offset, clipping the panel. */
+    .option-row {
+      position: relative;
     }
 
     .option-row input {
       position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       opacity: 0;
+      margin: 0;
       pointer-events: none;
     }
 
-    .option-row:has(input:checked) {
-      color: var(--ui-ink);
-    }
-
-    .option-row:focus-within,
+    /* Tab (keyboard) focus matches the section rows: no outline, just a bottom stroke.
+       The transparent border is already reserved above, so this only recolors it —
+       no layout shift. :has(:focus-visible) keeps it keyboard-only. */
+    .option-row:has(input:focus-visible),
     .option-action:focus-visible {
-      outline: var(--sz-02) solid var(--ui-ink-muted);
-      outline-offset: var(--sz-02);
+      outline: none;
+      border-bottom-color: var(--ui-ink-muted);
     }
 
+    /* Checkbox marker: 16x16, 4px radius; 2px stroke drawn CENTERED on the edge (1px
+       outside + 1px inside) to match Figma's center-aligned stroke, since a CSS border
+       would sit fully inside. Filled 10x10 inner square when selected. */
     .option-marker {
-      width: var(--sz-16);
-      height: var(--sz-16);
-      border: var(--rule-width) solid currentColor;
-      display: block;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      box-shadow: 0 0 0 1px var(--ui-ink), inset 0 0 0 1px var(--ui-ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
-    .option-row input:checked~.option-marker {
-      background: currentColor;
+    .option-row input:checked ~ .option-marker::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      background: var(--ui-ink);
+      border-radius: 1px;
     }
 
     .palette-swatch {
@@ -1073,9 +1132,19 @@
           <div id="form-options-panel" class="options-panel" data-panel="form">
             <div class="option-list">
               <label class="option-row">
-                <span>Bound</span>
-                <input id="toggle-outline" type="checkbox">
+                <input type="radio" name="form-mode" value="native">
                 <span class="option-marker" aria-hidden="true"></span>
+                <span>Native</span>
+              </label>
+              <label class="option-row">
+                <input type="radio" name="form-mode" value="bound">
+                <span class="option-marker" aria-hidden="true"></span>
+                <span>Bound</span>
+              </label>
+              <label class="option-row">
+                <input type="radio" name="form-mode" value="unbound">
+                <span class="option-marker" aria-hidden="true"></span>
+                <span>Unbound</span>
               </label>
             </div>
           </div>
@@ -2038,13 +2107,14 @@
       selectedPalettes: [],
       selectedProfiles: [],
 
-      showOutline: true,
+      formMode: 'native',   // 'native' | 'bound' | 'unbound' — native follows the palette
+      showOutline: true,     // resolved from formMode + palette on each generation
       showMetadata: true,
       showExport: true,
       displayLayout: 'art',
       aspectRatio: '1:1',
       isSidebarOpen: true,
-      activeOptionsPanel: null,
+      openPanels: new Set(), // options panels open independently; all collapsed on load
 
       seed: null, // The string guaranteeing exact reproduction
       artwork: null, // Holds the output of the generation engine
@@ -2082,6 +2152,16 @@
         appState[flag] = value;
       },
 
+      // Resolve showOutline from formMode + the given palette. 'native' follows the palette
+      // (muted/void categories read best unbound); 'bound'/'unbound' are explicit overrides.
+      // Called on every generation so 'native' is always current — no context gating.
+      resolveForm(palette) {
+        if (appState.formMode === 'bound') appState.showOutline = true;
+        else if (appState.formMode === 'unbound') appState.showOutline = false;
+        else appState.showOutline = !(palette.category === 'muted' || palette.category === 'void');
+        return appState.showOutline;
+      },
+
       syncCanvasScale() {
         const root = document.documentElement;
         const styles = getComputedStyle(root);
@@ -2114,12 +2194,13 @@
 
       toggleSidebar() {
         appState.isSidebarOpen = !appState.isSidebarOpen;
-        if (!appState.isSidebarOpen) appState.activeOptionsPanel = null;
+        if (!appState.isSidebarOpen) appState.openPanels.clear();
         this.syncCanvasScale();
       },
 
       toggleOptionsPanel(panelName) {
-        appState.activeOptionsPanel = appState.activeOptionsPanel === panelName ? null : panelName;
+        if (appState.openPanels.has(panelName)) appState.openPanels.delete(panelName);
+        else appState.openPanels.add(panelName);
       },
 
       setHeightMode(mode) {
@@ -2170,12 +2251,13 @@
         appState.rangeEnd = null;
         appState.selectedPalettes = [];
         appState.selectedProfiles = [];
+        appState.formMode = 'native';
         appState.showOutline = true;
         appState.showMetadata = true;
         appState.showExport = true;
         appState.displayLayout = 'art';
         appState.aspectRatio = '1:1';
-        appState.activeOptionsPanel = null;
+        appState.openPanels.clear();
         this.clearSeed();
       },
 
@@ -2188,8 +2270,8 @@
         const profileInputs = document.querySelectorAll('#profile-filter-list input[type="checkbox"]:checked');
         appState.selectedProfiles = [...profileInputs].map(input => input.value).filter(v => VALID_PROFILE_IDS.has(v));
 
-        const outlineEl = document.getElementById('toggle-outline');
-        if (outlineEl) appState.showOutline = outlineEl.checked;
+        // Form mode is driven by its own radio handler (formMode is authoritative); nothing
+        // to read back here. showOutline is resolved from formMode on each generation.
 
         const metadataEl = document.getElementById('toggle-metadata');
         if (metadataEl) appState.showMetadata = metadataEl.checked;
@@ -2214,8 +2296,10 @@
         const rangeToggleEl = document.getElementById('toggle-range-mode');
         if (rangeToggleEl) rangeToggleEl.checked = (appState.heightMode === 'range');
 
-        const outlineEl = document.getElementById('toggle-outline');
-        if (outlineEl) outlineEl.checked = appState.showOutline;
+        // Check the Form radio matching the current formMode.
+        document.querySelectorAll('#form-options-panel input[name="form-mode"]').forEach(radio => {
+          radio.checked = (radio.value === appState.formMode);
+        });
 
         const metadataEl = document.getElementById('toggle-metadata');
         if (metadataEl) metadataEl.checked = appState.showMetadata;
@@ -2247,7 +2331,8 @@
         appState.selectedPalettes = parseCommaList(params.get('palettes')).filter(name => VALID_PALETTE_NAMES.has(name));
         appState.selectedProfiles = parseCommaList(params.get('profiles')).filter(profile => VALID_PROFILE_IDS.has(profile));
 
-        appState.showOutline = params.has('outline') ? params.get('outline') !== 'false' : true;
+        const formParam = params.get('form');
+        appState.formMode = (formParam === 'bound' || formParam === 'unbound') ? formParam : 'native';
         appState.showMetadata = params.has('meta') ? params.get('meta') !== 'false' : true;
         appState.showExport = params.has('export') ? params.get('export') !== 'false' : true;
         appState.displayLayout = params.get('layout') === 'poster' ? 'poster' : 'art';
@@ -2287,7 +2372,7 @@
         searchParams.delete('profiles');
         searchParams.delete('heights');
         searchParams.delete('limit');
-        searchParams.delete('outline');
+        searchParams.delete('form');
         searchParams.delete('meta');
         searchParams.delete('export');
         searchParams.delete('layout');
@@ -2307,7 +2392,7 @@
         }
 
         if (appState.isLimitVisible) searchParams.set('limit', appState.targetBlocks);
-        if (!appState.showOutline) searchParams.set('outline', 'false');
+        if (appState.formMode !== 'native') searchParams.set('form', appState.formMode);
         if (!appState.showMetadata) searchParams.set('meta', 'false');
         if (!appState.showExport) searchParams.set('export', 'false');
         if (appState.displayLayout !== 'art') searchParams.set('layout', appState.displayLayout);
@@ -2351,11 +2436,9 @@
         if (newArtwork) {
           appState.artwork = newArtwork;
 
-          if (!wasSeedForced && appState.selectedPalettes.length === 0) {
-            appState.showOutline = !(newArtwork.palette.category === 'muted' || newArtwork.palette.category === 'void');
-            const outlineEl = document.getElementById('toggle-outline');
-            if (outlineEl) outlineEl.checked = appState.showOutline;
-          }
+          // Resolve Form for this palette every time (native follows the palette; explicit
+          // bound/unbound stick). Unconditional — fixes the old context-gated flakiness.
+          this.resolveForm(newArtwork.palette);
 
           appState.seed = newArtwork.seed;
           if (didMutateHeightState) Render.renderHeightFilter();
@@ -2491,7 +2574,7 @@
         !appState.isSidebarOpen ? document.documentElement.setAttribute('data-sidebar-state', 'hidden') : document.documentElement.removeAttribute('data-sidebar-state');
 
         document.querySelectorAll('.options-panel').forEach(panelEl => {
-          panelEl.dataset.panel === appState.activeOptionsPanel ? panelEl.setAttribute('data-state', 'open') : panelEl.removeAttribute('data-state');
+          appState.openPanels.has(panelEl.dataset.panel) ? panelEl.setAttribute('data-state', 'open') : panelEl.removeAttribute('data-state');
         });
       },
 
@@ -2800,7 +2883,7 @@
           marker.className = 'option-marker';
           marker.setAttribute('aria-hidden', 'true');
 
-          row.append(name, input, marker);
+          row.append(input, marker, name);
           list.appendChild(row);
         });
 
@@ -3013,8 +3096,13 @@
 
         document.querySelectorAll('[data-options-panel]').forEach(row => {
           row.addEventListener('click', () => {
+            // Preserve sidebar scroll position across the open/close so the section title
+            // stays put under the cursor (opening a panel must not scroll the sidebar).
+            const scroller = document.querySelector('.sidebar-content');
+            const prevScroll = scroller ? scroller.scrollTop : 0;
             State.toggleOptionsPanel(row.dataset.optionsPanel);
             Render.renderSidebarState();
+            if (scroller) scroller.scrollTop = prevScroll;
           });
         });
 
@@ -3030,8 +3118,14 @@
           State.triggerGeneration();
         });
 
-        document.getElementById('toggle-outline')?.addEventListener('change', event => {
-          this.syncRenderFlag('showOutline', event.target.checked);
+        document.getElementById('form-options-panel')?.addEventListener('change', event => {
+          if (event.target.name !== 'form-mode' || !event.target.checked) return;
+          appState.formMode = event.target.value;
+          // Re-resolve against the current palette and re-render (no regeneration needed —
+          // Form only affects how the existing artwork is drawn).
+          if (appState.artwork) State.resolveForm(appState.artwork.palette);
+          Render.render();
+          State.syncURL();
         });
 
         document.getElementById('toggle-range-mode')?.addEventListener('change', event => {
