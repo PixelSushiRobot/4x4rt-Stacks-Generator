@@ -23,40 +23,40 @@
       --canvas-size: min(calc(100vh - (var(--page-pad-y) * 2)), calc(var(--content-width) - (var(--page-pad-x) * 2)));
       /* --artwork-width: var(--canvas-size); */
       --artwork-width: 1000px;
-      /* Modular Scale System - FIXED VALUES TO DISABLE AUTO-SCALING */
-      --scale-unit: 1px;
-      --sz-01: 1px;
-      --sz-02: 2px;
-      --sz-05: 5px;
-      --sz-07: 7px;
-      --sz-08: 8px;
-      --sz-10: 10px;
-      --sz-15: 15px;
-      --sz-16: 16px;
-      --sz-18: 18px;
-      --sz-20: 20px;
-      --sz-25: 25px;
-      --sz-30: 30px;
-      --sz-40: 40px;
-      --sz-54: 54px;
-      --sz-56: 56px;
-      --sz-64: 64px;
-      --sz-90: 90px;
-      --sz-120: 120px;
-      --sz-365: 365px;
+      /* Modular Scale System */
+      --scale-unit: calc(var(--canvas-size) * 0.001);
+      --sz-01: calc(var(--scale-unit) * 1);
+      --sz-02: calc(var(--scale-unit) * 2);
+      --sz-05: calc(var(--scale-unit) * 5);
+      --sz-07: calc(var(--scale-unit) * 7);
+      --sz-08: calc(var(--scale-unit) * 8);
+      --sz-10: calc(var(--scale-unit) * 10);
+      --sz-15: calc(var(--scale-unit) * 15);
+      --sz-16: calc(var(--scale-unit) * 16);
+      --sz-18: calc(var(--scale-unit) * 18);
+      --sz-20: calc(var(--scale-unit) * 20);
+      --sz-25: calc(var(--scale-unit) * 25);
+      --sz-30: calc(var(--scale-unit) * 30);
+      --sz-40: calc(var(--scale-unit) * 40);
+      --sz-54: calc(var(--scale-unit) * 54);
+      --sz-56: calc(var(--scale-unit) * 56);
+      --sz-64: calc(var(--scale-unit) * 64);
+      --sz-90: calc(var(--scale-unit) * 90);
+      --sz-120: calc(var(--scale-unit) * 120);
+      --sz-365: calc(var(--scale-unit) * 365);
 
-      --rule-width: 1px;
+      --rule-width: max(1px, var(--sz-01));
       /* Failsafe colors from Spice palette to avoid unstyled content on first paint */
       --ui-bg: #f4f1ea;
       --ui-ink: rgba(28, 28, 26, 0.9);
       --ui-ink-solid: rgb(28, 28, 26);
       --ui-ink-muted: rgba(28, 28, 26, 0.5);
       --ui-rule: rgba(28, 28, 26, 0.1);
-      --ui-border-width: 2px;
-      --ui-text-size: 15px;
-      --ui-brand-size: 30px;
-      --poster-metadata-height: 65px;
-      --poster-total-height: calc(1000px + 65px + 20px);
+      --ui-border-width: max(1px, var(--sz-02));
+      --ui-text-size: var(--sz-15);
+      --ui-brand-size: var(--sz-30);
+      --poster-metadata-height: calc(var(--canvas-size) * var(--poster-metadata-ratio));
+      --poster-total-height: calc(var(--canvas-size) + var(--poster-metadata-height) + (var(--ui-border-width) * 2));
     }
 
     :root[data-sidebar-state="hidden"] {
@@ -1160,7 +1160,7 @@
     // The default 16 blocks limit is the reason for the name 4x4art, every artwork uses exactly 16 blocks. 
     const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2); // 2, 4, 6... 40
     const DEFAULT_LIMIT = POSSIBLE_LIMITS.includes(16) ? 16 : POSSIBLE_LIMITS[0];
-    const VALID_PROFILE_IDS = new Set(['isolate', 'drift', 'spectrum']);
+    const VALID_PROFILE_IDS = new Set(['spectrum', 'ramp', 'prime', 'duo']);
 
     const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
     const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
@@ -1788,9 +1788,10 @@
 
         // 2. Pick Profile natively from the PRNG
         const profileMode = nextRandom();
-        if (profileMode < 0.35) activeProfile = 'isolate';
-        else if (profileMode < 0.70) activeProfile = 'drift';
-        else activeProfile = 'spectrum';
+        if (profileMode < 0.42) activeProfile = 'spectrum'; // chaotic prismatic: adjacency-off + deck refill, guarded to >=3 distinct colors
+        else if (profileMode < 0.74) activeProfile = 'ramp'; // flagship: value gradient by height
+        else if (profileMode < 0.87) activeProfile = 'duo';  // two hues, max luminance distance
+        else activeProfile = 'prime';                        // single hue
 
         if (!isForcedSeed && allowedProfiles.length > 0 && !allowedProfiles.includes(activeProfile)) continue;
 
@@ -1812,23 +1813,30 @@
       // --- Biased Deck & Coloring Logic ---
       const colorWeights = new Array(palette.colors.length).fill(0);
       let activeIndices = shuffle([...Array(palette.colors.length).keys()]);
-      const numShapes = solution.placements.length;
 
-      if (activeProfile === 'isolate') {
-        const keepCount = (numShapes <= 6) ? 2 : (nextRandom() > 0.5 ? 2 : 3);
-        if (keepCount === 2) {
-          colorWeights[activeIndices[0]] = 10;
-          colorWeights[activeIndices[1]] = 10;
-        } else {
-          colorWeights[activeIndices[0]] = 10;
-          colorWeights[activeIndices[1]] = 5;
-          colorWeights[activeIndices[2]] = 2;
-        }
-      } else if (activeProfile === 'drift') {
-        const keepCount = nextRandom() > 0.5 ? 4 : 5;
-        for (let i = 0; i < keepCount; i++) {
-          colorWeights[activeIndices[i]] = keepCount - i + 1;
-        }
+      // Ramp maps color to vertical position instead of drawing from a weighted bag.
+      // Sort palette colors by luminance and, per shape, pick the ramp step for its
+      // height in the stack. Direction (dark->light vs light->dark) is seed-driven.
+      const isRamp = activeProfile === 'ramp';
+      const rampColors = isRamp
+        ? palette.colors.slice().sort((a, b) => getLuminance(a) - getLuminance(b))
+        : null;
+      const rampAscending = isRamp ? nextRandom() > 0.5 : false;
+
+      if (activeProfile === 'prime') {
+        // Single hue for the entire monolith.
+        colorWeights[activeIndices[0]] = 10;
+      } else if (activeProfile === 'duo') {
+        // Two hues chosen for maximum luminance distance, so the pairing reads as a
+        // deliberate duochrome even on low-hue palettes (where random pairs look alike).
+        const byLum = palette.colors
+          .map((c, i) => ({ i, L: getLuminance(c) }))
+          .sort((a, b) => a.L - b.L);
+        colorWeights[byLum[0].i] = 10;                        // darkest
+        colorWeights[byLum[byLum.length - 1].i] = 10;         // lightest
+      } else if (isRamp) {
+        // Ramp bypasses the deck; weights are unused. Kept balanced as a failsafe.
+        for (let i = 0; i < palette.colors.length; i++) colorWeights[i] = 1;
       } else {
         for (let i = 0; i < palette.colors.length; i++) {
           colorWeights[i] = 1;
@@ -1851,8 +1859,25 @@
       let colorDeck = buildBiasedDeck();
 
       const placementsWithColors = placementsWithShapes.map(p => {
+        // Ramp: color is a function of vertical position, not a deck draw.
+        if (isRamp) {
+          const shapeCenterY = p.y + (p.shape.height - 1) / 2;
+          const denom = Math.max(1, heightUnits - 1);
+          let t = shapeCenterY / denom;            // 0 at base, 1 at top
+          if (!rampAscending) t = 1 - t;           // flip direction per seed
+          const step = Math.round(t * (rampColors.length - 1));
+          const rampColor = rampColors[Math.max(0, Math.min(rampColors.length - 1, step))];
+          p.shape.cells.forEach(cell => {
+            colorGrid[p.y + cell.y][p.x + cell.x] = rampColor;
+          });
+          return { ...p, color: rampColor };
+        }
+
         const neighborColors = new Set();
-        const enforceAdjacency = nextRandom() > 0.25;
+        // Duo and Spectrum let colors clash; Ramp/Prime don't reach here.
+        // (Prime is single-hue via the deck, so adjacency is moot.)
+        const chaoticProfile = activeProfile === 'duo' || activeProfile === 'spectrum';
+        const enforceAdjacency = chaoticProfile ? false : nextRandom() > 0.25;
 
         if (enforceAdjacency) {
           p.shape.cells.forEach(cell => {
@@ -1884,12 +1909,43 @@
         const deckIndex = colorDeck.indexOf(color);
         if (deckIndex > -1) colorDeck.splice(deckIndex, 1);
 
+        // Spectrum: refill the deck after every pick so any color can recur and
+        // cluster (full "Prismatic" chaos). Other bag-based profiles consume one-of-each.
+        if (activeProfile === 'spectrum') colorDeck = buildBiasedDeck();
+
         p.shape.cells.forEach(cell => {
           colorGrid[p.y + cell.y][p.x + cell.x] = color;
         });
 
         return { ...p, color };
       });
+
+      // Spectrum guard: independent draws can collapse a sparse (3–4 shape) piece onto
+      // 1–2 colors, making it read as Prime/Duo. If fewer than 3 distinct colors were
+      // used, promote later shapes to as-yet-unused palette colors — in placement order,
+      // deterministically — until the piece shows at least 3 (capped by shape count and
+      // palette size). Leaves richer pieces untouched.
+      if (activeProfile === 'spectrum') {
+        const MIN_DISTINCT = 3;
+        const target = Math.min(MIN_DISTINCT, placementsWithColors.length, palette.colors.length);
+        const used = new Set(placementsWithColors.map(p => p.color));
+        if (used.size < target) {
+          const unused = palette.colors.filter(c => !used.has(c));
+          for (let i = placementsWithColors.length - 1; i >= 0 && used.size < target && unused.length > 0; i--) {
+            const p = placementsWithColors[i];
+            // Only recolor a shape whose current color appears more than once, so we
+            // never drop an already-distinct color below the count while raising it.
+            const dupCount = placementsWithColors.filter(q => q.color === p.color).length;
+            if (dupCount <= 1) continue;
+            const newColor = unused.shift();
+            p.color = newColor;
+            p.shape.cells.forEach(cell => {
+              colorGrid[p.y + cell.y][p.x + cell.x] = newColor;
+            });
+            used.add(newColor);
+          }
+        }
+      }
 
       return {
         placements: placementsWithColors,
@@ -2612,9 +2668,10 @@
         const list = document.getElementById('profile-filter-list');
         if (!list) return;
         const profiles = [
-          ['isolate', 'Isolate'],
-          ['drift', 'Drift'],
-          ['spectrum', 'Spectrum']
+          ['spectrum', 'Spectrum'],
+          ['ramp', 'Ramp'],
+          ['prime', 'Prime'],
+          ['duo', 'Duo']
         ];
 
         list.innerHTML = '';
