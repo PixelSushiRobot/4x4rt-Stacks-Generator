@@ -1160,7 +1160,7 @@
     // The default 16 blocks limit is the reason for the name 4x4art, every artwork uses exactly 16 blocks. 
     const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2); // 2, 4, 6... 40
     const DEFAULT_LIMIT = POSSIBLE_LIMITS.includes(16) ? 16 : POSSIBLE_LIMITS[0];
-    const VALID_PROFILE_IDS = new Set(['spectrum', 'ramp', 'prime', 'duo']);
+    const VALID_PROFILE_IDS = new Set(['prism', 'fade', 'shift', 'solid', 'split']);
 
     const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
     const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
@@ -1788,10 +1788,11 @@
 
         // 2. Pick Profile natively from the PRNG
         const profileMode = nextRandom();
-        if (profileMode < 0.42) activeProfile = 'spectrum'; // chaotic prismatic: adjacency-off + deck refill, guarded to >=3 distinct colors
-        else if (profileMode < 0.74) activeProfile = 'ramp'; // flagship: value gradient by height
-        else if (profileMode < 0.87) activeProfile = 'duo';  // two hues, max luminance distance
-        else activeProfile = 'prime';                        // single hue
+        if (profileMode < 0.40) activeProfile = 'prism';  // chaotic prismatic: adjacency-off + deck refill, guarded to >=3 distinct colors
+        else if (profileMode < 0.65) activeProfile = 'fade';  // value gradient by height
+        else if (profileMode < 0.81) activeProfile = 'shift'; // ordered hue walk by height
+        else if (profileMode < 0.94) activeProfile = 'split'; // two hues, max luminance distance
+        else activeProfile = 'solid';                         // single hue (kept rare — a little goes a long way)
 
         if (!isForcedSeed && allowedProfiles.length > 0 && !allowedProfiles.includes(activeProfile)) continue;
 
@@ -1812,21 +1813,68 @@
 
       // --- Biased Deck & Coloring Logic ---
       const colorWeights = new Array(palette.colors.length).fill(0);
+      // Shuffled color order (seed-driven). Used by Solid to pick a random candidate
+      // color; the draw also keeps PRNG order stable so existing seeds render identically.
       let activeIndices = shuffle([...Array(palette.colors.length).keys()]);
 
-      // Ramp maps color to vertical position instead of drawing from a weighted bag.
-      // Sort palette colors by luminance and, per shape, pick the ramp step for its
-      // height in the stack. Direction (dark->light vs light->dark) is seed-driven.
-      const isRamp = activeProfile === 'ramp';
-      const rampColors = isRamp
-        ? palette.colors.slice().sort((a, b) => getLuminance(a) - getLuminance(b))
-        : null;
-      const rampAscending = isRamp ? nextRandom() > 0.5 : false;
+      // Positional profiles map color to vertical position instead of drawing from a
+      // weighted bag. They share one path (sort palette -> per-shape t -> step -> color)
+      // and differ only in the color ORDERING:
+      //   fade   - luminance sort (value gradient)
+      //   shift  - hue-then-luminance sort (ordered hue progression)
+      const POSITIONAL = new Set(['fade', 'shift']);
+      const isPositional = POSITIONAL.has(activeProfile);
+      // Hue angle for sorting; achromatic colors return -1 and fall back to luminance,
+      // so grayscale/low-hue palettes degrade gracefully into a value walk.
+      const hueAngle = (hex) => {
+        const c = hex.replace('#', '');
+        const r = parseInt(c.slice(0, 2), 16) / 255, g = parseInt(c.slice(2, 4), 16) / 255, b = parseInt(c.slice(4, 6), 16) / 255;
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+        if (d < 0.02) return -1;
+        let h; if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+        h *= 60; if (h < 0) h += 360; return h;
+      };
+      let positionalColors = null;
+      if (isPositional) {
+        if (activeProfile === 'shift') {
+          positionalColors = palette.colors.slice().sort((a, b) => {
+            const ha = hueAngle(a), hb = hueAngle(b);
+            if (ha < 0 && hb < 0) return getLuminance(a) - getLuminance(b); // both achromatic
+            if (ha < 0) return -1;                                          // achromatic first
+            if (hb < 0) return 1;
+            return ha - hb || getLuminance(a) - getLuminance(b);
+          });
+        } else {
+          positionalColors = palette.colors.slice().sort((a, b) => getLuminance(a) - getLuminance(b));
+        }
+      }
+      const rampAscending = isPositional ? nextRandom() > 0.5 : false;
 
-      if (activeProfile === 'prime') {
-        // Single hue for the entire monolith.
-        colorWeights[activeIndices[0]] = 10;
-      } else if (activeProfile === 'duo') {
+      if (activeProfile === 'solid') {
+        // Single hue for the entire monolith, chosen randomly (seed-driven) so the same
+        // palette yields different Solids — BUT excluding very-dark near-neutrals, which
+        // otherwise make Solids from different palettes look alike (a run of charcoals).
+        // Pure-grayscale palettes are exempt: everything in them is neutral, so we keep
+        // the full set and let a random gray Solid stand (still varies by seed).
+        const chroma = (hex) => {
+          const c = hex.replace('#', '');
+          const r = parseInt(c.slice(0, 2), 16) / 255, g = parseInt(c.slice(2, 4), 16) / 255, b = parseInt(c.slice(4, 6), 16) / 255;
+          return Math.max(r, g, b) - Math.min(r, g, b);
+        };
+        const maxChroma = Math.max(...palette.colors.map(chroma));
+        const isGrayscale = maxChroma < 0.10;
+        // Candidate indices: all colors on grayscale palettes; otherwise drop the muddy
+        // dark-neutrals. Safety net: if filtering leaves fewer than 2, keep the full set.
+        let candidates = palette.colors
+          .map((c, i) => ({ c, i }))
+          .filter(({ c }) => isGrayscale || !(getLuminance(c) < 0.06 && chroma(c) < 0.10))
+          .map(({ i }) => i);
+        if (candidates.length < 2) candidates = palette.colors.map((_, i) => i);
+        // Pick one candidate using the already-shuffled activeIndices order (no new PRNG
+        // draw): the first shuffled index that is a candidate.
+        const chosen = activeIndices.find(i => candidates.includes(i));
+        colorWeights[chosen != null ? chosen : candidates[0]] = 10;
+      } else if (activeProfile === 'split') {
         // Two hues chosen for maximum luminance distance, so the pairing reads as a
         // deliberate duochrome even on low-hue palettes (where random pairs look alike).
         const byLum = palette.colors
@@ -1834,8 +1882,8 @@
           .sort((a, b) => a.L - b.L);
         colorWeights[byLum[0].i] = 10;                        // darkest
         colorWeights[byLum[byLum.length - 1].i] = 10;         // lightest
-      } else if (isRamp) {
-        // Ramp bypasses the deck; weights are unused. Kept balanced as a failsafe.
+      } else if (isPositional) {
+        // Positional profiles bypass the deck; weights are unused. Balanced as a failsafe.
         for (let i = 0; i < palette.colors.length; i++) colorWeights[i] = 1;
       } else {
         for (let i = 0; i < palette.colors.length; i++) {
@@ -1859,25 +1907,29 @@
       let colorDeck = buildBiasedDeck();
 
       const placementsWithColors = placementsWithShapes.map(p => {
-        // Ramp: color is a function of vertical position, not a deck draw.
-        if (isRamp) {
+        // Positional profiles: color is a function of vertical position, not a deck draw.
+        if (isPositional) {
           const shapeCenterY = p.y + (p.shape.height - 1) / 2;
           const denom = Math.max(1, heightUnits - 1);
           let t = shapeCenterY / denom;            // 0 at base, 1 at top
           if (!rampAscending) t = 1 - t;           // flip direction per seed
-          const step = Math.round(t * (rampColors.length - 1));
-          const rampColor = rampColors[Math.max(0, Math.min(rampColors.length - 1, step))];
+          const step = Math.round(t * (positionalColors.length - 1));
+          const posColor = positionalColors[Math.max(0, Math.min(positionalColors.length - 1, step))];
           p.shape.cells.forEach(cell => {
-            colorGrid[p.y + cell.y][p.x + cell.x] = rampColor;
+            colorGrid[p.y + cell.y][p.x + cell.x] = posColor;
           });
-          return { ...p, color: rampColor };
+          return { ...p, color: posColor };
         }
 
         const neighborColors = new Set();
-        // Duo and Spectrum let colors clash; Ramp/Prime don't reach here.
-        // (Prime is single-hue via the deck, so adjacency is moot.)
-        const chaoticProfile = activeProfile === 'duo' || activeProfile === 'spectrum';
-        const enforceAdjacency = chaoticProfile ? false : nextRandom() > 0.25;
+        // Adjacency suppression is OFF for Split, Prism, AND Solid. Solid is deck-based
+        // (it reaches this loop), and its deck holds only one color — so enforcing
+        // "don't match your neighbor" would find no valid color and the fallback would
+        // inject OTHER palette colors, breaking the single-hue guarantee. A monochrome
+        // piece wants identical neighbors, so Solid must never enforce adjacency.
+        // (Positional profiles return early above and never reach here.)
+        const noAdjacency = activeProfile === 'split' || activeProfile === 'prism' || activeProfile === 'solid';
+        const enforceAdjacency = noAdjacency ? false : nextRandom() > 0.25;
 
         if (enforceAdjacency) {
           p.shape.cells.forEach(cell => {
@@ -1909,9 +1961,9 @@
         const deckIndex = colorDeck.indexOf(color);
         if (deckIndex > -1) colorDeck.splice(deckIndex, 1);
 
-        // Spectrum: refill the deck after every pick so any color can recur and
-        // cluster (full "Prismatic" chaos). Other bag-based profiles consume one-of-each.
-        if (activeProfile === 'spectrum') colorDeck = buildBiasedDeck();
+        // Prism: refill the deck after every pick so any color can recur and
+        // cluster (full "prismatic" chaos). Other bag-based profiles consume one-of-each.
+        if (activeProfile === 'prism') colorDeck = buildBiasedDeck();
 
         p.shape.cells.forEach(cell => {
           colorGrid[p.y + cell.y][p.x + cell.x] = color;
@@ -1920,12 +1972,12 @@
         return { ...p, color };
       });
 
-      // Spectrum guard: independent draws can collapse a sparse (3–4 shape) piece onto
-      // 1–2 colors, making it read as Prime/Duo. If fewer than 3 distinct colors were
+      // Prism guard: independent draws can collapse a sparse (3–4 shape) piece onto
+      // 1–2 colors, making it read as Solid/Split. If fewer than 3 distinct colors were
       // used, promote later shapes to as-yet-unused palette colors — in placement order,
       // deterministically — until the piece shows at least 3 (capped by shape count and
       // palette size). Leaves richer pieces untouched.
-      if (activeProfile === 'spectrum') {
+      if (activeProfile === 'prism') {
         const MIN_DISTINCT = 3;
         const target = Math.min(MIN_DISTINCT, placementsWithColors.length, palette.colors.length);
         const used = new Set(placementsWithColors.map(p => p.color));
@@ -2668,10 +2720,11 @@
         const list = document.getElementById('profile-filter-list');
         if (!list) return;
         const profiles = [
-          ['spectrum', 'Spectrum'],
-          ['ramp', 'Ramp'],
-          ['prime', 'Prime'],
-          ['duo', 'Duo']
+          ['prism', 'Prism'],
+          ['fade', 'Fade'],
+          ['shift', 'Shift'],
+          ['solid', 'Solid'],
+          ['split', 'Split']
         ];
 
         list.innerHTML = '';
