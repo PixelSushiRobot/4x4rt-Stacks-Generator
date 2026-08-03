@@ -1716,9 +1716,20 @@
 
     function solveStackForHeight(targetHeight, targetBlocks) {
       const stackShapes = BASE_STACK_SHAPES.filter(shape => STRICT_SHAPE_IDS.has(shape.id));
-      // Weights bias the solver toward taller, more structural shapes.
-      // Higher weight = shape appears more times in the shuffled candidate list = chosen more often.
-      const curatedWeights = { 'O-4': 6, 'I-4-R0': 6, 'I-3-R0': 5, 'I-2-R90': 4, 'I-2-R0': 3, 'O-1': 1 };
+
+      // COARSENESS SPREAD: each piece gets a seed-driven point on a coarse<->fine axis, so
+      // the collection spans chunky big-bar monoliths to finer-grained stacks without any
+      // discrete trait. t=0 fine (favor O-1 / small), t=1 coarse (favor I-4 / I-3). Uniform
+      // roll; the weight floor of 1 keeps every shape available at all t (so height validity
+      // is never affected — only which solution is favored). Higher weight = shape appears
+      // more times in the shuffled candidate list = chosen more often.
+      const t = nextRandom(); // uniform 0..1
+      const fine   = { 'O-1': 10, 'I-2-R0': 5, 'I-2-R90': 5, 'O-4': 4, 'I-3-R0': 2, 'I-4-R0': 1 };
+      const coarse = { 'I-4-R0': 10, 'I-3-R0': 8, 'O-4': 6, 'I-2-R90': 3, 'I-2-R0': 2, 'O-1': 1 };
+      const lerp = (a, b) => Math.max(1, Math.round(a + (b - a) * t));
+      const curatedWeights = {};
+      Object.keys(coarse).forEach(id => { curatedWeights[id] = lerp(fine[id], coarse[id]); });
+
       const stackShapeWeights = new Map(stackShapes.map(shape => [shape.id, curatedWeights[shape.id] || 1]));
 
       const minBlocksPerUnit = Math.min(...stackShapes.map(shape => shape.blocks / shape.units));
@@ -1736,6 +1747,8 @@
       }
       return null;
     }
+
+    let CONTACT_SHEET_MODE = false; // test: 4x4 multi-generation view on regenerate
 
     // Pre-flight validation: test every candidate height by actually running the solver.
     // Only heights where the solver finds at least one valid solution are included.
@@ -2170,8 +2183,10 @@
         const paletteInputs = document.querySelectorAll('#palette-filter-list input:checked');
         appState.selectedPalettes = [...paletteInputs].map(input => input.value);
 
-        const profileInputs = document.querySelectorAll('#profile-filter-list input:checked');
-        appState.selectedProfiles = [...profileInputs].map(input => input.value);
+        // Real color profiles are checkboxes with a valid id value; the value-less
+        // contact-sheet debug toggle is filtered out via VALID_PROFILE_IDS.
+        const profileInputs = document.querySelectorAll('#profile-filter-list input[type="checkbox"]:checked');
+        appState.selectedProfiles = [...profileInputs].map(input => input.value).filter(v => VALID_PROFILE_IDS.has(v));
 
         const outlineEl = document.getElementById('toggle-outline');
         if (outlineEl) appState.showOutline = outlineEl.checked;
@@ -2191,6 +2206,8 @@
           checkbox.checked = appState.selectedPalettes.includes(checkbox.value);
         });
         document.querySelectorAll('#profile-filter-list input[type="checkbox"]').forEach(checkbox => {
+          // Skip value-less test controls (e.g. contact-sheet toggle); only real profiles.
+          if (!checkbox.value) return;
           checkbox.checked = appState.selectedProfiles.includes(checkbox.value);
         });
 
@@ -2493,11 +2510,17 @@
 
       renderArtwork() {
         if (!appState.artwork) return;
-        const { placements, heightUnits, palette } = appState.artwork;
         const svg = document.getElementById('artwork-svg');
+        this.drawArtworkInto(svg, appState.artwork, appState.aspectRatio, appState.showOutline);
+      },
+
+      // Draws a single artwork's rects into the given SVG element. Extracted so the
+      // contact-sheet (test) view can reuse the exact same geometry/inset logic.
+      drawArtworkInto(svg, artwork, aspectRatio, showOutline) {
+        const { placements, heightUnits, palette } = artwork;
         svg.innerHTML = '';
 
-        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasW = aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
         const canvasH = CANVAS_SIZE; // Always 1000
 
         const stackHeightPx = (heightUnits * CELL_STEP) + BORDER_WIDTH;
@@ -2526,7 +2549,7 @@
             const insetRight = occupied.has(`${cell.x + 1},${cell.y}`) ? 0 : BORDER_WIDTH;
             const insetTop = occupied.has(`${cell.x},${cell.y + 1}`) ? 0 : BORDER_WIDTH;
             const insetBottom = occupied.has(`${cell.x},${cell.y - 1}`) ? 0 : BORDER_WIDTH;
-            const effectiveGapColor = appState.showOutline ? INK_COLOR : palette.bg;
+            const effectiveGapColor = showOutline ? INK_COLOR : palette.bg;
 
             addRect(svg, cellX, cellY, CELL_SIZE, CELL_SIZE, effectiveGapColor);
             addRect(
@@ -2539,6 +2562,39 @@
             );
           });
         });
+      },
+
+      // CONTACT SHEET (test): render 16 independent seedless generations in a 4x4 grid
+      // to judge the range of outputs at a glance. Ignores seed/URL entirely.
+      renderContactSheet() {
+        let overlay = document.getElementById('contact-sheet');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'contact-sheet';
+          overlay.style.cssText = 'position:fixed;inset:0 var(--active-sidebar-width) 0 0;z-index:50;background:var(--ui-bg);display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:8px;padding:12px;box-sizing:border-box;';
+          document.body.appendChild(overlay);
+        }
+        overlay.style.display = 'grid';
+        overlay.innerHTML = '';
+
+        const params = State.buildGenerationParams();
+        for (let i = 0; i < 16; i++) {
+          const cell = document.createElement('div');
+          cell.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;';
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svg.style.cssText = 'width:100%;height:100%;display:block;';
+          // Seedless generation: force a fresh random piece each time.
+          const artwork = generateStack({ ...params, seed: null });
+          if (artwork) this.drawArtworkInto(svg, artwork, appState.aspectRatio, appState.showOutline);
+          cell.appendChild(svg);
+          overlay.appendChild(cell);
+        }
+      },
+
+      hideContactSheet() {
+        const overlay = document.getElementById('contact-sheet');
+        if (overlay) overlay.style.display = 'none';
       },
 
       renderMetadata() {
@@ -2747,6 +2803,36 @@
           row.append(name, input, marker);
           list.appendChild(row);
         });
+
+        // --- DEBUG CONTROLS (temporary) ---
+        const debugTitle = document.createElement('div');
+        debugTitle.className = 'option-group-title';
+        debugTitle.style.marginTop = 'var(--sz-16)';
+        debugTitle.textContent = 'debug';
+        list.appendChild(debugTitle);
+
+        // Contact sheet toggle (temporary): 4x4 multi-generation view for judging range.
+        const csRow = document.createElement('label');
+        csRow.className = 'option-row';
+        const csName = document.createElement('span');
+        csName.textContent = 'Contact Sheet (16x)';
+        const csInput = document.createElement('input');
+        csInput.type = 'checkbox';
+        csInput.checked = CONTACT_SHEET_MODE;
+        const csMarker = document.createElement('span');
+        csMarker.className = 'option-marker';
+        csMarker.setAttribute('aria-hidden', 'true');
+        csInput.addEventListener('change', () => {
+          CONTACT_SHEET_MODE = csInput.checked;
+          if (CONTACT_SHEET_MODE) {
+            Render.renderContactSheet();
+          } else {
+            Render.hideContactSheet();
+            Render.render();
+          }
+        });
+        csRow.append(csName, csInput, csMarker);
+        list.appendChild(csRow);
       },
 
       renderLimitSlider() {
@@ -2897,6 +2983,10 @@
     // --- CONTROLS MODULE ---
     const Controls = {
       regenerateFromFilters() {
+        if (CONTACT_SHEET_MODE) {
+          Render.renderContactSheet();
+          return;
+        }
         State.clearSeed();
         State.triggerGeneration();
       },
