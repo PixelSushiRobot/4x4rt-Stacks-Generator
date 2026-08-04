@@ -14,15 +14,18 @@
        1. DESIGN TOKENS & SCOPE MODIFIERS
        ========================================================================== */
     :root {
-      --page-pad-x: 20px;
+      --page-pad-x: 64px;
       --page-pad-y: 20px;
       --sidebar-width: 365px;
       --active-sidebar-width: var(--sidebar-width);
       --content-width: calc(100vw - var(--active-sidebar-width));
       --poster-metadata-ratio: 0.17;
       --canvas-size: min(calc(100vh - (var(--page-pad-y) * 2)), calc(var(--content-width) - (var(--page-pad-x) * 2)));
-      /* --artwork-width: var(--canvas-size); */
-      --artwork-width: 1000px;
+      /* 1:1 default: artwork width tracks the fitted square dimension. (Was hardcoded to
+         1000px, which broke the aspect ratio on wide/short viewports — width stuck at 1000
+         while height shrank to fit, producing a wide rectangle.) The 9:16 override below
+         recomputes this for portrait. */
+      --artwork-width: var(--canvas-size);
       /* Modular Scale System */
       --scale-unit: calc(var(--canvas-size) * 0.001);
       --sz-01: calc(var(--scale-unit) * 1);
@@ -142,6 +145,37 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      /* Pin the sidebar to the 1000px-canvas reference. NOTE: the global --sz-* tokens are
+         declared on :root, so their var(--scale-unit) is substituted AT :root and inherited
+         as already-computed lengths — overriding --scale-unit alone here does nothing. We
+         must re-declare the --sz-* tokens against the fixed unit so they recompute in this
+         subtree (1000 * 0.001 = 1px per unit → --sz-N = N px). Artwork/watermark keep the
+         fluid :root scale. */
+      --scale-unit: 1px;
+      --sz-01: 1px;
+      --sz-02: 2px;
+      --sz-05: 5px;
+      --sz-07: 7px;
+      --sz-08: 8px;
+      --sz-10: 10px;
+      --sz-15: 15px;
+      --sz-16: 16px;
+      --sz-18: 18px;
+      --sz-20: 20px;
+      --sz-25: 25px;
+      --sz-30: 30px;
+      --sz-40: 40px;
+      --sz-54: 54px;
+      --sz-56: 56px;
+      --sz-64: 64px;
+      --sz-90: 90px;
+      --sz-120: 120px;
+      --sz-365: 365px;
+      --rule-width: 1px;
+      --ui-border-width: 2px;
+      --ui-text-size: 15px;
+      --ui-brand-size: 30px;
+      font-size: var(--ui-text-size);
     }
 
     .l-sidebar[data-state="collapsed"] {
@@ -153,7 +187,8 @@
       padding-bottom: var(--sz-120);
       flex: 1;
       overflow-y: auto;
-      overflow-anchor: none; /* don't let the browser auto-shift scroll on panel open/close */
+      overflow-anchor: none;
+      /* don't let the browser auto-shift scroll on panel open/close */
     }
 
     .l-sidebar[data-state="collapsed"] .sidebar-content {
@@ -315,7 +350,7 @@
     }
 
     /* The section AFTER an open panel carries the divider on its top edge. */
-    .options-panel[data-state="open"] + .control-row {
+    .options-panel[data-state="open"]+.control-row {
       border-top: var(--rule-width) solid var(--ui-rule);
     }
 
@@ -361,11 +396,12 @@
 
     /* First/last rows echo the panel's corner radius so their hover/selected fill stays
        inside the rounded panel — no overflow clipping needed. */
-    .option-list > .option-row:first-child {
+    .option-list>.option-row:first-child {
       border-top-left-radius: var(--sz-20);
       border-top-right-radius: var(--sz-20);
     }
-    .option-list > .option-row:last-child {
+
+    .option-list>.option-row:last-child {
       border-bottom-left-radius: var(--sz-20);
       border-bottom-right-radius: var(--sz-20);
     }
@@ -418,7 +454,7 @@
       flex-shrink: 0;
     }
 
-    .option-row input:checked ~ .option-marker::after {
+    .option-row input:checked~.option-marker::after {
       content: '';
       width: 10px;
       height: 10px;
@@ -883,6 +919,168 @@
       aspect-ratio: 1 / 1;
     }
 
+    /* ================= 9:16 POSTER METADATA (separate structure) =================
+       Per the mockup: color bars is a square cell spanning R1+R2 (like a rowspan), with
+       seed/palette/profile stacked to its right. Single-direction borders (border-right on
+       cells, border-bottom on rows) — no doubling.
+         TOP BLOCK (height = 2 row-heights, square bars cell):
+           bars(rowspan, hug) | seed(fill)              <- sub-row 1
+           bars(cont'd)       | palette(fill) | profile(fill)  <- sub-row 2
+         R3: form(fill) | limit(fill) | height(fill)
+         R4: shapes(fill) | unit(hug) | unit(hug) */
+    #poster-meta-916 {
+      display: none;
+    }
+
+    :root[data-aspect-ratio="9:16"][data-layout="poster"] #poster-metadata {
+      display: none !important;
+    }
+
+    :root[data-aspect-ratio="9:16"][data-layout="poster"] #poster-meta-916 {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      border-top: var(--ui-border-width) solid var(--ui-ink-solid);
+      background: var(--ui-bg);
+      color: var(--ui-ink);
+      text-transform: uppercase;
+      overflow: hidden;
+      /* Row height in this block (artwork-width * 79/576). Font sizes and padding below are
+         derived as fractions of THIS, not of --sz-*, so their ratio to the row stays locked
+         to the 1:1 poster's ratio regardless of how tall the row actually renders.
+         In the 1:1 poster, row-height = 85 sz-units (poster-metadata-height 0.17*canvas-size,
+         split into 2 rows = 85 units each), and padding/label/value sit at 20/15/30 of those
+         85 units. We reuse those same 20/15/30-of-85 fractions here, scaled to THIS row's
+         actual height, so both modes render text/padding at an identical proportion of their
+         own row — instead of pinning to fixed --sz-* values that assume a row height (based
+         on canvas-size) equal to the 1:1 poster's, which the 9:16 row height is not. */
+      --pm9-row-h: calc(var(--artwork-width) * (79 / 576));
+    }
+
+    /* --- CSS-only scaling for 9:16 Poster Mode --- */
+    :root[data-aspect-ratio="9:16"][data-layout="poster"] .artwork-svg {
+      /* Scale down the artwork stage slightly and shift down to clear the title header */
+      transform: scale(0.9);
+      transform-origin: center center;
+    }
+
+    :root[data-aspect-ratio="9:16"][data-layout="poster"] .artwork-container {
+      /* Keep overflow hidden so scaled transforms stay cleanly inside the poster frame */
+      overflow: hidden;
+    }
+
+    /* Each row is one band-row tall (artwork-width * 79/576) and draws its bottom divider. */
+    #poster-meta-916 .pm9-row {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      height: var(--pm9-row-h);
+      border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
+    }
+
+    #poster-meta-916 .pm9-row-last {
+      border-bottom: none;
+    }
+
+    #poster-meta-916 .pm9-cell {
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      flex: 1 1 0;
+      /* default: fill; hug cells override below */
+      min-width: 0;
+      /* 20/85 of the row height — same fraction padding occupies of a row in the 1:1
+         poster (padding 20 : row-height 85), scaled to this row's actual height. */
+      padding: calc(var(--pm9-row-h) * 20 / 85);
+      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
+      overflow: hidden;
+    }
+
+    /* Last cell in each row has no right border (frame provides the edge). */
+    #poster-meta-916 .pm9-row> :last-child {
+      border-right: none;
+    }
+
+    /* Top block: color-bars cell spans 2 row-heights (R1+R2), matching the mockup. Draws the
+       full-width divider before R3 itself, so its two internal sub-rows don't double it up. */
+    #poster-meta-916 .pm9-top {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      height: calc(var(--pm9-row-h) * 2);
+      border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
+    }
+
+    #poster-meta-916 .pm9-top-right {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    /* Color bars: hug a square top-left cell spanning both sub-rows, bars bottom-aligned
+       like the 1:1 poster. */
+    #poster-meta-916 .pm9-color {
+      flex: 0 0 calc(var(--pm9-row-h) * 2);
+      /* square: 2 row-heights wide */
+      flex-direction: row;
+      align-items: flex-end;
+      gap: 0;
+    }
+
+    #poster-meta-916 .pm9-color .poster-color-bar {
+      flex: 1 0 0;
+      background: var(--bar-color);
+    }
+
+    #poster-meta-916 .pm9-color .poster-color-bar[data-unused="true"] {
+      aspect-ratio: 1 / 1;
+    }
+
+    /* Units row-2: SHAPES fills, each unit sub-cell hugs. */
+    #poster-meta-916 .pm9-units {
+      display: flex;
+      flex-direction: row;
+      flex: 0 0 auto;
+    }
+
+    #poster-meta-916 .pm9-units>* {
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: calc(var(--artwork-width) * (59 / 576));
+      /* Same row-height-relative padding as .pm9-cell above. */
+      padding: calc(var(--pm9-row-h) * 20 / 85);
+      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
+    }
+
+    #poster-meta-916 .pm9-units> :last-child {
+      border-right: none;
+    }
+
+    /* Fonts sized as fractions of the row height (15/85 and 30/85 — same fractions the 1:1
+       poster's meta-label/meta-value occupy of ITS row height), not fixed --sz-* values.
+       This keeps both the label:value ratio (1:2) AND each one's size relative to its own
+       row identical to the 1:1 poster. */
+    #poster-meta-916 .meta-label {
+      font-size: calc(var(--pm9-row-h) * 15 / 85);
+      line-height: 1.2;
+      color: var(--ui-ink);
+    }
+
+    #poster-meta-916 .meta-value {
+      font-size: calc(var(--pm9-row-h) * 30 / 85);
+      line-height: 1;
+      color: var(--ui-ink);
+    }
+
+    /* Trim horizontal padding on the limit cell to prevent letter squeeze in 9:16 poster mode */
+    #poster-meta-916 .pm9-limit {
+      padding-left: calc(var(--pm9-row-h) * 12 / 85);
+      padding-right: calc(var(--pm9-row-h) * 12 / 85);
+    }
 
 
     .meta-label {
@@ -1019,7 +1217,7 @@
           </div>
         </div>
 
-        <!-- Poster Metadata -->
+        <!-- Poster Metadata (1:1) — original nested-flex layout, shown for the square poster. -->
         <div id="poster-metadata" class="poster-metadata" style="display: none;">
           <div class="poster-meta-grid">
             <div class="poster-cell color-cell" id="poster-color-bars"></div>
@@ -1058,6 +1256,54 @@
                 <div id="poster-units-container" class="poster-units-container"></div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Poster Metadata (9:16) — 4 stacked rows per the mockup:
+             R1 bars(rowspan) | seed   R2 bars(cont'd) | palette | profile   R3 form | limit | height   R4 shapes | units
+             Color bars spans R1+R2 as a single square cell, per the mockup. -->
+        <div id="poster-meta-916">
+          <div class="pm9-top">
+            <div class="pm9-cell pm9-color" id="pm9-color-bars"></div>
+            <div class="pm9-top-right">
+              <div class="pm9-row">
+                <div class="pm9-cell pm9-seed">
+                  <div class="meta-label">seed</div>
+                  <div class="meta-value" id="pm9-seed"></div>
+                </div>
+              </div>
+              <div class="pm9-row pm9-row-last">
+                <div class="pm9-cell pm9-palette">
+                  <div class="meta-label">palette</div>
+                  <div class="meta-value" id="pm9-palette"></div>
+                </div>
+                <div class="pm9-cell pm9-profile">
+                  <div class="meta-label">profile</div>
+                  <div class="meta-value" id="pm9-profile"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="pm9-row">
+            <div class="pm9-cell pm9-form">
+              <div class="meta-label">form</div>
+              <div class="meta-value" id="pm9-form"></div>
+            </div>
+            <div class="pm9-cell pm9-limit">
+              <div class="meta-label">limit</div>
+              <div class="meta-value" id="pm9-limit"></div>
+            </div>
+            <div class="pm9-cell pm9-height">
+              <div class="meta-label">height</div>
+              <div class="meta-value" id="pm9-height"></div>
+            </div>
+          </div>
+          <div class="pm9-row pm9-row-last">
+            <div class="pm9-cell pm9-shape">
+              <div class="meta-label">shapes</div>
+              <div class="meta-value" id="pm9-shapes"></div>
+            </div>
+            <div id="pm9-units-container" class="pm9-units"></div>
           </div>
         </div>
 
@@ -1793,7 +2039,7 @@
       // is never affected — only which solution is favored). Higher weight = shape appears
       // more times in the shuffled candidate list = chosen more often.
       const t = nextRandom(); // uniform 0..1
-      const fine   = { 'O-1': 10, 'I-2-R0': 5, 'I-2-R90': 5, 'O-4': 4, 'I-3-R0': 2, 'I-4-R0': 1 };
+      const fine = { 'O-1': 10, 'I-2-R0': 5, 'I-2-R90': 5, 'O-4': 4, 'I-3-R0': 2, 'I-4-R0': 1 };
       const coarse = { 'I-4-R0': 10, 'I-3-R0': 8, 'O-4': 6, 'I-2-R90': 3, 'I-2-R0': 2, 'O-1': 1 };
       const lerp = (a, b) => Math.max(1, Math.round(a + (b - a) * t));
       const curatedWeights = {};
@@ -2174,8 +2420,22 @@
         const availableWidth = Math.max(1, window.innerWidth - activeSidebarWidth - (pagePadX * 2));
         const availableHeight = Math.max(1, window.innerHeight - (pagePadY * 2));
         const artworkRatio = appState.aspectRatio === '9:16' ? 0.5625 : 1;
-        const layoutHeightRatio = appState.displayLayout === 'poster' ? (1 + metadataRatio) : 1;
-        const byHeight = availableHeight / layoutHeightRatio;
+
+        // Poster reserves height for the metadata band below the canvas. 1:1 uses a 2-row
+        // band (0.17 of canvas); 9:16 uses the taller 4-row stacked band (~0.34), so it
+        // needs a larger reserve or the poster overflows the viewport. Ratio is relative to
+        // canvas height, so total poster height = canvas * (1 + ratio).
+        let byHeight;
+        if (appState.displayLayout === 'poster') {
+          // 9:16 metadata band = artwork_width * 316/576 (4 rows of 79) ≈ 0.549 of artwork
+          // width. Artwork width = canvas * 0.5625, so band ≈ canvas * 0.309; reserve 0.32
+          // for a small safety margin so the poster never runs past the viewport bottom.
+          const posterMetaRatio = appState.aspectRatio === '9:16' ? 0.32 : metadataRatio;
+          byHeight = availableHeight / (1 + posterMetaRatio);
+        } else {
+          byHeight = availableHeight;
+        }
+
         const byWidth = availableWidth / artworkRatio;
         const nextCanvasSize = Math.max(1, Math.min(byHeight, byWidth));
         root.style.setProperty('--canvas-size', `${nextCanvasSize}px`);
@@ -2722,15 +2982,18 @@
 
 
 
-        // Populate Poster Metadata
+        // Populate Poster Metadata (both the 1:1 block and the separate 9:16 block; only
+        // one is visible per aspect ratio, but populating both keeps them ready on toggle).
         if (appState.displayLayout === 'poster') {
-          document.getElementById('poster-seed').textContent = appState.seed;
-          document.getElementById('poster-palette').textContent = palette.name;
-          document.getElementById('poster-profile').textContent = activeProfile;
-          document.getElementById('poster-form').textContent = appState.showOutline ? 'bound' : 'unbound';
-          document.getElementById('poster-limit').textContent = appState.targetBlocks + ' blocks';
-          document.getElementById('poster-height').textContent = heightUnits + ' units';
-          document.getElementById('poster-shapes').textContent = placements.length;
+          const formText = appState.showOutline ? 'bound' : 'unbound';
+          const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+          setText('poster-seed', appState.seed); setText('pm9-seed', appState.seed);
+          setText('poster-palette', palette.name); setText('pm9-palette', palette.name);
+          setText('poster-profile', activeProfile); setText('pm9-profile', activeProfile);
+          setText('poster-form', formText); setText('pm9-form', formText);
+          setText('poster-limit', appState.targetBlocks + ' blocks'); setText('pm9-limit', appState.targetBlocks + ' blocks');
+          setText('poster-height', heightUnits + ' units'); setText('pm9-height', heightUnits + ' units');
+          setText('poster-shapes', placements.length); setText('pm9-shapes', placements.length);
 
           // Color Usage Calculation
           const colorUsage = {};
@@ -2741,44 +3004,45 @@
           });
           const maxUnits = Math.max(...Object.values(colorUsage), 0);
 
-          const colorBarsContainer = document.getElementById('poster-color-bars');
-          colorBarsContainer.innerHTML = '';
-          palette.colors.forEach(color => {
-            const units = colorUsage[color];
-            const bar = document.createElement('div');
-            bar.className = 'poster-color-bar';
-            bar.style.setProperty('--bar-color', color);
+          const buildColorBars = (container) => {
+            if (!container) return;
+            container.innerHTML = '';
+            palette.colors.forEach(color => {
+              const units = colorUsage[color];
+              const bar = document.createElement('div');
+              bar.className = 'poster-color-bar';
+              bar.style.setProperty('--bar-color', color);
+              const minHeightRatio = 1 / palette.colors.length;
+              const usageRatio = maxUnits > 0 ? (units / maxUnits) : 0;
+              const finalRatio = Math.max(usageRatio, minHeightRatio);
+              if (units === 0 || maxUnits === 0) bar.dataset.unused = 'true';
+              bar.style.height = `${finalRatio * 100}%`;
+              container.appendChild(bar);
+            });
+          };
+          buildColorBars(document.getElementById('poster-color-bars'));
+          buildColorBars(document.getElementById('pm9-color-bars'));
 
-            // Minimum height is 1/N of the container height to ensure it's at least a square
-            const minHeightRatio = 1 / palette.colors.length;
-            const usageRatio = maxUnits > 0 ? (units / maxUnits) : 0;
-            const finalRatio = Math.max(usageRatio, minHeightRatio);
-
-            if (units === 0 || maxUnits === 0) {
-              bar.dataset.unused = 'true';
-            }
-            bar.style.height = `${finalRatio * 100}%`;
-            colorBarsContainer.appendChild(bar);
-          });
-
-          // Shape Units
+          // Shape Units breakdown
           const shapeCounts = placements.reduce((acc, p) => {
             const units = SHAPE_CATALOG[p.id].units;
             acc[units] = (acc[units] || 0) + 1;
             return acc;
           }, {});
-
           const unitsKeys = Object.keys(shapeCounts).map(Number).sort((a, b) => a - b);
-          const unitsContainer = document.getElementById('poster-units-container');
-          unitsContainer.innerHTML = '';
-          unitsKeys.forEach(units => {
-            const lbl = formatUnitLabel(units);
-            const val = shapeCounts[units];
-            const cell = document.createElement('div');
-            cell.className = 'poster-cell hug';
-            cell.innerHTML = `<div class="meta-label">${lbl}</div><div class="meta-value">${val}</div>`;
-            unitsContainer.appendChild(cell);
-          });
+
+          const buildUnits = (container, cellClass) => {
+            if (!container) return;
+            container.innerHTML = '';
+            unitsKeys.forEach(units => {
+              const cell = document.createElement('div');
+              cell.className = cellClass;
+              cell.innerHTML = `<div class="meta-label">${formatUnitLabel(units)}</div><div class="meta-value">${shapeCounts[units]}</div>`;
+              container.appendChild(cell);
+            });
+          };
+          buildUnits(document.getElementById('poster-units-container'), 'poster-cell hug');
+          buildUnits(document.getElementById('pm9-units-container'), 'pm9-cell pm9-unit');
         }
 
         const shapesList = document.getElementById('shapes-list');
