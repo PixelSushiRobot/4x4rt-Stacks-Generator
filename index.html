@@ -26,6 +26,15 @@
          while height shrank to fit, producing a wide rectangle.) The 9:16 override below
          recomputes this for portrait. */
       --artwork-width: var(--canvas-size);
+      /* 9:16 metadata band: 4 stacked rows of (79/576) of --artwork-width each = 316/576 of
+         --artwork-width total. Top-down like --poster-metadata-height above — one variable
+         for the whole band, individual rows split it via flex-grow (see #poster-meta-916
+         below) instead of each computing its own height. JS reads this same ratio (combined
+         with the 0.5625 artwork-width factor) for its canvas-size budget reservation, so
+         there's one source of truth for the band's true proportions instead of two numbers
+         that have to be kept in sync by hand. */
+      --pm9-metadata-ratio: calc(316 / 576);
+      --pm9-metadata-height: calc(var(--artwork-width) * var(--pm9-metadata-ratio));
       /* Modular Scale System */
       --scale-unit: calc(var(--canvas-size) * 0.001);
       --sz-01: calc(var(--scale-unit) * 1);
@@ -942,17 +951,23 @@
       display: flex;
       flex-direction: column;
       width: 100%;
+      /* Top-down like .poster-metadata's --poster-metadata-height: one total band height,
+         set once from --pm9-metadata-height (defined at :root, see above). Rows below split
+         it via flex-grow shares instead of each computing its own explicit height. */
+      height: var(--pm9-metadata-height);
       border-top: var(--ui-border-width) solid var(--ui-ink-solid);
       background: var(--ui-bg);
       color: var(--ui-ink);
       text-transform: uppercase;
       overflow: hidden;
-      /* Row height in this block (artwork-width * 79/576), from the mockup measurement.
-         Still used for structural sizing (row/top-block/color-bar heights) — font-size
-         and padding no longer derive from it (see .meta-label/.meta-value/.pm9-cell
-         below), now that hug/fill sizes cells to content instead of squeezing equal
-         thirds. */
-      --pm9-row-h: calc(var(--artwork-width) * (79 / 576));
+      /* Reference unit for typography only (font-size/padding below) — NOT for box layout,
+         which now comes entirely from flex-grow shares of --pm9-metadata-height above. This
+         is the same 79/576-of-artwork-width "row" the shares divide the band into (4 rows:
+         the top block counts as 2, R3 and R4 count as 1 each), kept only so label/value/
+         padding can be expressed as the same fraction-of-a-row the 1:1 poster uses (15/85,
+         30/85, 20/85 — see .meta-label/.meta-value/.pm9-cell below), so text scales with
+         the canvas exactly like the 1:1 poster instead of sitting at a fixed px size. */
+      --pm9-row-h: calc(var(--pm9-metadata-height) / 4);
     }
 
     /* --- CSS-only scaling for 9:16 Poster Mode --- */
@@ -967,12 +982,15 @@
       overflow: hidden;
     }
 
-    /* Each row is one band-row tall (artwork-width * 79/576) and draws its bottom divider. */
+    /* Rows split --pm9-metadata-height via flex-grow shares (1 share each; .pm9-top below
+       takes 2) instead of each declaring its own height — same pattern as the 1:1 poster's
+       .poster-row { flex: 1 0 0 } splitting --poster-metadata-height in half. */
     #poster-meta-916 .pm9-row {
       display: flex;
       flex-direction: row;
       width: 100%;
-      height: var(--pm9-row-h);
+      flex: 1 0 0;
+      min-height: 0;
       border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
     }
 
@@ -985,10 +1003,10 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      /* Fixed padding, paired with the fixed label/value font-sizes below — hug/fill
-         means cells no longer need to be squeezed, so this no longer has to scale
-         down with the row height. */
-      padding: 10px;
+      /* 20/85 of a row — same fraction the 1:1 poster's cell padding (--sz-20) occupies of
+         its own row height (poster-metadata-height/2 = 85 sz-units). Scales with the canvas
+         like the rest of the 1:1 poster, instead of a fixed px value. */
+      padding: calc(var(--pm9-row-h) * 20 / 85);
       border-right: var(--ui-border-width) solid var(--ui-ink-solid);
       overflow: hidden;
     }
@@ -1008,13 +1026,17 @@
       border-right: none;
     }
 
-    /* Top block: color-bars cell spans 2 row-heights (R1+R2), matching the mockup. Draws the
-       full-width divider before R3 itself, so its two internal sub-rows don't double it up. */
+    /* Top block: color-bars cell spans R1+R2, matching the mockup. Takes 2 flex-grow shares
+       (double a plain .pm9-row's 1 share) instead of an explicit calc(row-h * 2) — the *2
+       lives in one place (the flex-grow number) instead of being duplicated in both this
+       height and the color-bar square's width below. Draws the full-width divider before R3
+       itself, so its two internal sub-rows don't double it up. */
     #poster-meta-916 .pm9-top {
       display: flex;
       flex-direction: row;
       width: 100%;
-      height: calc(var(--pm9-row-h) * 2);
+      flex: 2 0 0;
+      min-height: 0;
       border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
     }
 
@@ -1025,11 +1047,14 @@
       min-width: 0;
     }
 
-    /* Color bars: hug a square top-left cell spanning both sub-rows, bars bottom-aligned
-       like the 1:1 poster. */
+    /* Color bars: square top-left cell spanning both sub-rows, bars bottom-aligned like the
+       1:1 poster. Sized from --pm9-metadata-height directly (half of it, since .pm9-top
+       itself is 2 of the band's 4 shares) — same pattern as the 1:1 poster's color-cell
+       width, which is set from --poster-metadata-height directly rather than from a
+       runtime-computed flex size. */
     #poster-meta-916 .pm9-color {
-      flex: 0 0 calc(var(--pm9-row-h) * 2);
-      /* square: 2 row-heights wide */
+      flex: 0 0 calc(var(--pm9-metadata-height) / 2 - var(--ui-border-width));
+      width: calc(var(--pm9-metadata-height) / 2 - var(--ui-border-width));
       flex-direction: row;
       align-items: flex-end;
       gap: 0;
@@ -1055,16 +1080,20 @@
       border-right: none;
     }
 
-    /* Fixed sizes — no longer derived from row height. hug/fill now gives every cell
-       room to fit its content, so text doesn't need to shrink with the row. */
+    /* Fonts sized as fractions of --pm9-row-h (15/85 and 30/85 — same fractions the 1:1
+       poster's meta-label/meta-value occupy of ITS row height: --sz-15/--sz-30 against an
+       85-sz-unit row). This keeps both the label:value ratio (1:2) AND each one's size
+       relative to its own row identical to the 1:1 poster, and — because --pm9-row-h is
+       ultimately derived from --canvas-size — scales down with the canvas on small
+       viewports exactly like the 1:1 poster's --sz-* tokens do. */
     #poster-meta-916 .meta-label {
-      font-size: 10px;
+      font-size: calc(var(--pm9-row-h) * 15 / 85);
       line-height: 1.2;
       color: var(--ui-ink);
     }
 
     #poster-meta-916 .meta-value {
-      font-size: 20px;
+      font-size: calc(var(--pm9-row-h) * 30 / 85);
       line-height: 1;
       color: var(--ui-ink);
     }
@@ -2401,23 +2430,27 @@
         const pagePadX = parseFloat(styles.getPropertyValue('--page-pad-x')) || 20;
         const pagePadY = parseFloat(styles.getPropertyValue('--page-pad-y')) || 20;
         const sidebarWidth = parseFloat(styles.getPropertyValue('--sidebar-width')) || 365;
-        const metadataRatio = 0.17;
+        const metadataRatio = parseFloat(styles.getPropertyValue('--poster-metadata-ratio')) || 0.17;
+        // Same ratio the CSS band height itself is built from (--pm9-metadata-ratio,
+        // 316/576 — see :root), read here instead of re-approximated, so this reservation
+        // and the actual rendered band can't drift out of sync with each other.
+        const pm9MetadataRatio = parseFloat(styles.getPropertyValue('--pm9-metadata-ratio')) || (316 / 576);
         const isMobile = window.innerWidth <= 640;
         const activeSidebarWidth = (!isMobile && appState.isSidebarOpen) ? sidebarWidth : 0;
         const availableWidth = Math.max(1, window.innerWidth - activeSidebarWidth - (pagePadX * 2));
         const availableHeight = Math.max(1, window.innerHeight - (pagePadY * 2));
         const artworkRatio = appState.aspectRatio === '9:16' ? 0.5625 : 1;
 
-        // Poster reserves height for the metadata band below the canvas. 1:1 uses a 2-row
-        // band (0.17 of canvas); 9:16 uses the taller 4-row stacked band (~0.34), so it
-        // needs a larger reserve or the poster overflows the viewport. Ratio is relative to
-        // canvas height, so total poster height = canvas * (1 + ratio).
+        // Poster reserves height for the metadata band below the canvas. Ratio is relative
+        // to canvas height, so total poster height = canvas * (1 + ratio). 1:1's ratio
+        // (--poster-metadata-ratio, 0.17) is already relative to canvas height directly.
+        // 9:16's band is defined relative to --artwork-width instead (--pm9-metadata-ratio,
+        // 316/576 — 4 stacked rows), so it's converted to a canvas-height-relative ratio via
+        // the same artwork-width:canvas-size factor (artworkRatio) used for byWidth below —
+        // the exact geometry, not a hand-kept approximation of it.
         let byHeight;
         if (appState.displayLayout === 'poster') {
-          // 9:16 metadata band = artwork_width * 316/576 (4 rows of 79) ≈ 0.549 of artwork
-          // width. Artwork width = canvas * 0.5625, so band ≈ canvas * 0.309; reserve 0.32
-          // for a small safety margin so the poster never runs past the viewport bottom.
-          const posterMetaRatio = appState.aspectRatio === '9:16' ? 0.32 : metadataRatio;
+          const posterMetaRatio = appState.aspectRatio === '9:16' ? (artworkRatio * pm9MetadataRatio) : metadataRatio;
           byHeight = availableHeight / (1 + posterMetaRatio);
         } else {
           byHeight = availableHeight;
