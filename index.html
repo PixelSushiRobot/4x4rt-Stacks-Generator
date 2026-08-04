@@ -1255,7 +1255,7 @@
           </div>
         </div>
 
-        <!-- Poster Metadata (1:1) — original nested-flex layout, shown for the square poster. -->
+        <!-- Poster Metadata (1:1) -->
         <div id="poster-metadata" class="poster-metadata" style="display: none;">
           <div class="poster-meta-grid">
             <div class="poster-cell color-cell" id="poster-color-bars"></div>
@@ -1297,12 +1297,7 @@
           </div>
         </div>
 
-        <!-- Poster Metadata (9:16) — 4 stacked rows per the mockup:
-             R1 bars(rowspan) | seed   R2 bars(cont'd) | palette | profile   R3 form | limit | height   R4 shapes | units
-             Color bars spans R1+R2 as a single square cell, per the mockup.
-             Classes are shared with the 1:1 block (.poster-row, .poster-cell, .color-cell,
-             .poster-units-container, …) — #poster-metadata-9x16 + [data-aspect-ratio="9:16"]
-             scope the CSS, so only IDs need the -9x16 suffix. -->
+        <!-- Poster Metadata (9:16) -->
         <div id="poster-metadata-9x16">
           <div class="poster-top">
             <div class="poster-cell color-cell" id="poster-color-bars-9x16"></div>
@@ -1600,7 +1595,7 @@
     const VALID_PALETTE_NAMES = new Set(PALETTES.map(palette => palette.name));
     // --- SHAPE CATALOG ---
     // Shape fields:
-    //   piece    — internal family code (O, I, J, L, T, S, Z); mapped to UI-facing trait labels in PIECE_TRAIT_LABELS
+    //   piece    — internal family code (O, I, J, L, T, S, Z)
     //   rotation — clockwise orientation in degrees
     //   blocks   — SVG rect count drawn per shape
     //   units    — number of grid cells this shape occupies
@@ -2448,8 +2443,6 @@
 
       // Resolve showOutline from formMode + the given palette. 'native' follows the palette
       // (muted/void categories read best unbound); 'bound'/'unbound' are explicit overrides.
-      // Pure — does not touch appState, so grid pieces can each resolve their own palette
-      // without stomping on the single-mode artwork's outline setting.
       computeShowOutline(palette) {
         if (appState.formMode === 'bound') return true;
         if (appState.formMode === 'unbound') return false;
@@ -2457,7 +2450,7 @@
       },
 
       // Called on every single-piece generation so 'native' is always current — no context
-      // gating. Grid pieces use computeShowOutline directly instead (see renderContactSheet).
+      // gating. Grid pieces use computeShowOutline directly instead.
       resolveForm(palette) {
         appState.showOutline = this.computeShowOutline(palette);
         return appState.showOutline;
@@ -2470,9 +2463,6 @@
         const pagePadY = parseFloat(styles.getPropertyValue('--page-pad-y')) || 20;
         const sidebarWidth = parseFloat(styles.getPropertyValue('--sidebar-width')) || 365;
         const metadataRatio = parseFloat(styles.getPropertyValue('--poster-metadata-ratio')) || 0.17;
-        // Same ratio the CSS band height itself is built from (--poster-metadata-ratio-9x16,
-        // 316/576 — see :root), read here instead of re-approximated, so this reservation
-        // and the actual rendered band can't drift out of sync with each other.
         const metadataRatio9x16 = parseFloat(styles.getPropertyValue('--poster-metadata-ratio-9x16')) || (316 / 576);
         const isMobile = window.innerWidth <= 640;
         const activeSidebarWidth = (!isMobile && appState.isSidebarOpen) ? sidebarWidth : 0;
@@ -2618,7 +2608,6 @@
         const rangeToggleEl = document.getElementById('toggle-range-mode');
         if (rangeToggleEl) rangeToggleEl.checked = (appState.heightMode === 'range');
 
-        // Check the Form radio matching the current formMode.
         document.querySelectorAll('#form-options-panel input[name="form-mode"]').forEach(radio => {
           radio.checked = (radio.value === appState.formMode);
         });
