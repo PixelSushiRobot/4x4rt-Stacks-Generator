@@ -464,17 +464,121 @@
       border: var(--rule-width) solid rgba(28, 28, 26, 0.2);
     }
 
-    .height-panel-tools {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--sz-10);
-      margin-bottom: var(--sz-16);
+    /* Height panel: 3-dots mode toggle above a wrapping grid of selection pills. */
+    .height-panel {
+      padding: 20px;
+    }
+
+    /* Mode toggle: three 6px dots, 3px gaps (individual mode). Range mode hides the middle
+       dot and connects the outer two with a 2px bar. */
+    .height-mode-toggle {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      width: 24px;      /* 6 + 3 + 6 + 3 + 6 — fixed so the range-mode bar has a span to fill */
+      height: 6px;
+      padding: 0;
+      margin-bottom: 16px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+    .height-mode-toggle .hmt-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--ui-ink);
+      flex: 0 0 auto;
+    }
+    /* Range mode: middle dot becomes a 2px connecting bar butting against the outer dots
+       (no gap), so it reads as two dots joined by a continuous line. */
+    :root[data-height-mode="range"] .height-mode-toggle {
+      gap: 0;
+    }
+    :root[data-height-mode="range"] .height-mode-toggle .hmt-dot-2 {
+      height: 2px;
+      border-radius: 0;
+      flex: 1 1 auto;
     }
 
     .height-grid {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--sz-08) 0;
+      gap: 8px;
+    }
+
+    /* Selection pill: 63x26, 2px border, 15px number, all --ui-ink. */
+    .toggle-cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 63px;
+      height: 26px;
+      padding: 0;
+      font-size: 15px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      color: var(--ui-ink);
+    }
+
+    .toggle-cell::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--ui-ink);
+      border-radius: 999px;
+      z-index: 0;
+    }
+
+    .toggle-cell span {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Selected (individual) and in-range (range) share the filled dark look with light text. */
+    .toggle-cell[data-state="selected"],
+    .toggle-cell[data-state="in-range"] {
+      color: var(--ui-bg);
+    }
+
+    .toggle-cell[data-state="selected"]::before,
+    .toggle-cell[data-state="in-range"]::before {
+      background-color: var(--ui-ink-solid);
+      border-color: var(--ui-ink-solid);
+    }
+
+    /* Range pills merge into a continuous capsule within a row. Interior pills are square
+       and extend across the 8px grid gap to join neighbors; the capsule is capped with a
+       rounded end wherever it's the range start/end OR a row edge (so a range that wraps to
+       the next row shows normal rounded pills per row, not flat dangling edges). */
+    .toggle-cell[data-state="in-range"]::before {
+      inset: 0 -8px;          /* default interior: square, extend both sides across the gap */
+      border-radius: 0;
+    }
+    /* Left cap: rounded and flush when this pill starts the range or starts a row. */
+    .toggle-cell[data-state="in-range"][data-range-edge="start"]::before,
+    .toggle-cell[data-state="in-range"][data-range-edge="both"]::before,
+    .toggle-cell[data-state="in-range"][data-row-edge="left"]::before {
+      left: 0;
+      border-top-left-radius: 999px;
+      border-bottom-left-radius: 999px;
+    }
+    /* Right cap: rounded and flush when this pill ends the range or ends a row. */
+    .toggle-cell[data-state="in-range"][data-range-edge="end"]::before,
+    .toggle-cell[data-state="in-range"][data-range-edge="both"]::before,
+    .toggle-cell[data-state="in-range"][data-row-edge="right"]::before {
+      right: 0;
+      border-top-right-radius: 999px;
+      border-bottom-right-radius: 999px;
+    }
+
+    .toggle-cell:focus-visible {
+      outline: 2px solid var(--ui-ink-muted);
+      outline-offset: 2px;
+      border-radius: 999px;
     }
 
     /* ==========================================================================
@@ -635,72 +739,6 @@
     .slider-thumb:focus-visible {
       outline: var(--sz-02) solid var(--ui-ink-muted);
       outline-offset: var(--sz-02);
-    }
-
-    .toggle-cell {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: var(--sz-30);
-      min-width: var(--sz-64);
-      padding: 0 var(--sz-25) 0 var(--sz-15);
-      font-size: var(--sz-18);
-      cursor: pointer;
-      background: transparent;
-      border: none;
-      color: inherit;
-    }
-
-    .toggle-cell::before {
-      content: '';
-      position: absolute;
-      inset: 0 var(--sz-10) 0 0;
-      border: var(--sz-02) solid var(--ui-ink);
-      border-radius: 999px;
-      z-index: 0;
-    }
-
-    .toggle-cell span {
-      position: relative;
-      z-index: 1;
-    }
-
-    .toggle-cell[data-state="selected"],
-    .toggle-cell[data-state="in-range"] {
-      color: var(--ui-bg);
-    }
-
-    .toggle-cell[data-state="selected"]::before,
-    .toggle-cell[data-state="in-range"]::before {
-      background-color: var(--ui-ink);
-      border-color: transparent;
-    }
-
-    .toggle-cell[data-state="in-range"]::before {
-      inset: 0;
-      border-radius: 0;
-    }
-
-    .toggle-cell[data-range-edge="start"]::before {
-      inset: 0;
-      border-radius: 999px 0 0 999px;
-    }
-
-    .toggle-cell[data-range-edge="end"]::before {
-      inset: 0 var(--sz-10) 0 0;
-      border-radius: 0 999px 999px 0;
-    }
-
-    .toggle-cell[data-range-edge="start"].range-end::before {
-      inset: 0 var(--sz-10) 0 0;
-      border-radius: 999px;
-    }
-
-    .toggle-cell:focus-visible {
-      outline: var(--sz-02) solid var(--ui-ink-muted);
-      outline-offset: var(--sz-02);
-      border-radius: 999px;
     }
 
     #seed-display {
@@ -1373,18 +1411,15 @@
             </svg>
           </button>
           <div id="height-options-panel" class="options-panel" data-panel="height">
-            <div class="height-panel-tools">
-              <label class="option-row">
-                <span>Range</span>
-                <input id="toggle-range-mode" type="checkbox">
-                <span class="option-marker" aria-hidden="true"></span>
-              </label>
-              <button id="clear-height-filter" class="option-action" type="button">
-                <span>Clear</span>
-                <span class="option-marker" aria-hidden="true"></span>
+            <div class="height-panel">
+              <button id="height-mode-toggle" class="height-mode-toggle" type="button"
+                      aria-label="Toggle range selection mode">
+                <span class="hmt-dot hmt-dot-1"></span>
+                <span class="hmt-dot hmt-dot-2"></span>
+                <span class="hmt-dot hmt-dot-3"></span>
               </button>
+              <div id="height-filter-container" class="height-grid"></div>
             </div>
-            <div id="height-filter-container" class="height-grid"></div>
           </div>
           <div class="control-row u-hide-icon" id="shapes-heading">
             <span class="control-label">Shapes</span>
@@ -2218,8 +2253,9 @@
           checkbox.checked = appState.selectedProfiles.includes(checkbox.value);
         });
 
-        const rangeToggleEl = document.getElementById('toggle-range-mode');
-        if (rangeToggleEl) rangeToggleEl.checked = (appState.heightMode === 'range');
+        // Height mode is reflected on the root for the 3-dots toggle icon (renderHeightFilter
+        // also sets this; set here too so it's correct before the first pill render).
+        document.documentElement.setAttribute('data-height-mode', appState.heightMode === 'range' ? 'range' : 'multi');
 
         document.querySelectorAll('#form-options-panel input[name="form-mode"]').forEach(radio => {
           radio.checked = (radio.value === appState.formMode);
@@ -2928,25 +2964,34 @@
         if (!hList) return;
         hList.innerHTML = '';
 
-        POSSIBLE_HEIGHTS.slice().sort((a, b) => a - b).forEach(h => {
+        // Reflect mode on the root so the 3-dots toggle CSS can switch icon states.
+        document.documentElement.setAttribute('data-height-mode', appState.heightMode === 'range' ? 'range' : 'multi');
+
+        const sorted = POSSIBLE_HEIGHTS.slice().sort((a, b) => a - b);
+        // Pills wrap 4 per row; a merged range capsule must not visually bleed across a row
+        // wrap, so mark the pills at row edges to cap their capsule extension.
+        const PER_ROW = 4;
+
+        const rangeMin = appState.rangeEnd !== null ? Math.min(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
+        const rangeMax = appState.rangeEnd !== null ? Math.max(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
+
+        sorted.forEach((h, index) => {
           const cell = document.createElement('button');
           cell.className = 'toggle-cell';
           cell.type = 'button';
 
           if (appState.heightMode === 'multi') {
             if (appState.selectedHeights.has(h)) cell.setAttribute('data-state', 'selected');
-          } else {
-            if (appState.selectedHeights.has(h)) {
-              cell.setAttribute('data-state', 'in-range');
-              const min = appState.rangeEnd !== null ? Math.min(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
-              const max = appState.rangeEnd !== null ? Math.max(appState.rangeStart, appState.rangeEnd) : appState.rangeStart;
-              if (h === min) cell.setAttribute('data-range-edge', 'start');
-              if (h === max) cell.setAttribute('data-range-edge', 'end');
-              if (h === min && h === max) {
-                cell.setAttribute('data-range-edge', 'start');
-                cell.classList.add('range-end');
-              }
-            }
+          } else if (appState.selectedHeights.has(h)) {
+            cell.setAttribute('data-state', 'in-range');
+            if (h === rangeMin) cell.setAttribute('data-range-edge', 'start');
+            if (h === rangeMax) cell.setAttribute('data-range-edge', 'end');
+            // A single-pill range is both start and end → round both caps (full pill).
+            if (h === rangeMin && h === rangeMax) cell.setAttribute('data-range-edge', 'both');
+            // Cap the capsule at row wraps so a wrapped range shows normal rounded pills
+            // per row rather than flat edges dangling at the wrap.
+            if (index % PER_ROW === 0) cell.setAttribute('data-row-edge', 'left');
+            if (index % PER_ROW === PER_ROW - 1) cell.setAttribute('data-row-edge', 'right');
           }
 
           cell.innerHTML = `<span>${h}</span>`;
@@ -3040,17 +3085,8 @@
           State.syncURL();
         });
 
-        document.getElementById('toggle-range-mode')?.addEventListener('change', event => {
-          State.setHeightMode(event.target.checked ? 'range' : 'multi');
-          State.clearSeed();
-          Render.renderHeightFilter();
-          State.triggerGeneration();
-        });
-
-        document.getElementById('clear-height-filter')?.addEventListener('click', () => {
-          appState.selectedHeights.clear();
-          appState.rangeStart = null;
-          appState.rangeEnd = null;
+        document.getElementById('height-mode-toggle')?.addEventListener('click', () => {
+          State.setHeightMode(appState.heightMode === 'range' ? 'multi' : 'range');
           State.clearSeed();
           Render.renderHeightFilter();
           State.triggerGeneration();
