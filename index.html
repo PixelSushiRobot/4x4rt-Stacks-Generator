@@ -823,11 +823,27 @@
       }
     }
 
+    /* --- Outer Mat Frame --- */
+    .poster-mat {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    :root[data-layout="poster"] .poster-mat {
+      /* Provides the exact 2% paper mat outside the 2px black border */
+      padding: var(--sz-20);
+      background-color: var(--ui-bg);
+    }
+
     /* --- Poster Layout Overrides --- */
     :root[data-layout="poster"] .artwork-container {
       height: auto;
       display: flex;
       flex-direction: column;
+      /* Black border stays pinned directly around the poster content */
+      border: var(--ui-border-width) solid var(--ui-ink-solid);
     }
 
     :root[data-layout="poster"] .artwork-stage {
@@ -1214,136 +1230,139 @@
   </svg>
   <div id="app" class="l-app">
     <main id="canvas" class="l-canvas">
-      <div id="artwork-container" class="artwork-container">
-        <div class="artwork-stage">
-          <!-- Poster Title -->
-          <div id="poster-title" class="poster-title" style="display: none;">
-            <div class="poster-title-label">project</div>
-            <div class="poster-title-value">4x4rt Stacks</div>
+      <!-- Outer mat frame: provides the 2% paper margin in poster mode -->
+      <div id="poster-mat" class="poster-mat">
+        <div id="artwork-container" class="artwork-container">
+          <div class="artwork-stage">
+            <!-- Poster Title -->
+            <div id="poster-title" class="poster-title" style="display: none;">
+              <div class="poster-title-label">project</div>
+              <div class="poster-title-value">4x4rt Stacks</div>
+            </div>
+
+            <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
+              <svg class="icon icon-desktop">
+                <use href="#icon-custom-right-panel"></use>
+              </svg>
+              <svg class="icon icon-mobile">
+                <use href="#icon-custom-bottom-panel"></use>
+              </svg>
+            </button>
+            <svg id="artwork-svg" class="artwork-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
+
+            <div id="watermark" class="watermark">
+              <svg viewBox="0 0 90 30" preserveAspectRatio="xMaxYMax meet" xmlns="http://www.w3.org/2000/svg">
+                <g fill="var(--ui-ink-muted)">
+                  <rect width="24" height="6" />
+                  <rect y="16" width="24" height="6" />
+                  <rect y="24" width="12" height="6" />
+                  <rect x="12" y="8" width="18" height="6" />
+
+                  <rect x="30" y="8" width="24" height="6" />
+                  <rect x="30" y="24" width="24" height="6" />
+                  <rect x="36" width="24" height="6" />
+                  <rect x="36" y="16" width="24" height="6" />
+
+                  <rect x="60" width="24" height="6" />
+                  <rect x="60" y="16" width="24" height="6" />
+                  <rect x="60" y="24" width="12" height="6" />
+                  <rect x="72" y="8" width="18" height="6" />
+                  <rect x="78" y="24" width="12" height="6" />
+                </g>
+              </svg>
+            </div>
           </div>
 
-          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Close sidebar">
-            <svg class="icon icon-desktop">
-              <use href="#icon-custom-right-panel"></use>
-            </svg>
-            <svg class="icon icon-mobile">
-              <use href="#icon-custom-bottom-panel"></use>
-            </svg>
-          </button>
-          <svg id="artwork-svg" class="artwork-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"></svg>
-
-          <div id="watermark" class="watermark">
-            <svg viewBox="0 0 90 30" preserveAspectRatio="xMaxYMax meet" xmlns="http://www.w3.org/2000/svg">
-              <g fill="var(--ui-ink-muted)">
-                <rect width="24" height="6" />
-                <rect y="16" width="24" height="6" />
-                <rect y="24" width="12" height="6" />
-                <rect x="12" y="8" width="18" height="6" />
-
-                <rect x="30" y="8" width="24" height="6" />
-                <rect x="30" y="24" width="24" height="6" />
-                <rect x="36" width="24" height="6" />
-                <rect x="36" y="16" width="24" height="6" />
-
-                <rect x="60" width="24" height="6" />
-                <rect x="60" y="16" width="24" height="6" />
-                <rect x="60" y="24" width="12" height="6" />
-                <rect x="72" y="8" width="18" height="6" />
-                <rect x="78" y="24" width="12" height="6" />
-              </g>
-            </svg>
+          <!-- Poster Metadata (1:1) -->
+          <div id="poster-metadata" class="poster-metadata" style="display: none;">
+            <div class="poster-meta-grid">
+              <div class="poster-cell color-cell" id="poster-color-bars"></div>
+              <div class="poster-data-cols">
+                <div class="poster-row">
+                  <div class="poster-cell hug">
+                    <div class="meta-label">seed</div>
+                    <div class="meta-value" id="poster-seed"></div>
+                  </div>
+                  <div class="poster-cell fill">
+                    <div class="meta-label">palette</div>
+                    <div class="meta-value" id="poster-palette"></div>
+                  </div>
+                  <div class="poster-cell hug">
+                    <div class="meta-label">profile</div>
+                    <div class="meta-value" id="poster-profile"></div>
+                  </div>
+                  <div class="poster-cell hug" style="border-right: none;">
+                    <div class="meta-label">form</div>
+                    <div class="meta-value" id="poster-form"></div>
+                  </div>
+                </div>
+                <div class="poster-row">
+                  <div class="poster-cell fill">
+                    <div class="meta-label">limit</div>
+                    <div class="meta-value" id="poster-limit"></div>
+                  </div>
+                  <div class="poster-cell hug">
+                    <div class="meta-label">height</div>
+                    <div class="meta-value" id="poster-height"></div>
+                  </div>
+                  <div class="poster-cell hug">
+                    <div class="meta-label">shapes</div>
+                    <div class="meta-value" id="poster-shapes"></div>
+                  </div>
+                  <div id="poster-units-container" class="poster-units-container"></div>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <!-- Poster Metadata (9:16) -->
+          <div id="poster-metadata-9x16">
+            <div class="poster-top">
+              <div class="poster-cell color-cell" id="poster-color-bars-9x16"></div>
+              <div class="poster-top-right">
+                <div class="poster-row">
+                  <div class="poster-cell fill">
+                    <div class="meta-label">seed</div>
+                    <div class="meta-value" id="poster-seed-9x16"></div>
+                  </div>
+                </div>
+                <div class="poster-row poster-row-last">
+                  <div class="poster-cell fill">
+                    <div class="meta-label">palette</div>
+                    <div class="meta-value" id="poster-palette-9x16"></div>
+                  </div>
+                  <div class="poster-cell hug">
+                    <div class="meta-label">profile</div>
+                    <div class="meta-value" id="poster-profile-9x16"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="poster-row">
+              <div class="poster-cell hug">
+                <div class="meta-label">form</div>
+                <div class="meta-value" id="poster-form-9x16"></div>
+              </div>
+              <div class="poster-cell fill">
+                <div class="meta-label">limit</div>
+                <div class="meta-value" id="poster-limit-9x16"></div>
+              </div>
+              <div class="poster-cell hug">
+                <div class="meta-label">height</div>
+                <div class="meta-value" id="poster-height-9x16"></div>
+              </div>
+            </div>
+            <div class="poster-row poster-row-last">
+              <div class="poster-cell fill">
+                <div class="meta-label">shapes</div>
+                <div class="meta-value" id="poster-shapes-9x16"></div>
+              </div>
+              <div id="poster-units-container-9x16" class="poster-units-container"></div>
+            </div>
+          </div>
+
+
         </div>
-
-        <!-- Poster Metadata (1:1) -->
-        <div id="poster-metadata" class="poster-metadata" style="display: none;">
-          <div class="poster-meta-grid">
-            <div class="poster-cell color-cell" id="poster-color-bars"></div>
-            <div class="poster-data-cols">
-              <div class="poster-row">
-                <div class="poster-cell hug">
-                  <div class="meta-label">seed</div>
-                  <div class="meta-value" id="poster-seed"></div>
-                </div>
-                <div class="poster-cell fill">
-                  <div class="meta-label">palette</div>
-                  <div class="meta-value" id="poster-palette"></div>
-                </div>
-                <div class="poster-cell hug">
-                  <div class="meta-label">profile</div>
-                  <div class="meta-value" id="poster-profile"></div>
-                </div>
-                <div class="poster-cell hug" style="border-right: none;">
-                  <div class="meta-label">form</div>
-                  <div class="meta-value" id="poster-form"></div>
-                </div>
-              </div>
-              <div class="poster-row">
-                <div class="poster-cell fill">
-                  <div class="meta-label">limit</div>
-                  <div class="meta-value" id="poster-limit"></div>
-                </div>
-                <div class="poster-cell hug">
-                  <div class="meta-label">height</div>
-                  <div class="meta-value" id="poster-height"></div>
-                </div>
-                <div class="poster-cell hug">
-                  <div class="meta-label">shapes</div>
-                  <div class="meta-value" id="poster-shapes"></div>
-                </div>
-                <div id="poster-units-container" class="poster-units-container"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Poster Metadata (9:16) -->
-        <div id="poster-metadata-9x16">
-          <div class="poster-top">
-            <div class="poster-cell color-cell" id="poster-color-bars-9x16"></div>
-            <div class="poster-top-right">
-              <div class="poster-row">
-                <div class="poster-cell fill">
-                  <div class="meta-label">seed</div>
-                  <div class="meta-value" id="poster-seed-9x16"></div>
-                </div>
-              </div>
-              <div class="poster-row poster-row-last">
-                <div class="poster-cell fill">
-                  <div class="meta-label">palette</div>
-                  <div class="meta-value" id="poster-palette-9x16"></div>
-                </div>
-                <div class="poster-cell hug">
-                  <div class="meta-label">profile</div>
-                  <div class="meta-value" id="poster-profile-9x16"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="poster-row">
-            <div class="poster-cell hug">
-              <div class="meta-label">form</div>
-              <div class="meta-value" id="poster-form-9x16"></div>
-            </div>
-            <div class="poster-cell fill">
-              <div class="meta-label">limit</div>
-              <div class="meta-value" id="poster-limit-9x16"></div>
-            </div>
-            <div class="poster-cell hug">
-              <div class="meta-label">height</div>
-              <div class="meta-value" id="poster-height-9x16"></div>
-            </div>
-          </div>
-          <div class="poster-row poster-row-last">
-            <div class="poster-cell fill">
-              <div class="meta-label">shapes</div>
-              <div class="meta-value" id="poster-shapes-9x16"></div>
-            </div>
-            <div id="poster-units-container-9x16" class="poster-units-container"></div>
-          </div>
-        </div>
-
-
       </div>
     </main>
     <aside id="sidebar" class="l-sidebar">
@@ -3592,38 +3611,18 @@
       async downloadPNG(pixelRatio = 2) {
         if (appState.displayLayout === 'poster') {
           try {
-            const node = document.getElementById('artwork-container');
+            // Target the outer mat element instead of the inner container
+            const node = document.getElementById('poster-mat');
             const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-            const rect = node.getBoundingClientRect();
-
-            // 20px padding for 1000px width = 2% ratio (0.02)
-            const padRatio = 0.02;
-            const outerPadding = Math.round(rect.width * padRatio);
-
-            // Total dimensions including the 2% outer mat padding
-            const totalWidth = rect.width + (outerPadding * 2);
-            const totalHeight = rect.height + (outerPadding * 2);
-
             const targetWidth = Math.round(canvasW * pixelRatio);
-            const targetOuterPadding = Math.round(targetWidth * padRatio);
-            const exportCanvasWidth = targetWidth + (targetOuterPadding * 2);
-            const exportCanvasHeight = Math.round((totalHeight / totalWidth) * exportCanvasWidth);
+            const rect = node.getBoundingClientRect();
+            const targetHeight = Math.round((rect.height / rect.width) * targetWidth);
 
-            // Create a temporary outer wrapper to add the 2% background border
-            const wrapper = document.createElement('div');
-            wrapper.style.padding = `${outerPadding}px`;
-            wrapper.style.backgroundColor = appState.artwork.palette.bg;
-            wrapper.style.display = 'inline-block';
-
-            const parent = node.parentNode;
-            parent.insertBefore(wrapper, node);
-            wrapper.appendChild(node);
-
-            const dataUrl = await htmlToImage.toPng(wrapper, {
-              width: totalWidth,
-              height: totalHeight,
-              canvasWidth: exportCanvasWidth,
-              canvasHeight: exportCanvasHeight,
+            const dataUrl = await htmlToImage.toPng(node, {
+              width: rect.width,
+              height: rect.height,
+              canvasWidth: targetWidth,
+              canvasHeight: targetHeight,
               pixelRatio: 1,
               backgroundColor: appState.artwork.palette.bg,
               style: {
@@ -3631,18 +3630,9 @@
                 transformOrigin: 'top left'
               }
             });
-
-            // Restore DOM state
-            parent.insertBefore(node, wrapper);
-            wrapper.remove();
-
             this.triggerDownload(dataUrl, `4x4rt-stacks-poster-${appState.seed || 'export'}.png`);
           } catch (error) {
             console.error('Poster PNG download failed', error);
-            const node = document.getElementById('artwork-container');
-            if (node && node.parentNode.id !== 'canvas') {
-              document.getElementById('canvas').appendChild(node);
-            }
           }
           return;
         }
