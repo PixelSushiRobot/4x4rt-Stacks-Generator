@@ -2163,10 +2163,10 @@
         // 2. Pick Profile natively from the PRNG
         const profileMode = nextRandom();
         if (profileMode < 0.40) activeProfile = 'prism';      // 40% — chaotic prismatic: adjacency-off + deck refill, guarded to >=3 distinct colors
-        else if (profileMode < 0.65) activeProfile = 'fade';  // 25% — value gradient by height
-        else if (profileMode < 0.81) activeProfile = 'shift'; // 16% — ordered hue walk by height
-        else if (profileMode < 0.94) activeProfile = 'split'; // 13% — two hues, max luminance distance
-        else activeProfile = 'solid';                         // 6% — single hue (kept rare; a little goes a long way)
+        else if (profileMode < 0.67) activeProfile = 'fade';  // 27% — value gradient by height
+        else if (profileMode < 0.84) activeProfile = 'shift'; // 17% — ordered hue walk by height
+        else if (profileMode < 0.97) activeProfile = 'split'; // 13% — two hues, max luminance distance
+        else activeProfile = 'solid';                         // 3% — single hue (kept rare; a little goes a long way)
 
         if (!isForcedSeed && allowedProfiles.length > 0 && !allowedProfiles.includes(activeProfile)) continue;
 
@@ -3218,8 +3218,8 @@
           ['prism', 'Prism'],
           ['fade', 'Fade'],
           ['shift', 'Shift'],
-          ['solid', 'Solid'],
-          ['split', 'Split']
+          ['split', 'Split'],
+          ['solid', 'Solid']
         ];
 
         list.innerHTML = '';
