@@ -21,20 +21,12 @@
       --content-width: calc(100vw - var(--active-sidebar-width));
       --poster-metadata-ratio: 0.17;
       --canvas-size: min(calc(100vh - (var(--page-pad-y) * 2)), calc(var(--content-width) - (var(--page-pad-x) * 2)));
-      /* 1:1 default: artwork width tracks the fitted square dimension. (Was hardcoded to
-         1000px, which broke the aspect ratio on wide/short viewports — width stuck at 1000
-         while height shrank to fit, producing a wide rectangle.) The 9:16 override below
-         recomputes this for portrait. */
       --artwork-width: var(--canvas-size);
-      /* 9:16 metadata band: 4 stacked rows of (79/576) of --artwork-width each = 316/576 of
-         --artwork-width total. Top-down like --poster-metadata-height above — one variable
-         for the whole band, individual rows split it via flex-grow (see #poster-metadata-9x16
-         below) instead of each computing its own height. JS reads this same ratio (combined
-         with the 0.5625 artwork-width factor) for its canvas-size budget reservation, so
-         there's one source of truth for the band's true proportions instead of two numbers
-         that have to be kept in sync by hand. */
-      --poster-metadata-ratio-9x16: calc(316 / 576);
-      --poster-metadata-height-9x16: calc(var(--artwork-width) * var(--poster-metadata-ratio-9x16));
+
+      /* Portrait (9:16) metadata band: 4 stacked rows of (79/576) of --artwork-width each = 316/576 of --artwork-width total. */
+      --poster-metadata-ratio-portrait: calc(316 / 576);
+      --poster-metadata-height-portrait: calc(var(--artwork-width) * var(--poster-metadata-ratio-portrait));
+
       /* Modular Scale System */
       --scale-unit: calc(var(--canvas-size) * 0.001);
       --sz-01: calc(var(--scale-unit) * 1);
@@ -58,7 +50,7 @@
       --sz-365: calc(var(--scale-unit) * 365);
 
       --rule-width: max(1px, var(--sz-01));
-      /* Failsafe colors from Spice palette to avoid unstyled content on first paint */
+      /* Failsafe colors from Spice palette */
       --ui-bg: #f4f1ea;
       --ui-ink: rgba(28, 28, 26, 0.9);
       --ui-ink-solid: rgb(28, 28, 26);
@@ -75,7 +67,7 @@
       --active-sidebar-width: 0px;
     }
 
-    :root[data-aspect-ratio="9:16"] {
+    :root[data-aspect-ratio="portrait"] {
       --artwork-width: calc((var(--canvas-size) - var(--ui-border-width) * 2) * 0.5625 + var(--ui-border-width) * 2);
     }
 
@@ -154,12 +146,6 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      /* Pin the sidebar to the 1000px-canvas reference. NOTE: the global --sz-* tokens are
-         declared on :root, so their var(--scale-unit) is substituted AT :root and inherited
-         as already-computed lengths — overriding --scale-unit alone here does nothing. We
-         must re-declare the --sz-* tokens against the fixed unit so they recompute in this
-         subtree (1000 * 0.001 = 1px per unit → --sz-N = N px). Artwork/watermark keep the
-         fluid :root scale. */
       --scale-unit: 1px;
       --sz-01: 1px;
       --sz-02: 2px;
@@ -197,7 +183,6 @@
       flex: 1;
       overflow-y: auto;
       overflow-anchor: none;
-      /* don't let the browser auto-shift scroll on panel open/close */
     }
 
     .l-sidebar[data-state="collapsed"] .sidebar-content {
@@ -207,6 +192,18 @@
     /* ==========================================================================
        4. SVG & CANVAS UTILITIES
        ========================================================================== */
+    .poster-mat {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    :root[data-layout="poster"] .poster-mat {
+      padding: var(--sz-20);
+      background-color: var(--ui-bg);
+    }
+
     .artwork-container {
       position: relative;
       width: var(--artwork-width);
@@ -268,8 +265,6 @@
     .artist-name {
       color: var(--ui-ink-muted);
     }
-
-
 
     .project-description {
       font-size: var(--ui-text-size);
@@ -351,19 +346,13 @@
 
     .options-panel[data-state="open"] {
       display: block;
-      /* Panel fill hugs its rows; the 20px gap below is spacing before the divider that
-         precedes the next section. The divider itself is drawn by the next section's
-         trigger row (border-top rule below), so it reads as a full-width section line. */
       margin-bottom: var(--sz-20);
     }
 
-    /* A trigger row sitting directly above its open panel drops its own bottom line,
-       so there's no rule/space between the heading and the panel. */
     .control-row[data-interactive="true"]:has(+ .options-panel[data-state="open"]) {
       border-bottom: none;
     }
 
-    /* The section AFTER an open panel carries the divider on its top edge. */
     .options-panel[data-state="open"]+.control-row {
       border-top: var(--rule-width) solid var(--ui-rule);
     }
@@ -400,16 +389,12 @@
       min-height: var(--sz-30);
       padding: var(--sz-20);
       border-radius: 0;
-      /* Reserve the focus stroke's space up front (transparent) so focusing recolors it
-         without shifting layout. */
       border-bottom: var(--rule-width) solid transparent;
       color: var(--ui-ink);
       cursor: pointer;
       text-transform: uppercase;
     }
 
-    /* First/last rows echo the panel's corner radius so their hover/selected fill stays
-       inside the rounded panel — no overflow clipping needed. */
     .option-list>.option-row:first-child {
       border-top-left-radius: var(--sz-20);
       border-top-right-radius: var(--sz-20);
@@ -420,7 +405,6 @@
       border-bottom-right-radius: var(--sz-20);
     }
 
-    /* Hover and selected share the same fill; neither adds a border. */
     .option-row:hover,
     .option-action:hover,
     .option-row:has(input:checked) {
@@ -428,9 +412,6 @@
       color: var(--ui-ink);
     }
 
-    /* Hidden checkbox pinned inside its own row. It must be position:absolute within the
-       row (row is position:relative) — otherwise it escapes to the scroll container and
-       focusing it on click scrolls the sidebar to a stale offset, clipping the panel. */
     .option-row {
       position: relative;
     }
@@ -445,18 +426,12 @@
       pointer-events: none;
     }
 
-    /* Tab (keyboard) focus matches the section rows: no outline, just a bottom stroke.
-       The transparent border is already reserved above, so this only recolors it —
-       no layout shift. :has(:focus-visible) keeps it keyboard-only. */
     .option-row:has(input:focus-visible),
     .option-action:focus-visible {
       outline: none;
       border-bottom-color: var(--ui-ink-muted);
     }
 
-    /* Checkbox marker: 16x16, 4px radius; 2px stroke drawn CENTERED on the edge (1px
-       outside + 1px inside) to match Figma's center-aligned stroke, since a CSS border
-       would sit fully inside. Filled 10x10 inner square when selected. */
     .option-marker {
       width: 16px;
       height: 16px;
@@ -814,7 +789,7 @@
         padding: var(--sz-20) 0;
       }
 
-      .l-canvas[data-aspect-ratio="9:16"]~.l-sidebar {
+      .l-canvas[data-aspect-ratio="portrait"]~.l-sidebar {
         width: calc((var(--canvas-size) - var(--ui-border-width) * 2) * 0.5625 + var(--ui-border-width) * 2);
       }
 
@@ -823,26 +798,11 @@
       }
     }
 
-    /* --- Outer Mat Frame --- */
-    .poster-mat {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: transparent;
-    }
-
-    :root[data-layout="poster"] .poster-mat {
-      /* Provides the exact 2% paper mat outside the 2px black border */
-      padding: var(--sz-20);
-      background-color: var(--ui-bg);
-    }
-
     /* --- Poster Layout Overrides --- */
     :root[data-layout="poster"] .artwork-container {
       height: auto;
       display: flex;
       flex-direction: column;
-      /* Black border stays pinned directly around the poster content */
       border: var(--ui-border-width) solid var(--ui-ink-solid);
     }
 
@@ -889,7 +849,6 @@
       width: 100%;
       height: 100%;
     }
-
 
     .poster-data-cols {
       flex: 1 0 0;
@@ -956,70 +915,38 @@
       aspect-ratio: 1 / 1;
     }
 
-    /* ================= 9:16 POSTER METADATA (separate structure) =================
-       Per the mockup: color bars is a square cell spanning R1+R2 (like a rowspan), with
-       seed/palette/profile stacked to its right. Single-direction borders (border-right on
-       cells, border-bottom on rows) — no doubling.
-         TOP BLOCK (height = 2 row-heights, square bars cell):
-           bars(rowspan, hug) | seed(fill)               <- sub-row 1
-           bars(cont'd)       | palette(fill) | profile(hug)  <- sub-row 2
-         R3: form(hug) | limit(fill) | height(hug)
-         R4: shapes(fill) | unit(hug) unit(hug) ...
-         Same classes as the 1:1 metadata block (.poster-cell.fill / .poster-cell.hug, etc.) —
-         every cell picks one explicitly, same as the square layout does. The two blocks share
-         one class vocabulary; #poster-metadata-9x16 + [data-aspect-ratio="9:16"] on the rules
-         below is what scopes them apart, so no separate class suffix is needed. */
-    #poster-metadata-9x16 {
+    /* ================= PORTRAIT (9:16) POSTER METADATA ================= */
+    #poster-metadata-portrait {
       display: none;
     }
 
-    :root[data-aspect-ratio="9:16"][data-layout="poster"] #poster-metadata {
+    :root[data-aspect-ratio="portrait"][data-layout="poster"] #poster-metadata {
       display: none !important;
     }
 
-    :root[data-aspect-ratio="9:16"][data-layout="poster"] #poster-metadata-9x16 {
+    :root[data-aspect-ratio="portrait"][data-layout="poster"] #poster-metadata-portrait {
       display: flex;
       flex-direction: column;
       width: 100%;
-      /* Top-down like .poster-metadata's --poster-metadata-height: one total band height,
-         set once from --poster-metadata-height-9x16 (defined at :root, see above). Rows below
-         split it via flex-grow shares instead of each computing its own explicit height. */
-      height: var(--poster-metadata-height-9x16);
+      height: var(--poster-metadata-height-portrait);
       border-top: var(--ui-border-width) solid var(--ui-ink-solid);
       background: var(--ui-bg);
       color: var(--ui-ink);
       text-transform: uppercase;
       overflow: hidden;
-      /* Reference unit for typography only (font-size/padding below) — NOT for box layout,
-         which now comes entirely from flex-grow shares of --poster-metadata-height-9x16 above.
-         This is the same 79/576-of-artwork-width "row" the shares divide the band into (4
-         rows: the top block counts as 2, R3 and R4 count as 1 each), kept only so label/
-         value/padding can be expressed as the same fraction-of-a-row the 1:1 poster uses
-         (15/85, 30/85, 20/85 — see .meta-label/.meta-value/.poster-cell below), so text
-         scales with the canvas exactly like the 1:1 poster instead of sitting at a fixed
-         px size. */
-      --poster-row-height-9x16: calc(var(--poster-metadata-height-9x16) / 4);
+      --poster-row-height-portrait: calc(var(--poster-metadata-height-portrait) / 4);
     }
 
-    /* --- CSS-only scaling for 9:16 Poster Mode --- */
-    :root[data-aspect-ratio="9:16"][data-layout="poster"] .artwork-svg {
-      /* Scale down the artwork stage slightly and shift down to clear the title header */
+    :root[data-aspect-ratio="portrait"][data-layout="poster"] .artwork-svg {
       transform: scale(0.9);
       transform-origin: center center;
     }
 
-    :root[data-aspect-ratio="9:16"][data-layout="poster"] .artwork-container {
-      /* Keep overflow hidden so scaled transforms stay cleanly inside the poster frame */
+    :root[data-aspect-ratio="portrait"][data-layout="poster"] .artwork-container {
       overflow: hidden;
     }
 
-    /* Rows split --poster-metadata-height-9x16 via flex-grow shares (1 share each; .poster-top
-       below takes 2) instead of each declaring its own height — same pattern as the 1:1
-       poster's .poster-row { flex: 1 0 0 } splitting --poster-metadata-height in half.
-       .poster-row/.poster-cell are the SAME classes the 1:1 block uses; scoping them under
-       #poster-metadata-9x16 (rather than a class suffix) is what keeps these rules from
-       leaking onto the 1:1 layout. */
-    #poster-metadata-9x16 .poster-row {
+    #poster-metadata-portrait .poster-row {
       display: flex;
       flex-direction: row;
       width: 100%;
@@ -1028,44 +955,34 @@
       border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
     }
 
-    #poster-metadata-9x16 .poster-row-last {
+    #poster-metadata-portrait .poster-row-last {
       border-bottom: none;
     }
 
-    #poster-metadata-9x16 .poster-cell {
+    #poster-metadata-portrait .poster-cell {
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      /* 20/85 of a row — same fraction the 1:1 poster's cell padding (--sz-20) occupies of
-         its own row height (poster-metadata-height/2 = 85 sz-units). Scales with the canvas
-         like the rest of the 1:1 poster, instead of a fixed px value. */
-      padding: calc(var(--poster-row-height-9x16) * 20 / 85);
+      padding: calc(var(--poster-row-height-portrait) * 20 / 85);
       border-right: var(--ui-border-width) solid var(--ui-ink-solid);
       overflow: hidden;
     }
 
-    /* Same fill/hug pair as the 1:1 poster-cell — every cell picks one explicitly. */
-    #poster-metadata-9x16 .poster-cell.fill {
+    #poster-metadata-portrait .poster-cell.fill {
       flex: 1 1 0;
       min-width: 0;
     }
 
-    #poster-metadata-9x16 .poster-cell.hug {
+    #poster-metadata-portrait .poster-cell.hug {
       flex: 0 0 auto;
     }
 
-    /* Last cell in each row has no right border (frame provides the edge). */
-    #poster-metadata-9x16 .poster-row> :last-child {
+    #poster-metadata-portrait .poster-row> :last-child {
       border-right: none;
     }
 
-    /* Top block: color-bars cell spans R1+R2, matching the mockup. Takes 2 flex-grow shares
-       (double a plain .poster-row's 1 share) instead of an explicit calc(row-h * 2) — the *2
-       lives in one place (the flex-grow number) instead of being duplicated in both this
-       height and the color-bar square's width below. Draws the full-width divider before R3
-       itself, so its two internal sub-rows don't double it up. */
-    #poster-metadata-9x16 .poster-top {
+    #poster-metadata-portrait .poster-top {
       display: flex;
       flex-direction: row;
       width: 100%;
@@ -1074,58 +991,42 @@
       border-bottom: var(--ui-border-width) solid var(--ui-ink-solid);
     }
 
-    #poster-metadata-9x16 .poster-top-right {
+    #poster-metadata-portrait .poster-top-right {
       display: flex;
       flex-direction: column;
       flex: 1 1 0;
       min-width: 0;
     }
 
-    /* Color bars: square top-left cell spanning both sub-rows, bars bottom-aligned like the
-       1:1 poster. Reuses the 1:1 block's .color-cell class — sized here from
-       --poster-metadata-height-9x16 directly (half of it, since .poster-top itself is 2 of
-       the band's 4 shares), same pattern as the 1:1 poster's .color-cell width, which is set
-       from --poster-metadata-height directly rather than from a runtime-computed flex size.
-       The nested .poster-color-bar rules (fill + square) are already covered by the shared
-       rules above — .color-cell here only needs to override sizing. */
-    #poster-metadata-9x16 .color-cell {
-      flex: 0 0 calc(var(--poster-metadata-height-9x16) / 2 - var(--ui-border-width));
-      width: calc(var(--poster-metadata-height-9x16) / 2 - var(--ui-border-width));
+    #poster-metadata-portrait .color-cell {
+      flex: 0 0 calc(var(--poster-metadata-height-portrait) / 2 - var(--ui-border-width));
+      width: calc(var(--poster-metadata-height-portrait) / 2 - var(--ui-border-width));
       flex-direction: row;
       align-items: flex-end;
       gap: 0;
     }
 
-    /* Units row: SHAPES fills, each unit sub-cell hugs. Reuses the 1:1 block's
-       .poster-units-container class. */
-    #poster-metadata-9x16 .poster-units-container {
+    #poster-metadata-portrait .poster-units-container {
       display: flex;
       flex-direction: row;
       flex: 0 0 auto;
     }
 
-    #poster-metadata-9x16 .poster-units-container> :last-child {
+    #poster-metadata-portrait .poster-units-container> :last-child {
       border-right: none;
     }
 
-    /* Fonts sized as fractions of --poster-row-height-9x16 (15/85 and 30/85 — same fractions
-       the 1:1 poster's meta-label/meta-value occupy of ITS row height: --sz-15/--sz-30
-       against an 85-sz-unit row). This keeps both the label:value ratio (1:2) AND each one's
-       size relative to its own row identical to the 1:1 poster, and — because
-       --poster-row-height-9x16 is ultimately derived from --canvas-size — scales down with
-       the canvas on small viewports exactly like the 1:1 poster's --sz-* tokens do. */
-    #poster-metadata-9x16 .meta-label {
-      font-size: calc(var(--poster-row-height-9x16) * 15 / 85);
+    #poster-metadata-portrait .meta-label {
+      font-size: calc(var(--poster-row-height-portrait) * 15 / 85);
       line-height: 1.2;
       color: var(--ui-ink);
     }
 
-    #poster-metadata-9x16 .meta-value {
-      font-size: calc(var(--poster-row-height-9x16) * 30 / 85);
+    #poster-metadata-portrait .meta-value {
+      font-size: calc(var(--poster-row-height-portrait) * 30 / 85);
       line-height: 1;
       color: var(--ui-ink);
     }
-
 
     .meta-label {
       font-size: var(--sz-15);
@@ -1161,7 +1062,7 @@
     </symbol>
     <symbol id="icon-custom-render-grid" viewBox="0 0 16 16">
       <path fill-rule="evenodd" clip-rule="evenodd"
-        d="M2.98647 1.06647L2.93279 1.06644C2.68911 1.06621 2.47905 1.06601 2.29296 1.11068C1.70792 1.25113 1.25113 1.70792 1.11068 2.29296C1.06601 2.47905 1.06621 2.68911 1.06644 2.93279L1.06647 2.98647V5.54647L1.06644 5.60016C1.06621 5.84384 1.06601 6.05391 1.11068 6.23999C1.25113 6.82502 1.70792 7.28181 2.29296 7.42227C2.47905 7.46694 2.68911 7.46674 2.93279 7.4665L2.98647 7.46647H5.54647L5.60016 7.4665C5.84384 7.46674 6.05391 7.46694 6.23999 7.42227C6.82502 7.28181 7.28181 6.82502 7.42227 6.23999C7.46694 6.05391 7.46674 5.84384 7.4665 5.60016L7.46647 5.54647V2.98647L7.4665 2.93279C7.46674 2.68911 7.46694 2.47905 7.42227 2.29296C7.28181 1.70792 6.82502 1.25113 6.23999 1.11068C6.05391 1.06601 5.84384 1.06621 5.60016 1.06644L5.54647 1.06647H2.98647ZM2.54197 2.14788C2.58788 2.13685 2.65817 2.13314 2.98647 2.13314H5.54647C5.87478 2.13314 5.94507 2.13685 5.99097 2.14788C6.18599 2.1947 6.33825 2.34695 6.38507 2.54197C6.39609 2.58788 6.3998 2.65817 6.3998 2.98647V5.54647C6.3998 5.87478 6.39609 5.94507 6.38507 5.99097C6.33825 6.18599 6.18599 6.33825 5.99097 6.38507C5.94507 6.39609 5.87478 6.3998 5.54647 6.3998H2.98647C2.65817 6.3998 2.58788 6.39609 2.54197 6.38507C2.34695 6.33825 2.1947 6.18599 2.14788 5.99097C2.13685 5.94507 2.13314 5.87478 2.13314 5.54647V2.98647C2.13314 2.65817 2.13685 2.58788 2.14788 2.54197C2.1947 2.34695 2.34695 2.1947 2.54197 2.14788ZM10.4531 1.06647L10.3995 1.06644C10.1558 1.06621 9.94571 1.06601 9.75962 1.11068C9.17459 1.25113 8.7178 1.70792 8.57735 2.29296C8.53267 2.47905 8.53287 2.68911 8.53311 2.93279L8.53314 2.98647V5.54647L8.53311 5.60016C8.53287 5.84384 8.53267 6.05391 8.57735 6.23999C8.7178 6.82502 9.17459 7.28181 9.75962 7.42227C9.94571 7.46694 10.1558 7.46674 10.3995 7.4665L10.4531 7.46647H13.0131L13.0668 7.4665C13.3105 7.46674 13.5206 7.46694 13.7067 7.42227C14.2916 7.28181 14.7485 6.82502 14.889 6.23999C14.9336 6.05391 14.9335 5.84384 14.9331 5.60016V5.54647V2.98647V2.93279C14.9335 2.68911 14.9336 2.47905 14.889 2.29296C14.7485 1.70792 14.2916 1.25113 13.7067 1.11068C13.5206 1.06601 13.3105 1.06621 13.0668 1.06644L13.0131 1.06647H10.4531ZM10.0086 2.14788C10.0545 2.13685 10.1248 2.13314 10.4531 2.13314H13.0131C13.3415 2.13314 13.4118 2.13685 13.4576 2.14788C13.6526 2.1947 13.8049 2.34695 13.8518 2.54197C13.8627 2.58788 13.8665 2.65817 13.8665 2.98647V5.54647C13.8665 5.87478 13.8627 5.94507 13.8518 5.99097C13.8049 6.18599 13.6526 6.33825 13.4576 6.38507C13.4118 6.39609 13.3415 6.3998 13.0131 6.3998H10.4531C10.1248 6.3998 10.0545 6.39609 10.0086 6.38507C9.81362 6.33825 9.66136 6.18599 9.61455 5.99097C9.60352 5.94507 9.5998 5.87478 9.5998 5.54647V2.98647C9.5998 2.65817 9.60352 2.58788 9.61455 2.54197C9.66136 2.34695 9.81362 2.1947 10.0086 2.14788ZM2.93279 8.53311L2.98647 8.53314H5.54647L5.60016 8.53311C5.84384 8.53287 6.05391 8.53267 6.23999 8.57735C6.82502 8.7178 7.28181 9.17459 7.42227 9.75962C7.46694 9.94571 7.46674 10.1558 7.4665 10.3995L7.46647 10.4531V13.0131L7.4665 13.0668C7.46674 13.3105 7.46694 13.5206 7.42227 13.7067C7.28181 14.2916 6.82502 14.7485 6.23999 14.889C6.05391 14.9336 5.84384 14.9335 5.60016 14.9331H5.54647H2.98647H2.93279C2.68911 14.9335 2.47905 14.9336 2.29296 14.889C1.70792 14.7485 1.25113 14.2916 1.11068 13.7067C1.06601 13.5206 1.06621 13.3105 1.06644 13.0668L1.06647 13.0131V10.4531L1.06644 10.3995C1.06621 10.1558 1.06601 9.94571 1.11068 9.75962C1.25113 9.17459 1.70792 8.7178 2.29296 8.57735C2.47905 8.53267 2.68911 8.53287 2.93279 8.53311ZM2.98647 9.5998C2.65817 9.5998 2.58788 9.60352 2.54197 9.61455C2.34695 9.66136 2.1947 9.81362 2.14788 10.0086C2.13685 10.0545 2.13314 10.1248 2.13314 10.4531V13.0131C2.13314 13.3415 2.13685 13.4118 2.14788 13.4576C2.1947 13.6526 2.34695 13.8049 2.54197 13.8518C2.58788 13.8627 2.65817 13.8665 2.98647 13.8665H5.54647C5.87478 13.8665 5.94507 13.8627 5.99097 13.8518C6.18599 13.8049 6.33825 13.6526 6.38507 13.4576C6.39609 13.4118 6.3998 13.3415 6.3998 13.0131V10.4531C6.3998 10.1248 6.39609 10.0545 6.38507 10.0086C6.33825 9.81362 6.18599 9.66136 5.99097 9.61455C5.94507 9.60352 5.87478 9.5998 5.54647 9.5998H2.98647ZM10.4531 8.53314L10.3995 8.53311C10.1558 8.53287 9.94571 8.53267 9.75962 8.57735C9.17459 8.7178 8.7178 9.17459 8.57735 9.75962C8.53267 9.94571 8.53287 10.1558 8.53311 10.3995L8.53314 10.4531V13.0131L8.53311 13.0668C8.53287 13.3105 8.53267 13.5206 8.57735 13.7067C8.7178 14.2916 9.17459 14.7485 9.75962 14.889C9.94571 14.9336 10.1558 14.9335 10.3995 14.9331H10.4531H13.0131H13.0668C13.3105 14.9335 13.5206 14.9336 13.7067 14.889C14.2916 14.7485 14.7485 14.2916 14.889 13.7067C14.9336 13.5206 14.9335 13.3105 14.9331 13.0668V13.0131V10.4531V10.3995C14.9335 10.1558 14.9336 9.94571 14.889 9.75962C14.7485 9.17459 14.2916 8.7178 13.7067 8.57735C13.5206 8.53267 13.3105 8.53287 13.0668 8.53311L13.0131 8.53314H10.4531ZM10.0086 9.61455C10.0545 9.60352 10.1248 9.5998 10.4531 9.5998H13.0131C13.3415 9.5998 13.4118 9.60352 13.4576 9.61455C13.6526 9.66136 13.8049 9.81362 13.8518 10.0086C13.8627 10.0545 13.8665 10.1248 13.8665 10.4531V13.0131C13.8665 13.3415 13.8627 13.4118 13.8518 13.4576C13.8049 13.6526 13.6526 13.8049 13.4576 13.8518C13.4118 13.8627 13.3415 13.8665 13.0131 13.8665H10.4531C10.1248 13.8665 10.0545 13.8627 10.0086 13.8518C9.81362 13.8049 9.66136 13.6526 9.61455 13.4576C9.60352 13.4118 9.5998 13.3415 9.5998 13.0131V10.4531C9.5998 10.1248 9.60352 10.0545 9.61455 10.0086C9.66136 9.81362 9.81362 9.66136 10.0086 9.61455Z"
+        d="M2.98647 1.06647L2.93279 1.06644C2.68911 1.06621 2.47905 1.06601 2.29296 1.11068C1.70792 1.25113 1.25113 1.70792 1.11068 2.29296C1.06601 2.47905 1.06621 2.68911 1.06644 2.93279L1.06647 2.98647V5.54647L1.06644 5.60016C1.06621 5.84384 1.06601 6.05391 1.11068 6.23999C1.25113 6.82502 1.70792 7.28181 2.29296 7.42227C2.47905 7.46694 2.68911 7.46674 2.93279 7.4665L2.98647 7.46647H5.54647L5.60016 7.4665C5.84384 7.46674 6.05391 7.46694 6.23999 7.42227C6.82502 7.28181 7.28181 6.82502 7.42227 6.23999C7.46694 6.05391 7.46674 5.84384 7.4665 5.60016L7.46647 5.54647V2.98647L7.4665 2.93279C7.46674 2.68911 7.46694 2.47905 7.42227 2.29296C7.28181 1.70792 6.82502 1.25113 6.23999 1.11068C6.05391 1.06601 5.84384 1.06621 5.60016 1.06644L5.54647 1.06647H2.98647ZM2.54197 2.14788C2.58788 2.13685 2.65817 2.13314 2.98647 2.13314H5.54647C5.87478 2.13314 5.94507 2.13685 5.99097 2.14788C6.18599 2.1947 6.33825 2.34695 6.38507 2.54197C6.39609 2.58788 6.3998 2.65817 6.3998 2.98647V5.54647C6.3998 5.87478 6.39609 5.94507 6.38507 5.99097C6.33825 6.18599 6.18599 6.33825 5.99097 6.38507C5.94507 6.39609 5.87478 6.3998 5.54647 6.3998H2.98647C2.65817 6.3998 2.58788 6.39609 2.54197 6.38507C2.34695 6.33825 2.1947 6.18599 2.14788 5.99097C2.13685 5.94507 2.13314 5.87478 2.13314 5.54647V2.98647C2.13314 2.65817 2.13685 2.58788 2.14788 2.54197C2.1947 2.34695 2.34695 2.1947 2.54197 2.14788ZM10.4531 1.06647L10.3995 1.06644C10.1558 1.06621 9.94571 1.06601 9.75962 1.11068C9.17459 1.25113 8.7178 1.70792 8.57735 2.29296C8.53267 2.47905 8.53287 2.68911 8.53311 2.93279L8.53314 2.98647V5.54647L8.53311 5.60016C8.53287 5.84384 8.53267 6.05391 8.57735 6.23999C8.7178 6.82502 9.17459 7.28181 9.75962 7.42227C9.94571 7.46694 10.1558 7.46674 10.3995 7.4665L10.4531 7.46647H13.0131L13.0668 7.4665C13.3105 7.46674 13.5206 7.46694 13.7067 7.42227C14.2916 7.28181 14.7485 6.82502 14.889 6.23999C14.9336 6.05391 14.9335 5.84384 14.9331 5.60016V5.54647V2.98647V2.93279C14.9335 2.68911 14.9336 2.47905 14.889 2.29296C14.7485 1.70792 14.2916 1.25113 13.7067 1.11068C13.5206 1.06601 13.3105 1.06621 13.0668 1.06644L13.0131 1.06647H10.4531ZM10.0086 2.14788C10.0545 2.13685 10.1248 2.13314 10.4531 2.13314H13.0131C13.3415 2.13314 13.4118 2.13685 13.4576 2.14788C13.6526 2.1947 13.8049 2.34695 13.8518 2.54197C13.8627 2.58788 13.8665 2.65817 13.8665 2.98647V5.54647C13.8665 5.87478 13.8627 5.94507 13.8518 5.99097C13.8049 6.18599 13.6526 6.33825 13.4576 6.38507C13.4118 6.39609 13.3415 6.3998 13.0131 6.3998H10.4531C10.1248 6.3998 10.0545 6.39609 10.0086 6.38507C9.81362 6.33825 9.66136 6.18599 9.61455 5.99097C9.60352 5.94507 9.5998 5.87478 9.5998 5.54647V2.98647V2.93279C9.5998 2.65817 9.60352 2.58788 9.61455 2.54197C9.66136 2.34695 9.81362 2.1947 10.0086 2.14788ZM2.93279 8.53311L2.98647 8.53314H5.54647L5.60016 8.53311C5.84384 8.53287 6.05391 8.53267 6.23999 8.57735C6.82502 8.7178 7.28181 9.17459 7.42227 9.75962C7.46694 9.94571 7.46674 10.1558 7.4665 10.3995L7.46647 10.4531V13.0131L7.4665 13.0668C7.46674 13.3105 7.46694 13.5206 7.42227 13.7067C7.28181 14.2916 6.82502 14.7485 6.23999 14.889C6.05391 14.9336 5.84384 14.9335 5.60016 14.9331H5.54647H2.98647H2.93279C2.68911 14.9335 2.47905 14.9336 2.29296 14.889C1.70792 14.7485 1.25113 14.2916 1.11068 13.7067C1.06601 13.5206 1.06621 13.3105 1.06644 13.0668L1.06647 13.0131V10.4531L1.06644 10.3995C1.06621 10.1558 1.06601 9.94571 1.11068 9.75962C1.25113 9.17459 1.70792 8.7178 2.29296 8.57735C2.47905 8.53267 2.68911 8.53287 2.93279 8.53311ZM2.98647 9.5998C2.65817 9.5998 2.58788 9.60352 2.54197 9.61455C2.34695 9.66136 2.1947 9.81362 2.14788 10.0086C2.13685 10.0545 2.13314 10.1248 2.13314 10.4531V13.0131C2.13314 13.3415 2.13685 13.4118 2.14788 13.4576C2.1947 13.6526 2.34695 13.8049 2.54197 13.8518C2.58788 13.8627 2.65817 13.8665 2.98647 13.8665H5.54647C5.87478 13.8665 5.94507 13.8627 5.99097 13.8518C6.18599 13.8049 6.33825 13.6526 6.38507 13.4576C6.39609 13.4118 6.3998 13.3415 6.3998 13.0131V10.4531C6.3998 10.1248 6.39609 10.0545 6.38507 10.0086C6.33825 9.81362 6.18599 9.66136 5.99097 9.61455C5.94507 9.60352 5.87478 9.5998 5.54647 9.5998H2.98647ZM10.4531 8.53314L10.3995 8.53311C10.1558 8.53287 9.94571 8.53267 9.75962 8.57735C9.17459 8.7178 8.7178 9.17459 8.57735 9.75962C8.53267 9.94571 8.53287 10.1558 8.53311 10.3995L8.53314 10.4531V13.0131L8.53311 13.0668C8.53287 13.3105 8.53267 13.5206 8.57735 13.7067C8.7178 14.2916 9.17459 14.7485 9.75962 14.889C9.94571 14.9336 10.1558 14.9335 10.3995 14.9331H10.4531H13.0131H13.0668C13.3105 14.9335 13.5206 14.9336 13.7067 14.889C14.2916 14.7485 14.7485 14.2916 14.889 13.7067C14.9336 13.5206 14.9335 13.3105 14.9331 13.0668V13.0131V10.4531V10.3995C14.9335 10.1558 14.9336 9.94571 14.889 9.75962C14.7485 9.17459 14.2916 8.7178 13.7067 8.57735C13.5206 8.53267 13.3105 8.53287 13.0668 8.53311L13.0131 8.53314H10.4531ZM10.0086 9.61455C10.0545 9.60352 10.1248 9.5998 10.4531 9.5998H13.0131C13.3415 9.5998 13.4118 9.60352 13.4576 9.61455C13.6526 9.66136 13.8049 9.81362 13.8518 10.0086C13.8627 10.0545 13.8665 10.1248 13.8665 10.4531V13.0131C13.8665 13.3415 13.8627 13.4118 13.8518 13.4576C13.8049 13.6526 13.6526 13.8049 13.4576 13.8518C13.4118 13.8627 13.3415 13.8665 13.0131 13.8665H10.4531C10.1248 13.8665 10.0545 13.8627 10.0086 13.8518C9.81362 13.8049 9.66136 13.6526 9.61455 13.4576C9.60352 13.4118 9.5998 13.3415 9.5998 13.0131V10.4531V10.3995C9.5998 10.1248 9.60352 10.0545 9.61455 10.0086C9.66136 9.81362 9.81362 9.66136 10.0086 9.61455Z"
         fill="currentColor" />
     </symbol>
     <symbol id="icon-custom-art-layout" viewBox="0 0 16 16">
@@ -1273,7 +1174,7 @@
             </div>
           </div>
 
-          <!-- Poster Metadata (1:1) -->
+          <!-- Poster Metadata (Square / 1:1) -->
           <div id="poster-metadata" class="poster-metadata" style="display: none;">
             <div class="poster-meta-grid">
               <div class="poster-cell color-cell" id="poster-color-bars"></div>
@@ -1315,25 +1216,25 @@
             </div>
           </div>
 
-          <!-- Poster Metadata (9:16) -->
-          <div id="poster-metadata-9x16">
+          <!-- Poster Metadata (Portrait / 9:16) -->
+          <div id="poster-metadata-portrait">
             <div class="poster-top">
-              <div class="poster-cell color-cell" id="poster-color-bars-9x16"></div>
+              <div class="poster-cell color-cell" id="poster-color-bars-portrait"></div>
               <div class="poster-top-right">
                 <div class="poster-row">
                   <div class="poster-cell fill">
                     <div class="meta-label">seed</div>
-                    <div class="meta-value" id="poster-seed-9x16"></div>
+                    <div class="meta-value" id="poster-seed-portrait"></div>
                   </div>
                 </div>
                 <div class="poster-row poster-row-last">
                   <div class="poster-cell fill">
                     <div class="meta-label">palette</div>
-                    <div class="meta-value" id="poster-palette-9x16"></div>
+                    <div class="meta-value" id="poster-palette-portrait"></div>
                   </div>
                   <div class="poster-cell hug">
                     <div class="meta-label">profile</div>
-                    <div class="meta-value" id="poster-profile-9x16"></div>
+                    <div class="meta-value" id="poster-profile-portrait"></div>
                   </div>
                 </div>
               </div>
@@ -1341,26 +1242,25 @@
             <div class="poster-row">
               <div class="poster-cell hug">
                 <div class="meta-label">form</div>
-                <div class="meta-value" id="poster-form-9x16"></div>
+                <div class="meta-value" id="poster-form-portrait"></div>
               </div>
               <div class="poster-cell fill">
                 <div class="meta-label">limit</div>
-                <div class="meta-value" id="poster-limit-9x16"></div>
+                <div class="meta-value" id="poster-limit-portrait"></div>
               </div>
               <div class="poster-cell hug">
                 <div class="meta-label">height</div>
-                <div class="meta-value" id="poster-height-9x16"></div>
+                <div class="meta-value" id="poster-height-portrait"></div>
               </div>
             </div>
             <div class="poster-row poster-row-last">
               <div class="poster-cell fill">
                 <div class="meta-label">shapes</div>
-                <div class="meta-value" id="poster-shapes-9x16"></div>
+                <div class="meta-value" id="poster-shapes-portrait"></div>
               </div>
-              <div id="poster-units-container-9x16" class="poster-units-container"></div>
+              <div id="poster-units-container-portrait" class="poster-units-container"></div>
             </div>
           </div>
-
 
         </div>
       </div>
@@ -1392,8 +1292,8 @@
             </svg>
           </button>
           <button id="aspect-ratio-row" class="control-row" data-interactive="true" type="button">
-            <span class="control-label">Aspect Ratio</span>
-            <span id="aspect-ratio-value" class="control-value">1:1</span>
+            <span class="control-label">Canvas</span>
+            <span id="aspect-ratio-value" class="control-value">Square (1:1)</span>
             <svg class="icon" id="aspect-ratio-icon">
               <use href="#icon-custom-1-1-ratio"></use>
             </svg>
@@ -1528,30 +1428,30 @@
     const BORDER_WIDTH = 10;
     const CANVAS_SIZE = 1000;
     const CELL_SIZE = 100;
-    const CELL_STEP = CELL_SIZE - BORDER_WIDTH; // Make sure 2 adjacent cells' borders overlap
-    const COLUMN_WIDTH = 2 * CELL_STEP + BORDER_WIDTH; // Width of a 2-unit column: two steps + one closing border
-    const INK_COLOR = '#1c1c1a'; // Fixed dark ink specifically for the structural artwork outlines
+    const CELL_STEP = CELL_SIZE - BORDER_WIDTH;
+    const COLUMN_WIDTH = 2 * CELL_STEP + BORDER_WIDTH;
+    const INK_COLOR = '#1c1c1a';
 
-    // Every artwork uses a deterministic number of "blocks" (SVG rect counts).
-    // This previously fixed 16-block constraint is now a user-controllable parameter.
-    // The default 16 blocks limit is the reason for the name 4x4art, every artwork uses exactly 16 blocks. 
-    const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2); // 2, 4, 6... 40
+    const POSSIBLE_LIMITS = Array.from({ length: 20 }, (_, i) => (i + 1) * 2);
     const DEFAULT_LIMIT = POSSIBLE_LIMITS.includes(16) ? 16 : POSSIBLE_LIMITS[0];
     const VALID_PROFILE_IDS = new Set(['prism', 'fade', 'shift', 'solid', 'split']);
 
-    const STACK_EDGE_MARGIN = CELL_STEP / 2; // Minimum clearance between the stack and the canvas edge.
-    const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP); // Calculate max units based on the remaining space after margins and closing border.
-    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z']; // Display order for internal family operations.
-    const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 }; // Solver search order within the backtracker (lower = tried first).
-    const MAX_SOLUTIONS_PER_HEIGHT = 24; // Per-height solution cap — keeps the solver fast on complex heights.
+    const STACK_EDGE_MARGIN = CELL_STEP / 2;
+    const MAX_STACK_HEIGHT_UNITS = Math.floor((CANVAS_SIZE - (STACK_EDGE_MARGIN * 2) - BORDER_WIDTH) / CELL_STEP);
+    const FAMILY_ORDER = ['O', 'I', 'J', 'L', 'T', 'S', 'Z'];
+    const SHAPE_PRIORITY = { J: 0, L: 1, T: 2, S: 3, Z: 4, I: 5, O: 6 };
+    const MAX_SOLUTIONS_PER_HEIGHT = 24;
+
+    const RATIO_LABELS = {
+      square: 'Square (1:1)',
+      portrait: 'Portrait (9:16)'
+    };
 
 
     // ==========================================================================
     // 2. DESIGN TOKENS
     // ==========================================================================
-    // A cohesive generative system: Curated, thematic, and distinct.
     const PALETTES = [
-      // 1. THE CLASSICS (Anchored to Warm Cotton, Newsprint, and Kraft papers)
       { name: 'spice', bg: '#f4f1ea', category: 'classic', colors: ['#c8a98c', '#0e3f39', '#c08e49', '#e2560b', '#a17073', '#695c54'] },
       { name: 'storm', bg: '#e8e6e1', category: 'classic', colors: ['#1c1a14', '#413819', '#f9cf45', '#fbd78b', '#948572', '#2c2618'] },
       { name: 'flora', bg: '#f4f1ea', category: 'classic', colors: ['#e07809', '#1f6334', '#df79a1', '#bb1009', '#63671b', '#a8b379'] },
@@ -1564,7 +1464,6 @@
       { name: 'blush', bg: '#f4f1ea', category: 'classic', colors: ['#275a15', '#a16448', '#d47b6d', '#ff8a8b', '#ce4e4b', '#afca97'] },
       { name: 'orchid', bg: '#e8e6e1', category: 'classic', colors: ['#1d4a83', '#c1585d', '#86aac4', '#e4948b', '#427ba6', '#a8c7db'] },
 
-      // 2. THE BRIGHTS (Stark backgrounds with vibrant hues and deep, heavy anchor inks)
       { name: 'marine', bg: '#f0f2f5', category: 'bright', colors: ['#239de0', '#027fd3', '#5bbcf3', '#11151c', '#7acdf5', '#0a5fa0'] },
       { name: 'amethyst', bg: '#fdfcfb', category: 'bright', colors: ['#a259ff', '#883fe8', '#661ed9', '#150921', '#cda1ee', '#7a30cc'] },
       { name: 'spruce', bg: '#fdfcfb', category: 'bright', colors: ['#57c7af', '#228e74', '#44aa94', '#0a1a15', '#6dd4be', '#1a7060'] },
@@ -1573,7 +1472,6 @@
       { name: 'topaz', bg: '#fdfcfb', category: 'bright', colors: ['#e08f0c', '#ecaf30', '#ffe399', '#1c1408', '#c07a00', '#f5c840'] },
       { name: 'ivy', bg: '#fdfcfb', category: 'bright', colors: ['#268e1b', '#469d3c', '#76c66d', '#1c1c1a', '#95c190', '#3a8a30'] },
 
-      // 3. THE ATMOSPHERES (Tinted wash backgrounds with tonal layers)
       { name: 'breeze', bg: '#e3eef8', category: 'atmosphere', colors: ['#b8d9f0', '#7ab8e0', '#3e8ec4', '#c8e4f7', '#daeef9', '#5aaad8'] },
       { name: 'lichen', bg: '#e0edea', category: 'atmosphere', colors: ['#a8e4d8', '#6dd4be', '#44aa94', '#c4ede6', '#b2dfd5', '#228e74'] },
       { name: 'bloom', bg: '#fbe8e8', category: 'atmosphere', colors: ['#f0a0a0', '#de7070', '#c94040', '#f7c8c8', '#f2b6b6', '#b50e08'] },
@@ -1587,7 +1485,6 @@
       { name: 'sage', bg: '#e8ece7', category: 'atmosphere', colors: ['#b6c9b6', '#91ad90', '#6e8f6d', '#d4e3d3', '#c6d9c5', '#4f704e'] },
       { name: 'clay', bg: '#f2e8e4', category: 'atmosphere', colors: ['#d1aca0', '#b58677', '#9c6655', '#e8cec5', '#debcaf', '#7a4635'] },
 
-      // 4. THE MUTED (Mid-tone colored paper with opaque high-contrast inks)
       { name: 'heather', bg: '#7b7fc4', category: 'muted', colors: ['#f0effa', '#e0dff5', '#2c2e7a', '#1a1c5e', '#c8c7ec', '#4a4c9e'] },
       { name: 'mauve', bg: '#9e6e8c', category: 'muted', colors: ['#f5e8f0', '#e8c8dc', '#3a1a30', '#5e1e48', '#c890b0', '#2a0e22'] },
       { name: 'slate', bg: '#6e7e8c', category: 'muted', colors: ['#e8edf0', '#c8d4da', '#1c2c38', '#304050', '#98aebc', '#0e1e2a'] },
@@ -1595,7 +1492,6 @@
       { name: 'rust', bg: '#a05030', category: 'muted', colors: ['#f5e8e0', '#e8c8b4', '#2a0c00', '#4a1c08', '#c88060', '#1a0400'] },
       { name: 'violet', bg: '#6040a0', category: 'muted', colors: ['#f0eafa', '#d8c8f0', '#180830', '#301050', '#9878d0', '#0c0418'] },
 
-      // 5. THE VOIDS (Near-black backgrounds with deep shadows and luminous pops)
       { name: 'tundra', bg: '#0b131a', category: 'void', colors: ['#164060', '#1c5070', '#5aaccc', '#0a2030', '#0e3040', '#8cd3eb'] },
       { name: 'abyss', bg: '#060b12', category: 'void', colors: ['#182840', '#203050', '#3d5a80', '#08101c', '#0c1828', '#6b95cc'] },
       { name: 'pine', bg: '#050f09', category: 'void', colors: ['#182c18', '#2e6b4f', '#142818', '#081808', '#0c2010', '#5cb88f'] },
@@ -1603,7 +1499,6 @@
       { name: 'charcoal', bg: '#080c12', category: 'void', colors: ['#182430', '#607080', '#141c24', '#0c1018', '#101820', '#94a9be'] },
       { name: 'basalt', bg: '#0a0a09', category: 'void', colors: ['#404040', '#707070', '#282826', '#141413', '#1f1f1d', '#b0b0a9'] },
 
-      // 6. THE MINERALS (Dedicated grayscales and high-contrast Meridian blends)
       { name: 'carbon', bg: '#e8e6e2', category: 'mineral', colors: ['#111110', '#222220', '#444440', '#666662', '#999996', '#ccccca'] },
       { name: 'graphite', bg: '#f0ede8', category: 'mineral', colors: ['#1c1c1a', '#2e2e2c', '#585654', '#868482', '#b0aeac', '#d8d6d4'] },
       { name: 'ash', bg: '#d0ccc6', category: 'mineral', colors: ['#1a1816', '#3c3a38', '#606060', '#909090', '#c0c0be', '#f0eee8'] },
@@ -1612,258 +1507,42 @@
       { name: 'flint', bg: '#f4f4f4', category: 'mineral', colors: ['#ffffff', '#050505', '#151515', '#2a2a2a', '#73777a', '#b5b8ba'] },
     ];
     const VALID_PALETTE_NAMES = new Set(PALETTES.map(palette => palette.name));
-    // --- SHAPE CATALOG ---
-    // Shape fields:
-    //   piece    — internal family code (O, I, J, L, T, S, Z)
-    //   rotation — clockwise orientation in degrees
-    //   blocks   — SVG rect count drawn per shape
-    //   units    — number of grid cells this shape occupies
-    //   width    — bounding box width in grid units
-    //   height   — bounding box height in grid units
-    //   area     — bounding box area (width × height, includes any empty cells in the bounding box)
-    //   mask     — row strings, top-to-bottom: '1' = occupied cell, '0' = empty cell
-    //
-    // NOTE: J, L, T, S, Z entries are kept here for reference and future projects.
-    //       Only O and I shapes are active in this generator (see STRICT_SHAPE_IDS).
+
     const SHAPES = {
-      'O-1': {
-        piece: 'O', rotation: 0, blocks: 2, units: 1, width: 1, height: 1, area: 1,
-        mask: [
-          '1'
-        ]
-      },
-
-      'O-4': {
-        piece: 'O', rotation: 0, blocks: 2, units: 4, width: 2, height: 2, area: 4,
-        mask: [
-          '11',
-          '11'
-        ]
-      },
-
-      'I-2-R0': {
-        piece: 'I', rotation: 0, blocks: 4, units: 2, width: 1, height: 2, area: 2,
-        mask: [
-          '1',
-          '1'
-        ]
-      },
-
-      'I-2-R90': {
-        piece: 'I', rotation: 90, blocks: 4, units: 2, width: 2, height: 1, area: 2,
-        mask: [
-          '11'
-        ]
-      },
-
-      'I-3-R0': {
-        piece: 'I', rotation: 0, blocks: 4, units: 3, width: 1, height: 3, area: 3,
-        mask: [
-          '1',
-          '1',
-          '1'
-        ]
-      },
-
-      'I-3-R90': {
-        piece: 'I', rotation: 90, blocks: 4, units: 3, width: 3, height: 1, area: 3,
-        mask: [
-          '111'
-        ]
-      },
-
-      'I-4-R0': {
-        piece: 'I', rotation: 0, blocks: 4, units: 4, width: 1, height: 4, area: 4,
-        mask: [
-          '1',
-          '1',
-          '1',
-          '1'
-        ]
-      },
-
-      'I-4-R90': {
-        piece: 'I', rotation: 90, blocks: 4, units: 4, width: 4, height: 1, area: 4,
-        mask: [
-          '1111'
-        ]
-      },
-
-      'J-3-R0': {
-        piece: 'J', rotation: 0, blocks: 4, units: 3, width: 2, height: 2, area: 4,
-        mask: [
-          '01',
-          '11'
-        ]
-      },
-
-      'J-3-R90': {
-        piece: 'J', rotation: 90, blocks: 4, units: 3, width: 2, height: 2, area: 4,
-        mask: [
-          '10',
-          '11'
-        ]
-      },
-
-      'J-3-R180': {
-        piece: 'J', rotation: 180, blocks: 4, units: 3, width: 2, height: 2, area: 4,
-        mask: [
-          '11',
-          '10'
-        ]
-      },
-
-      'J-3-R270': {
-        piece: 'J', rotation: 270, blocks: 4, units: 3, width: 2, height: 2, area: 4,
-        mask: [
-          '11',
-          '01'
-        ]
-      },
-
-      'J-4-R0': {
-        piece: 'J', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6,
-        mask: [
-          '01',
-          '01',
-          '11'
-        ]
-      },
-
-      'J-4-R90': {
-        piece: 'J', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6,
-        mask: [
-          '100',
-          '111'
-        ]
-      },
-
-      'J-4-R180': {
-        piece: 'J', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6,
-        mask: [
-          '11',
-          '10',
-          '10'
-        ]
-      },
-
-      'J-4-R270': {
-        piece: 'J', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6,
-        mask: [
-          '111',
-          '001'
-        ]
-      },
-
-      'L-4-R0': {
-        piece: 'L', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6,
-        mask: [
-          '10',
-          '10',
-          '11'
-        ]
-      },
-
-      'L-4-R90': {
-        piece: 'L', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6,
-        mask: [
-          '111',
-          '100'
-        ]
-      },
-
-      'L-4-R180': {
-        piece: 'L', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6,
-        mask: [
-          '11',
-          '01',
-          '01'
-        ]
-      },
-
-      'L-4-R270': {
-        piece: 'L', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6,
-        mask: [
-          '001',
-          '111'
-        ]
-      },
-
-      'T-4-R0': {
-        piece: 'T', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6,
-        mask: [
-          '111',
-          '010'
-        ]
-      },
-
-      'T-4-R90': {
-        piece: 'T', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6,
-        mask: [
-          '01',
-          '11',
-          '01'
-        ]
-      },
-
-      'T-4-R180': {
-        piece: 'T', rotation: 180, blocks: 8, units: 4, width: 3, height: 2, area: 6,
-        mask: [
-          '010',
-          '111'
-        ]
-      },
-
-      'T-4-R270': {
-        piece: 'T', rotation: 270, blocks: 8, units: 4, width: 2, height: 3, area: 6,
-        mask: [
-          '10',
-          '11',
-          '10'
-        ]
-      },
-
-      'S-4-R0': {
-        piece: 'S', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6,
-        mask: [
-          '011',
-          '110'
-        ]
-      },
-
-      'S-4-R90': {
-        piece: 'S', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6,
-        mask: [
-          '10',
-          '11',
-          '01'
-        ]
-      },
-
-      'Z-4-R0': {
-        piece: 'Z', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6,
-        mask: [
-          '110',
-          '011'
-        ]
-      },
-
-      'Z-4-R90': {
-        piece: 'Z', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6,
-        mask: [
-          '01',
-          '11',
-          '10'
-        ]
-      },
+      'O-1': { piece: 'O', rotation: 0, blocks: 2, units: 1, width: 1, height: 1, area: 1, mask: ['1'] },
+      'O-4': { piece: 'O', rotation: 0, blocks: 2, units: 4, width: 2, height: 2, area: 4, mask: ['11', '11'] },
+      'I-2-R0': { piece: 'I', rotation: 0, blocks: 4, units: 2, width: 1, height: 2, area: 2, mask: ['1', '1'] },
+      'I-2-R90': { piece: 'I', rotation: 90, blocks: 4, units: 2, width: 2, height: 1, area: 2, mask: ['11'] },
+      'I-3-R0': { piece: 'I', rotation: 0, blocks: 4, units: 3, width: 1, height: 3, area: 3, mask: ['1', '1', '1'] },
+      'I-3-R90': { piece: 'I', rotation: 90, blocks: 4, units: 3, width: 3, height: 1, area: 3, mask: ['111'] },
+      'I-4-R0': { piece: 'I', rotation: 0, blocks: 4, units: 4, width: 1, height: 4, area: 4, mask: ['1', '1', '1', '1'] },
+      'I-4-R90': { piece: 'I', rotation: 90, blocks: 4, units: 4, width: 4, height: 1, area: 4, mask: ['1111'] },
+      'J-3-R0': { piece: 'J', rotation: 0, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['01', '11'] },
+      'J-3-R90': { piece: 'J', rotation: 90, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['10', '11'] },
+      'J-3-R180': { piece: 'J', rotation: 180, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['11', '10'] },
+      'J-3-R270': { piece: 'J', rotation: 270, blocks: 4, units: 3, width: 2, height: 2, area: 4, mask: ['11', '01'] },
+      'J-4-R0': { piece: 'J', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['01', '01', '11'] },
+      'J-4-R90': { piece: 'J', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['100', '111'] },
+      'J-4-R180': { piece: 'J', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['11', '10', '10'] },
+      'J-4-R270': { piece: 'J', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['111', '001'] },
+      'L-4-R0': { piece: 'L', rotation: 0, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['10', '10', '11'] },
+      'L-4-R90': { piece: 'L', rotation: 90, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['111', '100'] },
+      'L-4-R180': { piece: 'L', rotation: 180, blocks: 6, units: 4, width: 2, height: 3, area: 6, mask: ['11', '01', '01'] },
+      'L-4-R270': { piece: 'L', rotation: 270, blocks: 6, units: 4, width: 3, height: 2, area: 6, mask: ['001', '111'] },
+      'T-4-R0': { piece: 'T', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['111', '010'] },
+      'T-4-R90': { piece: 'T', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['01', '11', '01'] },
+      'T-4-R180': { piece: 'T', rotation: 180, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['010', '111'] },
+      'T-4-R270': { piece: 'T', rotation: 270, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['10', '11', '10'] },
+      'S-4-R0': { piece: 'S', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['011', '110'] },
+      'S-4-R90': { piece: 'S', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['10', '11', '01'] },
+      'Z-4-R0': { piece: 'Z', rotation: 0, blocks: 8, units: 4, width: 3, height: 2, area: 6, mask: ['110', '011'] },
+      'Z-4-R90': { piece: 'Z', rotation: 90, blocks: 8, units: 4, width: 2, height: 3, area: 6, mask: ['01', '11', '10'] },
     };
 
 
     // ==========================================================================
     // 3. UTILITIES
     // ==========================================================================
-    // --- DETERMINISTIC PRNG (Seed Engine) ---
-    // xmur3: string hasher — converts the seed string into a numeric state used to initialize the PRNG.
     function xmur3(str) {
       for (var i = 0, h = 1779033703 ^ str.length; i < str.length; i++) {
         h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
@@ -1875,7 +1554,6 @@
       }
     }
 
-    // mulberry32: fast 32-bit PRNG — produces deterministic floats in [0, 1) from a numeric seed state.
     function mulberry32(a) {
       return function () {
         var t = a += 0x6D2B79F5;
@@ -1885,7 +1563,6 @@
       }
     }
 
-    // Hot function pointer — replaced by setSeed() to switch between seeded and unseeded modes.
     let nextRandom = Math.random;
 
     function setSeed(seedStr) {
@@ -1904,7 +1581,6 @@
       return result;
     }
 
-    // WCAG relative luminance — determines whether to apply light or dark UI ink over a palette background.
     function getLuminance(hex) {
       const c = hex.replace('#', '');
       const r = parseInt(c.slice(0, 2), 16) / 255;
@@ -1914,11 +1590,8 @@
       return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
     }
 
-    // Threshold of 0.35 is slightly lower than the WCAG midpoint (0.5), biased toward
-    // treating mid-tones as 'dark' so the UI renders lighter ink — avoiding muddy mid-tone text.
     function isLight(hex) { return getLuminance(hex) > 0.35; }
 
-    // --- HELPER FUNCTIONS ---
     function pick(arr) { return arr[Math.floor(nextRandom() * arr.length)]; }
     function getSortedLimits() {
       return POSSIBLE_LIMITS.slice().sort((a, b) => a - b);
@@ -1963,8 +1636,6 @@
         if (SHAPE_PRIORITY[a.piece] !== SHAPE_PRIORITY[b.piece]) return SHAPE_PRIORITY[a.piece] - SHAPE_PRIORITY[b.piece];
         return a.id.localeCompare(b.id);
       });
-    // The active shape palette for this generator. Only these O and I variants are
-    // passed to the solver; all other catalog entries are excluded.
     const STRICT_SHAPE_IDS = new Set(['O-1', 'O-4', 'I-2-R0', 'I-2-R90', 'I-3-R0', 'I-4-R0']);
 
     function addRect(svg, x, y, w, h, fill) {
@@ -1975,7 +1646,6 @@
       svg.appendChild(r);
     }
 
-    // --- GRID & PLACEMENT UTILITIES ---
     function createGrid(height) {
       return Array.from({ length: height }, () => [false, false]);
     }
@@ -1990,8 +1660,6 @@
       }
       return null;
     }
-    // Returns the valid x-start positions for a shape within the 2-unit-wide column.
-    // Width-1 shapes can start at x=0 or x=1; width-2 shapes must start at x=0.
     function getAllowedOffsets(shape) {
       return shape.width === 1 ? [0, 1] : [0];
     }
@@ -2011,12 +1679,6 @@
       });
     }
 
-    // Quality filter applied before storing a candidate solution.
-    // A preferred solution must satisfy two criteria:
-    //   1. No shape ID used more than twice (O-1 singles are exempt).
-    //   2. Arrangements of 4+ shapes must include at least 3 distinct shape IDs.
-    // Solutions that fail are collected separately as fallbacks, used only when no
-    // preferred solutions exist for a given height.
     function isPreferredSolution(placements) {
       const counts = {};
       placements.forEach(p => { counts[p.id] = (counts[p.id] || 0) + 1; });
@@ -2035,7 +1697,6 @@
     // ==========================================================================
     // 4. ALGORITHMS
     // ==========================================================================
-    // --- CORE GENERATION ALGORITHMS ---
 
     function searchStack(grid, targetHeight, targetBlocks, blocksUsed, placements, solutions, fallbackSolutions, stackShapes, stackShapeWeights, minBlocksPerUnit, maxBlocksPerUnit) {
       if (solutions.length >= MAX_SOLUTIONS_PER_HEIGHT) return;
@@ -2094,13 +1755,7 @@
     function solveStackForHeight(targetHeight, targetBlocks) {
       const stackShapes = BASE_STACK_SHAPES.filter(shape => STRICT_SHAPE_IDS.has(shape.id));
 
-      // COARSENESS SPREAD: each piece gets a seed-driven point on a coarse<->fine axis, so
-      // the collection spans chunky big-bar monoliths to finer-grained stacks without any
-      // discrete trait. t=0 fine (favor O-1 / small), t=1 coarse (favor I-4 / I-3). Uniform
-      // roll; the weight floor of 1 keeps every shape available at all t (so height validity
-      // is never affected — only which solution is favored). Higher weight = shape appears
-      // more times in the shuffled candidate list = chosen more often.
-      const t = nextRandom(); // uniform 0..1
+      const t = nextRandom();
       const fine = { 'O-1': 10, 'I-2-R0': 5, 'I-2-R90': 5, 'O-4': 4, 'I-3-R0': 2, 'I-4-R0': 1 };
       const coarse = { 'I-4-R0': 10, 'I-3-R0': 8, 'O-4': 6, 'I-2-R90': 3, 'I-2-R0': 2, 'O-1': 1 };
       const lerp = (a, b) => Math.max(1, Math.round(a + (b - a) * t));
@@ -2125,19 +1780,14 @@
       return null;
     }
 
-    // Pre-flight validation: test every candidate height by actually running the solver.
-    // Only heights where the solver finds at least one valid solution are included.
-    // This replaces the old hardcoded '- 3' floor with a proved-valid set, and correctly
-    // handles any height that is geometrically impossible regardless of available area.
     function computeValidHeights(targetBlocks) {
       const validHeights = [];
       for (let h = MAX_STACK_HEIGHT_UNITS; h >= 1; h--) {
         if (solveStackForHeight(h, targetBlocks) !== null) validHeights.push(h);
       }
-      return validHeights; // Descending order (tallest first), matching original POSSIBLE_HEIGHTS shape.
+      return validHeights;
     }
     let POSSIBLE_HEIGHTS = computeValidHeights(DEFAULT_LIMIT);
-
 
 
     // ==========================================================================
@@ -2153,7 +1803,6 @@
       const isForcedSeed = !!currentSeed;
       let attempts = 0;
 
-      // Defensive defaults to prevent undefined errors when mapping parameters
       const allowedPalettes = params.allowedPalettes || [];
       const allowedProfiles = params.allowedProfiles || [];
       const allowedHeights = params.allowedHeights || [];
@@ -2170,50 +1819,37 @@
         }
         setSeed(currentSeed);
 
-        // 1. Pick Palette natively from the PRNG
         palette = pick(PALETTES);
         if (!isForcedSeed && allowedPalettes.length > 0 && !allowedPalettes.includes(palette.name)) continue;
 
-        // 2. Pick Profile natively from the PRNG
         const profileMode = nextRandom();
-        if (profileMode < 0.40) activeProfile = 'prism';      // 40% — chaotic prismatic: adjacency-off + deck refill, guarded to >=3 distinct colors
+        if (profileMode < 0.40) activeProfile = 'prism';      // 40% — chaotic prismatic
         else if (profileMode < 0.67) activeProfile = 'fade';  // 27% — value gradient by height
         else if (profileMode < 0.84) activeProfile = 'shift'; // 17% — ordered hue walk by height
         else if (profileMode < 0.97) activeProfile = 'split'; // 13% — two hues, max luminance distance
-        else activeProfile = 'solid';                         // 3% — single hue (kept rare; a little goes a long way)
+        else activeProfile = 'solid';                         // 3% — single hue
 
         if (!isForcedSeed && allowedProfiles.length > 0 && !allowedProfiles.includes(activeProfile)) continue;
 
-        // 3. Pick Height natively from the PRNG
         heightUnits = pick(POSSIBLE_HEIGHTS);
         if (!isForcedSeed && allowedHeights.length > 0 && !allowedHeights.includes(heightUnits)) continue;
 
-        // 4. Attempt to mathematically solve the structure with the current PRNG seed
         const placements = solveStackForHeight(heightUnits, params.blockLimit);
         if (!placements) {
-          if (isForcedSeed) return null; // If a shared URL seed is mathematically broken, abort cleanly
+          if (isForcedSeed) return null;
           continue;
         }
 
         solution = { placements, heightUnits };
-        break; // We found a naturally occurring seed that matches every constraint!
+        break;
       }
 
-      // --- Biased Deck & Coloring Logic ---
       const colorWeights = new Array(palette.colors.length).fill(0);
-      // Shuffled color order (seed-driven). Used by Solid to pick a random candidate
-      // color; the draw also keeps PRNG order stable so existing seeds render identically.
       let activeIndices = shuffle([...Array(palette.colors.length).keys()]);
 
-      // Positional profiles map color to vertical position instead of drawing from a
-      // weighted bag. They share one path (sort palette -> per-shape t -> step -> color)
-      // and differ only in the color ORDERING:
-      //   fade   - luminance sort (value gradient)
-      //   shift  - hue-then-luminance sort (ordered hue progression)
       const POSITIONAL = new Set(['fade', 'shift']);
       const isPositional = POSITIONAL.has(activeProfile);
-      // Hue angle for sorting; achromatic colors return -1 and fall back to luminance,
-      // so grayscale/low-hue palettes degrade gracefully into a value walk.
+
       const hueAngle = (hex) => {
         const c = hex.replace('#', '');
         const r = parseInt(c.slice(0, 2), 16) / 255, g = parseInt(c.slice(2, 4), 16) / 255, b = parseInt(c.slice(4, 6), 16) / 255;
@@ -2222,13 +1858,14 @@
         let h; if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
         h *= 60; if (h < 0) h += 360; return h;
       };
+
       let positionalColors = null;
       if (isPositional) {
         if (activeProfile === 'shift') {
           positionalColors = palette.colors.slice().sort((a, b) => {
             const ha = hueAngle(a), hb = hueAngle(b);
-            if (ha < 0 && hb < 0) return getLuminance(a) - getLuminance(b); // both achromatic
-            if (ha < 0) return -1;                                          // achromatic first
+            if (ha < 0 && hb < 0) return getLuminance(a) - getLuminance(b);
+            if (ha < 0) return -1;
             if (hb < 0) return 1;
             return ha - hb || getLuminance(a) - getLuminance(b);
           });
@@ -2239,11 +1876,6 @@
       const rampAscending = isPositional ? nextRandom() > 0.5 : false;
 
       if (activeProfile === 'solid') {
-        // Single hue for the entire monolith, chosen randomly (seed-driven) so the same
-        // palette yields different Solids — BUT excluding very-dark near-neutrals, which
-        // otherwise make Solids from different palettes look alike (a run of charcoals).
-        // Pure-grayscale palettes are exempt: everything in them is neutral, so we keep
-        // the full set and let a random gray Solid stand (still varies by seed).
         const chroma = (hex) => {
           const c = hex.replace('#', '');
           const r = parseInt(c.slice(0, 2), 16) / 255, g = parseInt(c.slice(2, 4), 16) / 255, b = parseInt(c.slice(4, 6), 16) / 255;
@@ -2251,27 +1883,22 @@
         };
         const maxChroma = Math.max(...palette.colors.map(chroma));
         const isGrayscale = maxChroma < 0.10;
-        // Candidate indices: all colors on grayscale palettes; otherwise drop the muddy
-        // dark-neutrals. Safety net: if filtering leaves fewer than 2, keep the full set.
+
         let candidates = palette.colors
           .map((c, i) => ({ c, i }))
           .filter(({ c }) => isGrayscale || !(getLuminance(c) < 0.06 && chroma(c) < 0.10))
           .map(({ i }) => i);
         if (candidates.length < 2) candidates = palette.colors.map((_, i) => i);
-        // Pick one candidate using the already-shuffled activeIndices order (no new PRNG
-        // draw): the first shuffled index that is a candidate.
+
         const chosen = activeIndices.find(i => candidates.includes(i));
         colorWeights[chosen != null ? chosen : candidates[0]] = 10;
       } else if (activeProfile === 'split') {
-        // Two hues chosen for maximum luminance distance, so the pairing reads as a
-        // deliberate duochrome even on low-hue palettes (where random pairs look alike).
         const byLum = palette.colors
           .map((c, i) => ({ i, L: getLuminance(c) }))
           .sort((a, b) => a.L - b.L);
-        colorWeights[byLum[0].i] = 10;                        // darkest
-        colorWeights[byLum[byLum.length - 1].i] = 10;         // lightest
+        colorWeights[byLum[0].i] = 10;
+        colorWeights[byLum[byLum.length - 1].i] = 10;
       } else if (isPositional) {
-        // Positional profiles bypass the deck; weights are unused. Balanced as a failsafe.
         for (let i = 0; i < palette.colors.length; i++) colorWeights[i] = 1;
       } else {
         for (let i = 0; i < palette.colors.length; i++) {
@@ -2295,12 +1922,11 @@
       let colorDeck = buildBiasedDeck();
 
       const placementsWithColors = placementsWithShapes.map(p => {
-        // Positional profiles: color is a function of vertical position, not a deck draw.
         if (isPositional) {
           const shapeCenterY = p.y + (p.shape.height - 1) / 2;
           const denom = Math.max(1, heightUnits - 1);
-          let t = shapeCenterY / denom;            // 0 at base, 1 at top
-          if (!rampAscending) t = 1 - t;           // flip direction per seed
+          let t = shapeCenterY / denom;
+          if (!rampAscending) t = 1 - t;
           const step = Math.round(t * (positionalColors.length - 1));
           const posColor = positionalColors[Math.max(0, Math.min(positionalColors.length - 1, step))];
           p.shape.cells.forEach(cell => {
@@ -2310,12 +1936,6 @@
         }
 
         const neighborColors = new Set();
-        // Adjacency suppression is OFF for Split, Prism, AND Solid. Solid is deck-based
-        // (it reaches this loop), and its deck holds only one color — so enforcing
-        // "don't match your neighbor" would find no valid color and the fallback would
-        // inject OTHER palette colors, breaking the single-hue guarantee. A monochrome
-        // piece wants identical neighbors, so Solid must never enforce adjacency.
-        // (Positional profiles return early above and never reach here.)
         const noAdjacency = activeProfile === 'split' || activeProfile === 'prism' || activeProfile === 'solid';
         const enforceAdjacency = noAdjacency ? false : nextRandom() > 0.25;
 
@@ -2349,8 +1969,6 @@
         const deckIndex = colorDeck.indexOf(color);
         if (deckIndex > -1) colorDeck.splice(deckIndex, 1);
 
-        // Prism: refill the deck after every pick so any color can recur and
-        // cluster (full "prismatic" chaos). Other bag-based profiles consume one-of-each.
         if (activeProfile === 'prism') colorDeck = buildBiasedDeck();
 
         p.shape.cells.forEach(cell => {
@@ -2360,11 +1978,6 @@
         return { ...p, color };
       });
 
-      // Prism guard: independent draws can collapse a sparse (3–4 shape) piece onto
-      // 1–2 colors, making it read as Solid/Split. If fewer than 3 distinct colors were
-      // used, promote later shapes to as-yet-unused palette colors — in placement order,
-      // deterministically — until the piece shows at least 3 (capped by shape count and
-      // palette size). Leaves richer pieces untouched.
       if (activeProfile === 'prism') {
         const MIN_DISTINCT = 3;
         const target = Math.min(MIN_DISTINCT, placementsWithColors.length, palette.colors.length);
@@ -2373,8 +1986,6 @@
           const unused = palette.colors.filter(c => !used.has(c));
           for (let i = placementsWithColors.length - 1; i >= 0 && used.size < target && unused.length > 0; i--) {
             const p = placementsWithColors[i];
-            // Only recolor a shape whose current color appears more than once, so we
-            // never drop an already-distinct color below the count while raising it.
             const dupCount = placementsWithColors.filter(q => q.color === p.color).length;
             if (dupCount <= 1) continue;
             const newColor = unused.shift();
@@ -2400,7 +2011,6 @@
     // ==========================================================================
     // 6. STATE
     // ==========================================================================
-    // GLOBAL STATE LAYER
     const appState = {
       heightMode: 'multi',
       targetBlocks: DEFAULT_LIMIT,
@@ -2413,23 +2023,22 @@
       selectedPalettes: [],
       selectedProfiles: [],
 
-      formMode: 'native',   // 'native' | 'bound' | 'unbound' — native follows the palette
-      showOutline: true,     // resolved from formMode + palette on each generation
+      formMode: 'native',
+      showOutline: true,
       showMetadata: true,
       showExport: true,
       displayLayout: 'art',
-      aspectRatio: '1:1',
-      renderMode: 'single',  // 'single' | 'grid' — grid shows a 4x4 sheet of independent random pieces
-      isRenderModeVisible: false, // control only shows when ?render=single|grid is in the URL
+      aspectRatio: 'square', // 'square' | 'portrait'
+      renderMode: 'single',
+      isRenderModeVisible: false,
       isSidebarOpen: true,
-      openPanels: new Set(), // options panels open independently; all collapsed on load
+      openPanels: new Set(),
 
-      seed: null, // The string guaranteeing exact reproduction
-      artwork: null, // Holds the output of the generation engine
-      shareUrl: null // Safe fallback URL for environments that block replaceState
+      seed: null,
+      artwork: null,
+      shareUrl: null
     };
 
-    // --- STATE MODULE ---
     const State = {
       refreshValidHeights() {
         POSSIBLE_HEIGHTS = computeValidHeights(appState.targetBlocks);
@@ -2460,16 +2069,12 @@
         appState[flag] = value;
       },
 
-      // Resolve showOutline from formMode + the given palette. 'native' follows the palette
-      // (muted/void categories read best unbound); 'bound'/'unbound' are explicit overrides.
       computeShowOutline(palette) {
         if (appState.formMode === 'bound') return true;
         if (appState.formMode === 'unbound') return false;
         return !(palette.category === 'muted' || palette.category === 'void');
       },
 
-      // Called on every single-piece generation so 'native' is always current — no context
-      // gating. Grid pieces use computeShowOutline directly instead.
       resolveForm(palette) {
         appState.showOutline = this.computeShowOutline(palette);
         return appState.showOutline;
@@ -2482,24 +2087,16 @@
         const pagePadY = parseFloat(styles.getPropertyValue('--page-pad-y')) || 20;
         const sidebarWidth = parseFloat(styles.getPropertyValue('--sidebar-width')) || 365;
         const metadataRatio = parseFloat(styles.getPropertyValue('--poster-metadata-ratio')) || 0.17;
-        const metadataRatio9x16 = parseFloat(styles.getPropertyValue('--poster-metadata-ratio-9x16')) || (316 / 576);
+        const metadataRatioPortrait = parseFloat(styles.getPropertyValue('--poster-metadata-ratio-portrait')) || (316 / 576);
         const isMobile = window.innerWidth <= 640;
         const activeSidebarWidth = (!isMobile && appState.isSidebarOpen) ? sidebarWidth : 0;
         const availableWidth = Math.max(1, window.innerWidth - activeSidebarWidth - (pagePadX * 2));
         const availableHeight = Math.max(1, window.innerHeight - (pagePadY * 2));
-        const artworkRatio = appState.aspectRatio === '9:16' ? 0.5625 : 1;
+        const artworkRatio = appState.aspectRatio === 'portrait' ? 0.5625 : 1;
 
-        // Poster reserves height for the metadata band below the canvas. Ratio is relative
-        // to canvas height, so total poster height = canvas * (1 + ratio). 1:1's ratio
-        // (--poster-metadata-ratio, 0.17) is already relative to canvas height directly.
-        // 9:16's band is defined relative to --artwork-width instead
-        // (--poster-metadata-ratio-9x16, 316/576 — 4 stacked rows), so it's converted to a
-        // canvas-height-relative ratio via the same artwork-width:canvas-size factor
-        // (artworkRatio) used for byWidth below — the exact geometry, not a hand-kept
-        // approximation of it.
         let byHeight;
         if (appState.displayLayout === 'poster') {
-          const posterMetaRatio = appState.aspectRatio === '9:16' ? (artworkRatio * metadataRatio9x16) : metadataRatio;
+          const posterMetaRatio = appState.aspectRatio === 'portrait' ? (artworkRatio * metadataRatioPortrait) : metadataRatio;
           byHeight = availableHeight / (1 + posterMetaRatio);
         } else {
           byHeight = availableHeight;
@@ -2517,7 +2114,7 @@
       },
 
       toggleAspectRatio() {
-        appState.aspectRatio = appState.aspectRatio === '1:1' ? '9:16' : '1:1';
+        appState.aspectRatio = appState.aspectRatio === 'square' ? 'portrait' : 'square';
         this.syncCanvasScale();
       },
 
@@ -2589,7 +2186,7 @@
         appState.showMetadata = true;
         appState.showExport = true;
         appState.displayLayout = 'art';
-        appState.aspectRatio = '1:1';
+        appState.aspectRatio = 'square';
         appState.renderMode = 'single';
         appState.isRenderModeVisible = false;
         appState.openPanels.clear();
@@ -2602,9 +2199,6 @@
 
         const profileInputs = document.querySelectorAll('#profile-filter-list input[type="checkbox"]:checked');
         appState.selectedProfiles = [...profileInputs].map(input => input.value).filter(v => VALID_PROFILE_IDS.has(v));
-
-        // Form mode is driven by its own radio handler (formMode is authoritative); nothing
-        // to read back here. showOutline is resolved from formMode on each generation.
 
         const metadataEl = document.getElementById('toggle-metadata');
         if (metadataEl) appState.showMetadata = metadataEl.checked;
@@ -2666,7 +2260,9 @@
         appState.showMetadata = params.has('meta') ? params.get('meta') !== 'false' : true;
         appState.showExport = params.has('export') ? params.get('export') !== 'false' : true;
         appState.displayLayout = params.get('layout') === 'poster' ? 'poster' : 'art';
-        appState.aspectRatio = params.get('ratio') === '9:16' ? '9:16' : '1:1';
+
+        // Strict Canvas dimension URL check: ?canvas=portrait
+        appState.aspectRatio = params.get('canvas') === 'portrait' ? 'portrait' : 'square';
 
         if (params.has('limit')) {
           appState.targetBlocks = clampToAllowedLimit(parseInt(params.get('limit'), 10));
@@ -2715,7 +2311,7 @@
         searchParams.delete('meta');
         searchParams.delete('export');
         searchParams.delete('layout');
-        searchParams.delete('ratio');
+        searchParams.delete('canvas');
         searchParams.delete('render');
 
         if (appState.selectedPalettes.length) searchParams.set('palettes', appState.selectedPalettes.join(','));
@@ -2736,7 +2332,7 @@
         if (!appState.showMetadata) searchParams.set('meta', 'false');
         if (!appState.showExport) searchParams.set('export', 'false');
         if (appState.displayLayout !== 'art') searchParams.set('layout', appState.displayLayout);
-        if (appState.aspectRatio !== '1:1') searchParams.set('ratio', appState.aspectRatio);
+        if (appState.aspectRatio !== 'square') searchParams.set('canvas', appState.aspectRatio);
         if (appState.isRenderModeVisible) searchParams.set('render', appState.renderMode);
         if (appState.seed) searchParams.set('seed', appState.seed);
 
@@ -2776,11 +2372,7 @@
 
         if (newArtwork) {
           appState.artwork = newArtwork;
-
-          // Resolve Form for this palette every time (native follows the palette; explicit
-          // bound/unbound stick). Unconditional — fixes the old context-gated flakiness.
           this.resolveForm(newArtwork.palette);
-
           appState.seed = newArtwork.seed;
           if (didMutateHeightState) Render.renderHeightFilter();
           Render.render();
@@ -2797,7 +2389,6 @@
     // ==========================================================================
     // 7. SYNC
     // ==========================================================================
-    // --- URL STATE SYNCING ---
     function normalizeSeed(value) {
       if (typeof value !== 'string') return null;
       const normalized = value.trim().toUpperCase();
@@ -2876,7 +2467,6 @@
       return units > 0 ? '•'.repeat(units) : '';
     }
 
-    // --- RENDER MODULE ---
     const Render = {
       renderDisplayOptions() {
         const renderModeRow = document.getElementById('render-mode-row');
@@ -2892,8 +2482,6 @@
           }
         }
 
-        // Layout/Aspect Ratio only apply to a single rendered piece — hide them while
-        // Grid is showing a sheet of independent random pieces.
         const layoutRow = document.getElementById('layout-row');
         const aspectRatioRow = document.getElementById('aspect-ratio-row');
         if (layoutRow) layoutRow.style.display = isGrid ? 'none' : '';
@@ -2912,14 +2500,14 @@
         const aspectIcon = document.getElementById('aspect-ratio-icon');
         const canvasWrap = document.getElementById('canvas');
         if (aspectRatioValue) {
-          aspectRatioValue.textContent = appState.aspectRatio;
+          aspectRatioValue.textContent = RATIO_LABELS[appState.aspectRatio] || 'Square (1:1)';
           if (aspectIcon) {
-            aspectIcon.querySelector('use').setAttribute('href', appState.aspectRatio === '1:1' ? '#icon-custom-1-1-ratio' : '#icon-custom-9-16-ratio');
+            aspectIcon.querySelector('use').setAttribute('href', appState.aspectRatio === 'square' ? '#icon-custom-1-1-ratio' : '#icon-custom-9-16-ratio');
           }
           if (canvasWrap) {
-            appState.aspectRatio === '9:16' ? canvasWrap.setAttribute('data-aspect-ratio', '9:16') : canvasWrap.removeAttribute('data-aspect-ratio');
+            canvasWrap.setAttribute('data-aspect-ratio', appState.aspectRatio);
           }
-          appState.aspectRatio === '9:16' ? document.documentElement.setAttribute('data-aspect-ratio', '9:16') : document.documentElement.removeAttribute('data-aspect-ratio');
+          document.documentElement.setAttribute('data-aspect-ratio', appState.aspectRatio);
         }
       },
 
@@ -2956,21 +2544,18 @@
         });
       },
 
-
       renderArtwork() {
         if (!appState.artwork) return;
         const svg = document.getElementById('artwork-svg');
         this.drawArtworkInto(svg, appState.artwork, appState.aspectRatio, appState.showOutline);
       },
 
-      // Draws a single artwork's rects into the given SVG element. Extracted so the
-      // grid render mode can reuse the exact same geometry/inset logic.
       drawArtworkInto(svg, artwork, aspectRatio, showOutline) {
         const { placements, heightUnits, palette } = artwork;
         svg.innerHTML = '';
 
-        const canvasW = aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-        const canvasH = CANVAS_SIZE; // Always 1000
+        const canvasW = aspectRatio === 'portrait' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE;
 
         const stackHeightPx = (heightUnits * CELL_STEP) + BORDER_WIDTH;
         const offsetX = Math.round((canvasW - COLUMN_WIDTH) / 2);
@@ -3013,8 +2598,6 @@
         });
       },
 
-      // GRID RENDER MODE: render 16 independent seedless generations in a 4x4 sheet,
-      // to see the range of outputs at a glance. Ignores seed/URL entirely.
       renderContactSheet() {
         let overlay = document.getElementById('contact-sheet');
         if (!overlay) {
@@ -3033,7 +2616,6 @@
           const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
           svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
           svg.style.cssText = 'width:100%;height:100%;display:block;';
-          // Seedless generation: force a fresh random piece each time.
           const artwork = generateStack({ ...params, seed: null });
           if (artwork) this.drawArtworkInto(svg, artwork, appState.aspectRatio, State.computeShowOutline(artwork.palette));
           cell.appendChild(svg);
@@ -3080,22 +2662,17 @@
         const limitDisplayEl = document.getElementById('limit-display');
         if (limitDisplayEl) limitDisplayEl.textContent = appState.targetBlocks;
 
-
-
-        // Populate Poster Metadata (both the 1:1 block and the separate 9:16 block; only
-        // one is visible per aspect ratio, but populating both keeps them ready on toggle).
         if (appState.displayLayout === 'poster') {
           const formText = appState.showOutline ? 'bound' : 'unbound';
           const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-          setText('poster-seed', appState.seed); setText('poster-seed-9x16', appState.seed);
-          setText('poster-palette', palette.name); setText('poster-palette-9x16', palette.name);
-          setText('poster-profile', activeProfile); setText('poster-profile-9x16', activeProfile);
-          setText('poster-form', formText); setText('poster-form-9x16', formText);
-          setText('poster-limit', appState.targetBlocks + ' blocks'); setText('poster-limit-9x16', appState.targetBlocks + ' blocks');
-          setText('poster-height', heightUnits + ' units'); setText('poster-height-9x16', heightUnits + ' units');
-          setText('poster-shapes', placements.length); setText('poster-shapes-9x16', placements.length);
+          setText('poster-seed', appState.seed); setText('poster-seed-portrait', appState.seed);
+          setText('poster-palette', palette.name); setText('poster-palette-portrait', palette.name);
+          setText('poster-profile', activeProfile); setText('poster-profile-portrait', activeProfile);
+          setText('poster-form', formText); setText('poster-form-portrait', formText);
+          setText('poster-limit', appState.targetBlocks + ' blocks'); setText('poster-limit-portrait', appState.targetBlocks + ' blocks');
+          setText('poster-height', heightUnits + ' units'); setText('poster-height-portrait', heightUnits + ' units');
+          setText('poster-shapes', placements.length); setText('poster-shapes-portrait', placements.length);
 
-          // Color Usage Calculation
           const colorUsage = {};
           palette.colors.forEach(c => colorUsage[c] = 0);
           placements.forEach(p => {
@@ -3121,9 +2698,8 @@
             });
           };
           buildColorBars(document.getElementById('poster-color-bars'));
-          buildColorBars(document.getElementById('poster-color-bars-9x16'));
+          buildColorBars(document.getElementById('poster-color-bars-portrait'));
 
-          // Shape Units breakdown
           const shapeCounts = placements.reduce((acc, p) => {
             const units = SHAPE_CATALOG[p.id].units;
             acc[units] = (acc[units] || 0) + 1;
@@ -3142,7 +2718,7 @@
             });
           };
           buildUnits(document.getElementById('poster-units-container'), 'poster-cell hug');
-          buildUnits(document.getElementById('poster-units-container-9x16'), 'poster-cell hug');
+          buildUnits(document.getElementById('poster-units-container-portrait'), 'poster-cell hug');
         }
 
         const shapesList = document.getElementById('shapes-list');
@@ -3278,13 +2854,11 @@
           const percent = sortedLimits.length > 1 ? valueIndex / (sortedLimits.length - 1) : 0;
           const sliderWidth = slider.offsetWidth;
           const thumbWidth = thumb.offsetWidth;
-          // The thumb slides from 0 to (sliderWidth - thumbWidth)
           const maxScroll = Math.max(0, sliderWidth - thumbWidth);
           thumb.style.transform = `translateX(${percent * maxScroll}px)`;
           thumb.querySelector('span').textContent = normalizedVal;
         }
 
-        // Initial pos
         requestAnimationFrame(() => updateThumbPos(appState.targetBlocks));
 
         let isDragging = false;
@@ -3308,7 +2882,6 @@
             window.addEventListener('pointermove', onPointerMove);
             window.addEventListener('pointerup', onPointerUp);
           } else {
-            // Stepper behavior: jump to next/prev if clicking track
             const rect = thumb.getBoundingClientRect();
             const clickX = e.clientX;
             const currentIndex = sortedLimits.indexOf(clampToAllowedLimit(appState.targetBlocks));
@@ -3347,7 +2920,6 @@
         }
 
         slider.addEventListener('pointerdown', onPointerDown);
-        // Ensure layout changes don't break position
         window.addEventListener('resize', () => updateThumbPos(appState.targetBlocks));
       },
 
@@ -3361,7 +2933,6 @@
           cell.className = 'toggle-cell';
           cell.type = 'button';
 
-          // Styling purely references the single source of truth: selectedHeights
           if (appState.heightMode === 'multi') {
             if (appState.selectedHeights.has(h)) cell.setAttribute('data-state', 'selected');
           } else {
@@ -3380,7 +2951,6 @@
 
           cell.innerHTML = `<span>${h}</span>`;
 
-          // Click logic modifies the single source of truth: selectedHeights
           cell.addEventListener('click', () => {
             State.toggleHeightSelection(h);
             State.clearSeed();
@@ -3397,7 +2967,6 @@
     // ==========================================================================
     // 9. CONTROLS
     // ==========================================================================
-    // --- CONTROLS MODULE ---
     const Controls = {
       regenerateFromFilters() {
         if (appState.renderMode === 'grid') {
@@ -3443,8 +3012,6 @@
 
         document.querySelectorAll('[data-options-panel]').forEach(row => {
           row.addEventListener('click', () => {
-            // Preserve sidebar scroll position across the open/close so the section title
-            // stays put under the cursor (opening a panel must not scroll the sidebar).
             const scroller = document.querySelector('.sidebar-content');
             const prevScroll = scroller ? scroller.scrollTop : 0;
             State.toggleOptionsPanel(row.dataset.optionsPanel);
@@ -3468,8 +3035,6 @@
         document.getElementById('form-options-panel')?.addEventListener('change', event => {
           if (event.target.name !== 'form-mode' || !event.target.checked) return;
           appState.formMode = event.target.value;
-          // Re-resolve against the current palette and re-render (no regeneration needed —
-          // Form only affects how the existing artwork is drawn).
           if (appState.artwork) State.resolveForm(appState.artwork.palette);
           Render.render();
           State.syncURL();
@@ -3572,7 +3137,7 @@
       getSVGString() {
         const svg = document.getElementById('artwork-svg');
         const clone = svg.cloneNode(true);
-        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+        const canvasW = appState.aspectRatio === 'portrait' ? 562.5 : CANVAS_SIZE;
         const canvasH = CANVAS_SIZE;
         clone.setAttribute('width', canvasW);
         clone.setAttribute('height', canvasH);
@@ -3601,7 +3166,6 @@
         });
       },
 
-
       downloadSVG() {
         if (appState.displayLayout === 'poster') return;
         const blob = new Blob([this.getSVGString()], { type: 'image/svg+xml;charset=utf-8' });
@@ -3611,9 +3175,8 @@
       async downloadPNG(pixelRatio = 2) {
         if (appState.displayLayout === 'poster') {
           try {
-            // Target the outer mat element instead of the inner container
             const node = document.getElementById('poster-mat');
-            const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
+            const canvasW = appState.aspectRatio === 'portrait' ? 562.5 : CANVAS_SIZE;
             const targetWidth = Math.round(canvasW * pixelRatio);
             const rect = node.getBoundingClientRect();
             const targetHeight = Math.round((rect.height / rect.width) * targetWidth);
@@ -3638,8 +3201,8 @@
         }
 
         const scale = pixelRatio;
-        const canvasW = appState.aspectRatio === '9:16' ? 562.5 : CANVAS_SIZE;
-        const canvasH = CANVAS_SIZE; // Always 1000
+        const canvasW = appState.aspectRatio === 'portrait' ? 562.5 : CANVAS_SIZE;
+        const canvasH = CANVAS_SIZE;
         try {
           const img = await this._loadSVGImage();
 
@@ -3658,8 +3221,6 @@
     // ==========================================================================
     // 10. INIT
     // ==========================================================================
-    // Initialize UI colors from data, not hardcoded CSS
-    // Runs synchronously before first paint so there's no flash
     (function initUIColors() {
       const p = PALETTES.find(p => p.name === 'spice') || PALETTES[0];
       const root = document.documentElement;
@@ -3670,7 +3231,6 @@
       root.style.setProperty('--ui-rule', 'rgba(28, 28, 26, 0.1)');
     })();
 
-    // --- INIT SEQUENCE ---
     Controls.bindGlobalControls();
     State.parseURL();
     Controls.bindParamsPanel();
@@ -3684,9 +3244,6 @@
       Render.renderSidebarState();
     });
     State.triggerGeneration();
-    // triggerGeneration always produces a single piece (needed as the fallback artwork for
-    // when the user later switches back to Single) — if the URL requested grid mode, show
-    // the contact sheet on top of that now.
     if (appState.renderMode === 'grid') Render.renderContactSheet();
 
   </script>
