@@ -924,10 +924,12 @@
        seed/palette/profile stacked to its right. Single-direction borders (border-right on
        cells, border-bottom on rows) — no doubling.
          TOP BLOCK (height = 2 row-heights, square bars cell):
-           bars(rowspan, hug) | seed(fill)              <- sub-row 1
-           bars(cont'd)       | palette(fill) | profile(fill)  <- sub-row 2
-         R3: form(fill) | limit(fill) | height(fill)
-         R4: shapes(fill) | unit(hug) | unit(hug) */
+           bars(rowspan, hug) | seed(fill)               <- sub-row 1
+           bars(cont'd)       | palette(fill) | profile(hug)  <- sub-row 2
+         R3: form(hug) | limit(fill) | height(hug)
+         R4: shapes(fill) | unit(hug) unit(hug) ...
+         Same fill/hug pair as the 1:1 poster-cell (.pm9-cell.fill / .pm9-cell.hug) —
+         every cell picks one explicitly, same as the square layout does. */
     #poster-meta-916 {
       display: none;
     }
@@ -945,15 +947,11 @@
       color: var(--ui-ink);
       text-transform: uppercase;
       overflow: hidden;
-      /* Row height in this block (artwork-width * 79/576). Font sizes and padding below are
-         derived as fractions of THIS, not of --sz-*, so their ratio to the row stays locked
-         to the 1:1 poster's ratio regardless of how tall the row actually renders.
-         In the 1:1 poster, row-height = 85 sz-units (poster-metadata-height 0.17*canvas-size,
-         split into 2 rows = 85 units each), and padding/label/value sit at 20/15/30 of those
-         85 units. We reuse those same 20/15/30-of-85 fractions here, scaled to THIS row's
-         actual height, so both modes render text/padding at an identical proportion of their
-         own row — instead of pinning to fixed --sz-* values that assume a row height (based
-         on canvas-size) equal to the 1:1 poster's, which the 9:16 row height is not. */
+      /* Row height in this block (artwork-width * 79/576), from the mockup measurement.
+         Still used for structural sizing (row/top-block/color-bar heights) — font-size
+         and padding no longer derive from it (see .meta-label/.meta-value/.pm9-cell
+         below), now that hug/fill sizes cells to content instead of squeezing equal
+         thirds. */
       --pm9-row-h: calc(var(--artwork-width) * (79 / 576));
     }
 
@@ -987,14 +985,22 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      flex: 1 1 0;
-      /* default: fill; hug cells override below */
-      min-width: 0;
-      /* 20/85 of the row height — same fraction padding occupies of a row in the 1:1
-         poster (padding 20 : row-height 85), scaled to this row's actual height. */
-      padding: calc(var(--pm9-row-h) * 20 / 85);
+      /* Fixed padding, paired with the fixed label/value font-sizes below — hug/fill
+         means cells no longer need to be squeezed, so this no longer has to scale
+         down with the row height. */
+      padding: 10px;
       border-right: var(--ui-border-width) solid var(--ui-ink-solid);
       overflow: hidden;
+    }
+
+    /* Same fill/hug pair as the 1:1 poster-cell — every cell picks one explicitly. */
+    #poster-meta-916 .pm9-cell.fill {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    #poster-meta-916 .pm9-cell.hug {
+      flex: 0 0 auto;
     }
 
     /* Last cell in each row has no right border (frame provides the edge). */
@@ -1045,41 +1051,22 @@
       flex: 0 0 auto;
     }
 
-    #poster-meta-916 .pm9-units>* {
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      min-width: calc(var(--artwork-width) * (59 / 576));
-      /* Same row-height-relative padding as .pm9-cell above. */
-      padding: calc(var(--pm9-row-h) * 20 / 85);
-      border-right: var(--ui-border-width) solid var(--ui-ink-solid);
-    }
-
     #poster-meta-916 .pm9-units> :last-child {
       border-right: none;
     }
 
-    /* Fonts sized as fractions of the row height (15/85 and 30/85 — same fractions the 1:1
-       poster's meta-label/meta-value occupy of ITS row height), not fixed --sz-* values.
-       This keeps both the label:value ratio (1:2) AND each one's size relative to its own
-       row identical to the 1:1 poster. */
+    /* Fixed sizes — no longer derived from row height. hug/fill now gives every cell
+       room to fit its content, so text doesn't need to shrink with the row. */
     #poster-meta-916 .meta-label {
-      font-size: calc(var(--pm9-row-h) * 15 / 85);
+      font-size: 10px;
       line-height: 1.2;
       color: var(--ui-ink);
     }
 
     #poster-meta-916 .meta-value {
-      font-size: calc(var(--pm9-row-h) * 30 / 85);
+      font-size: 20px;
       line-height: 1;
       color: var(--ui-ink);
-    }
-
-    /* Trim horizontal padding on the limit cell to prevent letter squeeze in 9:16 poster mode */
-    #poster-meta-916 .pm9-limit {
-      padding-left: calc(var(--pm9-row-h) * 12 / 85);
-      padding-right: calc(var(--pm9-row-h) * 12 / 85);
     }
 
 
@@ -1267,17 +1254,17 @@
             <div class="pm9-cell pm9-color" id="pm9-color-bars"></div>
             <div class="pm9-top-right">
               <div class="pm9-row">
-                <div class="pm9-cell pm9-seed">
+                <div class="pm9-cell pm9-seed fill">
                   <div class="meta-label">seed</div>
                   <div class="meta-value" id="pm9-seed"></div>
                 </div>
               </div>
               <div class="pm9-row pm9-row-last">
-                <div class="pm9-cell pm9-palette">
+                <div class="pm9-cell pm9-palette fill">
                   <div class="meta-label">palette</div>
                   <div class="meta-value" id="pm9-palette"></div>
                 </div>
-                <div class="pm9-cell pm9-profile">
+                <div class="pm9-cell pm9-profile hug">
                   <div class="meta-label">profile</div>
                   <div class="meta-value" id="pm9-profile"></div>
                 </div>
@@ -1285,21 +1272,21 @@
             </div>
           </div>
           <div class="pm9-row">
-            <div class="pm9-cell pm9-form">
+            <div class="pm9-cell pm9-form hug">
               <div class="meta-label">form</div>
               <div class="meta-value" id="pm9-form"></div>
             </div>
-            <div class="pm9-cell pm9-limit">
+            <div class="pm9-cell pm9-limit fill">
               <div class="meta-label">limit</div>
               <div class="meta-value" id="pm9-limit"></div>
             </div>
-            <div class="pm9-cell pm9-height">
+            <div class="pm9-cell pm9-height hug">
               <div class="meta-label">height</div>
               <div class="meta-value" id="pm9-height"></div>
             </div>
           </div>
           <div class="pm9-row pm9-row-last">
-            <div class="pm9-cell pm9-shape">
+            <div class="pm9-cell pm9-shape fill">
               <div class="meta-label">shapes</div>
               <div class="meta-value" id="pm9-shapes"></div>
             </div>
@@ -3042,7 +3029,7 @@
             });
           };
           buildUnits(document.getElementById('poster-units-container'), 'poster-cell hug');
-          buildUnits(document.getElementById('pm9-units-container'), 'pm9-cell pm9-unit');
+          buildUnits(document.getElementById('pm9-units-container'), 'pm9-cell pm9-unit hug');
         }
 
         const shapesList = document.getElementById('shapes-list');
