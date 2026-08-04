@@ -55,6 +55,7 @@
       --ui-ink: rgba(28, 28, 26, 0.9);
       --ui-ink-solid: rgb(28, 28, 26);
       --ui-ink-muted: rgba(28, 28, 26, 0.5);
+      --ui-ink-20: rgba(28, 28, 26, 0.2);
       --ui-rule: rgba(28, 28, 26, 0.1);
       --ui-border-width: max(1px, var(--sz-02));
       --ui-text-size: var(--sz-15);
@@ -451,17 +452,126 @@
       border-radius: 1px;
     }
 
-    .palette-swatch {
-      display: grid;
-      grid-template-columns: repeat(7, var(--sz-08));
-      gap: var(--sz-02);
+    /* ---- Palette panel: each category is its OWN rounded panel group ---- */
+    /* The palette's options-panel wrapper is transparent — the per-category panels below
+       provide the rounded --ui-rule boxes (avoids a panel-in-panel double box). */
+    #palette-options-panel {
+      background: transparent;
+      border-radius: 0;
     }
 
-    .palette-swatch span {
-      width: var(--sz-08);
-      height: var(--sz-16);
+    .palette-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      /* gap between category panels */
+    }
+
+    /* One category = its own rounded --ui-rule panel with 20px padding. */
+    .palette-category {
+      background: var(--ui-rule);
+      border-radius: var(--sz-20);
+      padding: 20px;
+    }
+
+    /* Category label styled like a section title, muted. Clickable: toggles the whole
+       category. Hit area hugs the label text so its focus ring wraps just the label
+       (matching the seed focus state), not the full panel width. */
+    .palette-category-title {
+      display: inline-block;
+      text-align: left;
+      font-family: inherit;
+      font-size: var(--ui-text-size);
+      text-transform: uppercase;
+      color: var(--ui-ink-muted);
+      margin-bottom: 13px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      padding: 0;
+    }
+
+    .palette-category-title:hover {
+      color: var(--ui-ink);
+    }
+
+    .palette-category-title:focus-visible {
+      outline: var(--sz-02) solid var(--ui-ink-muted);
+      outline-offset: var(--sz-02);
+      border-radius: var(--sz-02);
+    }
+
+    /* Grid: 4 columns of 63px units, 11px column gap, 13px row gap (fits 285px inner). */
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 63px);
+      column-gap: 11px;
+      row-gap: 13px;
+    }
+
+    /* Each unit fills its grid cell (63px on desktop; flexes wider at small breakpoints);
+       the fixed-width pill stays centered. */
+    .palette-unit {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .palette-unit input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      margin: 0;
+      pointer-events: none;
+    }
+
+    /* Color pill: 43x16, holds 7 vertical stripes (bg + 6 colors) filling the full capsule.
+       The 2px ink@20% ring is drawn INSIDE, on top of the stripes, tracing the capsule. */
+    .palette-pill {
+      position: relative;
+      box-sizing: border-box;
+      width: 43px;
+      height: 16px;
+      display: flex;
+      overflow: hidden;
+      border-radius: 999px;
+    }
+
+    .palette-pill span {
+      flex: 1 0 0;
       background: var(--swatch-color);
-      border: var(--rule-width) solid rgba(28, 28, 26, 0.2);
+    }
+
+    .palette-pill::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--ui-ink-20);
+      border-radius: 999px;
+      pointer-events: none;
+    }
+
+    /* Selected: 2px gap then a 2px ink outline ring around the pill. */
+    .palette-unit:has(input:checked) .palette-pill {
+      outline: 2px solid var(--ui-ink);
+      outline-offset: 2px;
+    }
+
+    .palette-unit-label {
+      margin-top: 8px;
+      font-size: 13px;
+      text-transform: uppercase;
+      color: var(--ui-ink);
+      text-align: center;
+    }
+
+    /* Focus ring only on keyboard focus (Tab), not on mouse select/deselect. */
+    .palette-unit:has(input:focus-visible) .palette-pill {
+      outline: 2px solid var(--ui-ink-muted);
+      outline-offset: 2px;
     }
 
     /* Height panel: 3-dots mode toggle above a wrapping grid of selection pills. */
@@ -476,7 +586,8 @@
       display: flex;
       align-items: center;
       gap: 3px;
-      width: 24px;      /* 6 + 3 + 6 + 3 + 6 — fixed so the range-mode bar has a span to fill */
+      width: 24px;
+      /* 6 + 3 + 6 + 3 + 6 — fixed so the range-mode bar has a span to fill */
       height: 6px;
       padding: 0;
       margin-bottom: 16px;
@@ -484,6 +595,7 @@
       border: none;
       cursor: pointer;
     }
+
     .height-mode-toggle .hmt-dot {
       width: 6px;
       height: 6px;
@@ -491,11 +603,13 @@
       background: var(--ui-ink);
       flex: 0 0 auto;
     }
+
     /* Range mode: middle dot becomes a 2px connecting bar butting against the outer dots
        (no gap), so it reads as two dots joined by a continuous line. */
     :root[data-height-mode="range"] .height-mode-toggle {
       gap: 0;
     }
+
     :root[data-height-mode="range"] .height-mode-toggle .hmt-dot-2 {
       height: 2px;
       border-radius: 0;
@@ -555,9 +669,11 @@
        rounded end wherever it's the range start/end OR a row edge (so a range that wraps to
        the next row shows normal rounded pills per row, not flat dangling edges). */
     .toggle-cell[data-state="in-range"]::before {
-      inset: 0 -8px;          /* default interior: square, extend both sides across the gap */
+      inset: 0 -8px;
+      /* default interior: square, extend both sides across the gap */
       border-radius: 0;
     }
+
     /* Left cap: rounded and flush when this pill starts the range or starts a row. */
     .toggle-cell[data-state="in-range"][data-range-edge="start"]::before,
     .toggle-cell[data-state="in-range"][data-range-edge="both"]::before,
@@ -566,6 +682,7 @@
       border-top-left-radius: 999px;
       border-bottom-left-radius: 999px;
     }
+
     /* Right cap: rounded and flush when this pill ends the range or ends a row. */
     .toggle-cell[data-state="in-range"][data-range-edge="end"]::before,
     .toggle-cell[data-state="in-range"][data-range-edge="both"]::before,
@@ -833,6 +950,12 @@
 
       .l-sidebar[data-state="collapsed"] {
         display: none !important;
+      }
+
+      /* Palette grid fills the wider width instead of locking to 4 columns — pills wrap to
+         fill each row like the height pills do. */
+      .palette-grid {
+        grid-template-columns: repeat(auto-fill, minmax(63px, 1fr));
       }
     }
 
@@ -1355,7 +1478,7 @@
             </svg>
           </button>
           <div id="palette-options-panel" class="options-panel" data-panel="palette">
-            <div id="palette-filter-list" class="option-list"></div>
+            <div id="palette-filter-list" class="palette-panel"></div>
           </div>
           <button class="control-row" data-interactive="true" type="button" data-options-panel="profile">
             <span class="control-label">Profile</span>
@@ -1413,7 +1536,7 @@
           <div id="height-options-panel" class="options-panel" data-panel="height">
             <div class="height-panel">
               <button id="height-mode-toggle" class="height-mode-toggle" type="button"
-                      aria-label="Toggle range selection mode">
+                aria-label="Toggle range selection mode">
                 <span class="hmt-dot hmt-dot-1"></span>
                 <span class="hmt-dot hmt-dot-2"></span>
                 <span class="hmt-dot hmt-dot-3"></span>
@@ -2674,6 +2797,7 @@
         root.style.setProperty('--ui-ink', `rgba(${baseRGB}, 0.9)`);
         root.style.setProperty('--ui-ink-solid', `rgb(${baseRGB})`);
         root.style.setProperty('--ui-ink-muted', `rgba(${baseRGB}, 0.5)`);
+        root.style.setProperty('--ui-ink-20', `rgba(${baseRGB}, 0.2)`);
         root.style.setProperty('--ui-rule', `rgba(${baseRGB}, 0.1)`);
 
         !appState.showExport ? document.getElementById('export-overlay')?.setAttribute('data-state', 'hidden') : document.getElementById('export-overlay')?.removeAttribute('data-state');
@@ -2787,47 +2911,60 @@
       renderPaletteFilter() {
         const list = document.getElementById('palette-filter-list');
         if (!list) return;
+        list.className = 'palette-panel';
         list.innerHTML = '';
 
         const categories = [...new Set(PALETTES.map(palette => palette.category))];
         categories.forEach(category => {
-          const group = document.createElement('div');
-          group.className = 'option-group';
+          const block = document.createElement('div');
+          block.className = 'palette-category';
 
-          const title = document.createElement('div');
-          title.className = 'option-group-title';
+          const grid = document.createElement('div');
+          grid.className = 'palette-grid';
+
+          const title = document.createElement('button');
+          title.type = 'button';
+          title.className = 'palette-category-title';
           title.textContent = category;
-          group.appendChild(title);
+          // Click the category label to select/deselect all palettes in it: if all are
+          // already selected, clear them; otherwise select the whole category.
+          title.addEventListener('click', () => {
+            const boxes = grid.querySelectorAll('input[type="checkbox"]');
+            const allChecked = [...boxes].every(b => b.checked);
+            boxes.forEach(b => { b.checked = !allChecked; });
+            State.clearSeed();
+            State.triggerGeneration();
+          });
+          block.appendChild(title);
 
           PALETTES.filter(palette => palette.category === category).forEach(palette => {
-            const row = document.createElement('label');
-            row.className = 'option-row';
-
-            const name = document.createElement('span');
-            name.textContent = palette.name;
+            const unit = document.createElement('label');
+            unit.className = 'palette-unit';
 
             const input = document.createElement('input');
             input.type = 'checkbox';
             input.value = palette.name;
             input.checked = appState.selectedPalettes.includes(palette.name);
 
-            const marker = document.createElement('span');
-            marker.className = 'option-marker';
-            marker.setAttribute('aria-hidden', 'true');
-
-            const swatch = document.createElement('span');
-            swatch.className = 'palette-swatch';
+            const pill = document.createElement('span');
+            pill.className = 'palette-pill';
+            pill.setAttribute('aria-hidden', 'true');
             [palette.bg, ...palette.colors].forEach(color => {
-              const chip = document.createElement('span');
-              chip.style.setProperty('--swatch-color', color);
-              swatch.appendChild(chip);
+              const stripe = document.createElement('span');
+              stripe.style.setProperty('--swatch-color', color);
+              pill.appendChild(stripe);
             });
 
-            row.append(name, input, marker, swatch);
-            group.appendChild(row);
+            const label = document.createElement('span');
+            label.className = 'palette-unit-label';
+            label.textContent = palette.name;
+
+            unit.append(input, pill, label);
+            grid.appendChild(unit);
           });
 
-          list.appendChild(group);
+          block.appendChild(grid);
+          list.appendChild(block);
         });
       },
 
@@ -3155,6 +3292,13 @@
           if (event.target.tagName === 'INPUT' || event.metaKey || event.ctrlKey) return;
           const key = event.key.toLowerCase();
 
+          // These are global shortcuts, not keyboard navigation of a control. Blur whatever
+          // was last focused (e.g. a section header just clicked) so the keypress doesn't
+          // trigger a :focus-visible ring on panel elements after regenerating.
+          if (['r', 'i', 'p', 's'].includes(key) && document.activeElement) {
+            document.activeElement.blur();
+          }
+
           if (key === 'r') this.regenerateFromFilters();
 
           if (key === 'i') {
@@ -3264,6 +3408,7 @@
       root.style.setProperty('--ui-ink', 'rgba(28, 28, 26, 0.9)');
       root.style.setProperty('--ui-ink-solid', 'rgb(28, 28, 26)');
       root.style.setProperty('--ui-ink-muted', 'rgba(28, 28, 26, 0.5)');
+      root.style.setProperty('--ui-ink-20', 'rgba(28, 28, 26, 0.2)');
       root.style.setProperty('--ui-rule', 'rgba(28, 28, 26, 0.1)');
     })();
 
